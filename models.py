@@ -24,6 +24,7 @@ class Video(Base):
     youtube_id = Column(String, unique=True, nullable=False)
     title = Column(String)
     channel_name = Column(String)
+    channel_id = Column(String, index=True)
     thumbnail_url = Column(String)
     published_at = Column(DateTime)
     current_price = Column(Float, default=10.0)

@@ -65,19 +65,32 @@ templates.env.filters["fmt"] = fmt
 
 # ── video helpers ─────────────────────────────────────────────────────────────
 
+def get_channel_videos(db: Session, channel_id: str, exclude_youtube_id: str) -> list:
+    """Fetch (view_count, published_at) for other videos from the same creator."""
+    others = (
+        db.query(models.Video)
+        .filter(models.Video.channel_id == channel_id, models.Video.youtube_id != exclude_youtube_id)
+        .limit(20)
+        .all()
+    )
+    result = []
+    for v in others:
+        views = v.stats[-1].view_count if v.stats else 0
+        result.append((views, v.published_at))
+    return result
+
+
 def upsert_video(db: Session, yt: dict) -> models.Video:
     video = db.query(models.Video).filter(models.Video.youtube_id == yt["youtube_id"]).first()
 
-    prev_views = None
-    if video and video.stats:
-        prev_views = video.stats[-1].view_count
+    channel_vids = get_channel_videos(db, yt.get("channel_id", ""), yt["youtube_id"])
 
     price_data = calculate_price(
         view_count=yt["view_count"],
         like_count=yt["like_count"],
         comment_count=yt["comment_count"],
         published_at=yt["published_at"],
-        prev_view_count=prev_views,
+        channel_videos=channel_vids,
     )
 
     if not video:
@@ -85,6 +98,7 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
             youtube_id=yt["youtube_id"],
             title=yt["title"],
             channel_name=yt["channel_name"],
+            channel_id=yt.get("channel_id", ""),
             thumbnail_url=yt["thumbnail_url"],
             published_at=yt["published_at"],
             current_price=price_data["price"],
@@ -94,6 +108,7 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
     else:
         video.title = yt["title"]
         video.channel_name = yt["channel_name"]
+        video.channel_id = yt.get("channel_id", "")
         video.thumbnail_url = yt["thumbnail_url"]
         video.current_price = price_data["price"]
         video.last_updated = datetime.utcnow()
@@ -162,11 +177,11 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         video = upsert_video(db, yt_list[0])
 
     last = video.stats[-1] if video.stats else None
-    prev = video.stats[-2] if len(video.stats) > 1 else None
 
+    channel_vids = get_channel_videos(db, video.channel_id or "", video.youtube_id)
     info = calculate_price(last.view_count, last.like_count, last.comment_count,
-                           video.published_at, prev.view_count if prev else None) if last \
-        else {"risk": "Unknown", "risk_color": "secondary", "momentum_pct": 0, "views_per_day": 0}
+                           video.published_at, channel_videos=channel_vids) if last \
+        else {"risk": "Unknown", "risk_color": "secondary", "momentum_pct": 0, "views_per_day": 0, "rps": 1.0}
 
     price_history = [{"t": s.recorded_at.strftime("%d.%m %H:%M"), "p": s.price_at_time}
                      for s in video.stats[-30:]]

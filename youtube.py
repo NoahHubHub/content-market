@@ -42,6 +42,7 @@ def _parse_items(items: list) -> list:
                 "youtube_id": item["id"],
                 "title": snippet.get("title", "Unknown"),
                 "channel_name": snippet.get("channelTitle", "Unknown"),
+                "channel_id": snippet.get("channelId", ""),
                 "thumbnail_url": snippet.get("thumbnails", {})
                 .get("medium", {})
                 .get("url", ""),
