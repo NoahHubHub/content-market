@@ -1,5 +1,6 @@
 import os
 import random
+import secrets
 import string
 from datetime import datetime
 from dotenv import load_dotenv
@@ -19,8 +20,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Content Market")
 
-# Key enthält Startzeitpunkt → Sessions werden bei jedem Neustart ungültig
-_session_key = os.getenv("SECRET_KEY") or f"dev-{os.getpid()}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+# Kryptografisch zufälliger Key bei jedem Modulimport → Sessions immer ungültig nach Neustart
+_session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 templates = Jinja2Templates(directory="templates")
 
