@@ -218,6 +218,14 @@
       </a>
       {% if user %}
       <span class="tr-nav-balance" title="Cash · {{ user.holdings_count }} Positionen">${{ "%.0f"|format(user.balance) }}</span>
+      <form method="post" action="/logout" style="margin:0;">
+        <button type="submit"
+          style="background:none;border:none;color:#333;font-size:.82rem;font-weight:500;
+                 cursor:pointer;padding:0;transition:color .15s;"
+          onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#333'">
+          ↩
+        </button>
+      </form>
       {% endif %}
     </div>
   </div>
