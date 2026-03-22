@@ -36,6 +36,7 @@
   <div class="tr-tabs">
     <button class="tr-tab active" onclick="switchTab(this,'portfolio')">Portfolio</button>
     <button class="tr-tab" onclick="switchTab(this,'diversifizierung')">Diversifizierung</button>
+    <button class="tr-tab" onclick="switchTab(this,'cash')">Cash</button>
   </div>
   <div class="tr-avatar">
     {{ user.username[0] | upper }}
@@ -43,15 +44,15 @@
   </div>
 </div>
 
-<!-- Total value -->
-<div class="tr-total-label">Insgesamt</div>
+<!-- Total value — updates per tab -->
+<div class="tr-total-label" id="val-label">Investiert</div>
 <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-  <div class="tr-total-value">${{ "%.2f"|format(portfolio_value) }}</div>
-  {% if total_pnl_pct >= 0 %}
-  <span class="tr-total-change tr-up">▲ {{ "%.2f"|format(total_pnl_pct) }} %</span>
-  {% else %}
-  <span class="tr-total-change tr-down">▼ {{ "%.2f"|format(total_pnl_pct | abs) }} %</span>
-  {% endif %}
+  <div class="tr-total-value" id="val-main">${{ "%.2f"|format(total_current) }}</div>
+  <span class="tr-total-change {% if total_pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}"
+        id="val-change">
+    {% if total_pnl_pct >= 0 %}▲{% else %}▼{% endif %}
+    {{ "%.2f"|format(total_pnl_pct | abs) }} %
+  </span>
 </div>
 
 <!-- ── TAB: Portfolio ─────────────────────────────── -->
@@ -102,6 +103,43 @@
   </div>
   {% endif %}
 
+</div>
+
+<!-- ── TAB: Cash ─────────────────────────────────── -->
+<div id="panel-cash" class="tab-panel">
+  <div style="margin:32px 0 24px;">
+    <div class="tr-total-label" style="margin-bottom:6px;">Verfügbares Guthaben</div>
+    <div style="font-size:3rem;font-weight:700;">${{ "%.2f"|format(user.balance) }}</div>
+  </div>
+
+  <div style="background:#111;border-radius:16px;padding:20px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+      <span class="tr-sub">Startkapital</span>
+      <span style="font-weight:600;">$10.000,00</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1a1a1a;">
+      <span class="tr-sub">Investiert</span>
+      <span style="font-weight:600;">${{ "%.2f"|format(total_invested) }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;">
+      <span class="tr-sub">Noch verfügbar</span>
+      <span style="font-weight:700;font-size:1.05rem;">${{ "%.2f"|format(user.balance) }}</span>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  {% set spent_pct = ((10000 - user.balance) / 10000 * 100) | round(1) %}
+  <div class="tr-sub" style="margin-bottom:8px;">{{ spent_pct }}% investiert</div>
+  <div style="height:6px;background:#111;border-radius:6px;overflow:hidden;">
+    <div style="height:100%;width:{{ spent_pct }}%;background:#fff;border-radius:6px;
+                transition:width .6s ease;"></div>
+  </div>
+
+  <div class="tr-actions" style="margin-top:32px;">
+    <a href="/search" class="tr-btn-primary">
+      <span>Investieren</span><span>🔍</span>
+    </a>
+  </div>
 </div>
 
 <!-- ── TAB: Diversifizierung ─────────────────────── -->
@@ -182,23 +220,25 @@
     "#79c0ff","#56d364","#ffb86c","#bc8cff","#ff7b72",
   ];
 
-  // ── Sparkline: $10.000 → aktueller Wert ───────────
-  const portfolioValue = {{ portfolio_value }};
-  const sparkCtx = document.getElementById("sparkChart").getContext("2d");
+  // ── Sparkline: Einstiegswert → aktueller Investmentwert ──
+  const totalInvested = {{ total_invested }};
+  const totalCurrent  = {{ total_current }};
+  const cashBalance   = {{ user.balance }};
+  const isUp          = totalCurrent >= totalInvested;
 
+  const sparkCtx = document.getElementById("sparkChart").getContext("2d");
   new Chart(sparkCtx, {
     type: "line",
     data: {
-      labels: ["Start", "Jetzt"],
+      labels: ["Einstieg", "Jetzt"],
       datasets: [{
-        data: [10000, portfolioValue],
-        borderColor: portfolioValue >= 10000 ? "#30d158" : "#ff453a",
+        data: [totalInvested || 10000, totalCurrent || 10000],
+        borderColor: isUp ? "#30d158" : "#ff453a",
         borderWidth: 2.5,
         pointRadius: [0, 4],
-        pointBackgroundColor: portfolioValue >= 10000 ? "#30d158" : "#ff453a",
+        pointBackgroundColor: isUp ? "#30d158" : "#ff453a",
         fill: true,
-        backgroundColor: portfolioValue >= 10000
-          ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)",
+        backgroundColor: isUp ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)",
         tension: 0.4,
       }]
     },
@@ -213,16 +253,15 @@
       beforeDraw(chart) {
         const { ctx, scales: { y, x } } = chart;
         if (!y || !x) return;
-        const yPos = y.getPixelForValue(10000);
+        const baseline = totalInvested || 10000;
+        const yPos = y.getPixelForValue(baseline);
         ctx.save();
         ctx.setLineDash([4, 6]);
         ctx.strokeStyle = "rgba(255,255,255,0.15)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(x.left, yPos);
-        ctx.lineTo(x.right, yPos);
-        ctx.stroke();
-        ctx.restore();
+        ctx.moveTo(x.left, yPos); ctx.lineTo(x.right, yPos);
+        ctx.stroke(); ctx.restore();
       }
     }]
   });
@@ -278,11 +317,23 @@
   }
 
   // ── Tab switching ──────────────────────────────────
+  const tabMeta = {
+    portfolio:       { label: "Investiert",  value: `$${totalCurrent.toFixed(2)}`,  change: true },
+    diversifizierung:{ label: "Gesamt",      value: `${{ "%.2f"|format(portfolio_value) }}`, change: false },
+    cash:            { label: "Verfügbar",   value: `$${cashBalance.toFixed(2)}`,   change: false },
+  };
+
   function switchTab(btn, panelId) {
     document.querySelectorAll(".tr-tab").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("panel-" + panelId).classList.add("active");
+
+    const meta = tabMeta[panelId];
+    document.getElementById("val-label").textContent = meta.label;
+    document.getElementById("val-main").textContent  = meta.value;
+    document.getElementById("val-change").style.display = meta.change ? "" : "none";
+
     if (panelId === "diversifizierung") buildDonut();
   }
 
