@@ -5,5 +5,4 @@ jinja2
 python-multipart
 python-dotenv
 google-api-python-client
-passlib[bcrypt]
 itsdangerous

@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -20,7 +19,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Content Market")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
 templates = Jinja2Templates(directory="templates")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+DEMO_PASSWORD = "demo"  # placeholder: jeder nutzt dieses Passwort
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -108,9 +108,9 @@ async def register(
 ):
     if db.query(models.User).filter(models.User.username == username).first():
         return templates.TemplateResponse(
-            "register.html", {"request": request, "error": "Username already taken"}
+            "register.html", {"request": request, "error": "Username bereits vergeben"}
         )
-    user = models.User(username=username, password_hash=pwd_context.hash(password))
+    user = models.User(username=username, password_hash=DEMO_PASSWORD)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -131,9 +131,9 @@ async def login(
     db: Session = Depends(get_db),
 ):
     user = db.query(models.User).filter(models.User.username == username).first()
-    if not user or not pwd_context.verify(password, user.password_hash):
+    if not user or password != DEMO_PASSWORD:
         return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Invalid username or password"}
+            "login.html", {"request": request, "error": "Falsches Passwort (Tipp: demo)"}
         )
     request.session["user_id"] = user.id
     return RedirectResponse("/", status_code=302)
