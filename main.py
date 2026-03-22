@@ -292,12 +292,24 @@ async def portfolio_page(request: Request, db: Session = Depends(get_db)):
     total_pnl_pct = round(total_pnl / total_invested * 100, 2) if total_invested else 0
     portfolio_value = round(user.balance + total_current, 2)
 
-    # Chart data
-    chart_labels = [h["video"].title[:30] for h in holdings_data]
-    chart_values = [h["current_val"] for h in holdings_data]
-    if user.balance > 0:
-        chart_labels.append("Cash")
-        chart_values.append(round(user.balance, 2))
+    # Build portfolio value sparkline from video price history
+    # Collect all timestamps across all held videos
+    from collections import defaultdict
+    ts_values: dict = defaultdict(float)
+    for item in holdings_data:
+        for stat in item["video"].stats:
+            key = stat.recorded_at.strftime("%d.%m %H:%M")
+            ts_values[key] += item["shares"] * stat.price_at_time
+    # Add balance to every timestamp
+    for k in ts_values:
+        ts_values[k] = round(ts_values[k] + user.balance, 2)
+    # Sort by time and take last 30 points
+    sorted_ts = sorted(ts_values.items())[-30:]
+    # If only one point or none, pad with start value
+    if not sorted_ts:
+        sorted_ts = [("Jetzt", portfolio_value)]
+    spark_labels = [t for t, _ in sorted_ts]
+    spark_values = [v for _, v in sorted_ts]
 
     return templates.TemplateResponse("portfolio.html", {
         "request": request, "user": user,
@@ -307,8 +319,8 @@ async def portfolio_page(request: Request, db: Session = Depends(get_db)):
         "total_pnl": total_pnl,
         "total_pnl_pct": total_pnl_pct,
         "portfolio_value": portfolio_value,
-        "chart_labels": chart_labels,
-        "chart_values": chart_values,
+        "spark_labels": spark_labels,
+        "spark_values": spark_values,
     })
 
 

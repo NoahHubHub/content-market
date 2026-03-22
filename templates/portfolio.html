@@ -1,190 +1,242 @@
 {% extends "base.html" %}
 {% block title %}Portfolio — Content Market{% endblock %}
+
 {% block content %}
+<style>
+  /* Page overrides — pure black like Trade Republic */
+  body { background: #000 !important; }
+  .navbar { background: #000 !important; border-bottom: none !important; }
 
-<h4 class="fw-bold mb-4">Mein Portfolio</h4>
+  .tr-tabs { display: flex; gap: 24px; margin-bottom: 4px; }
+  .tr-tab  { font-size: 1.05rem; font-weight: 600; color: #555; cursor: pointer; padding-bottom: 2px; border: none; background: none; }
+  .tr-tab.active { color: #fff; }
 
-<!-- Summary cards -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card p-3 text-center">
-      <div class="text-secondary mb-1" style="font-size:.8rem;">Gesamtwert</div>
-      <div class="fs-5 fw-bold">${{ "%.2f"|format(portfolio_value) }}</div>
-    </div>
+  .tr-total-label { font-size: .8rem; color: #555; margin-bottom: 2px; letter-spacing: .03em; }
+  .tr-total-value { font-size: 2.4rem; font-weight: 700; color: #fff; line-height: 1.1; }
+  .tr-total-change { font-size: .9rem; font-weight: 500; margin-left: 8px; }
+  .tr-up   { color: #fff; }
+  .tr-down { color: #ff453a; }
+
+  .tr-timerange { display: flex; gap: 0; margin: 20px 0 0; border-bottom: 1px solid #1a1a1a; }
+  .tr-tr-btn { background: none; border: none; color: #555; font-size: .85rem; font-weight: 600;
+    padding: 6px 16px 10px; cursor: pointer; position: relative; }
+  .tr-tr-btn.active { color: #fff; }
+  .tr-tr-btn.active::after { content: ""; position: absolute; bottom: -1px; left: 16px;
+    right: 16px; height: 2px; background: #fff; border-radius: 2px; }
+
+  /* Chart wrapper */
+  .tr-chart-wrap { position: relative; width: 100%; margin: 0 -12px; padding: 0; width: calc(100% + 24px); }
+
+  /* Section header */
+  .tr-section { display: flex; justify-content: space-between; align-items: center; margin: 36px 0 16px; }
+  .tr-section h2 { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
+  .tr-section span { font-size: .85rem; color: #555; }
+
+  /* Investment row */
+  .tr-item { display: flex; align-items: center; gap: 14px; padding: 14px 0;
+    border-bottom: 1px solid #111; text-decoration: none; }
+  .tr-item:last-child { border-bottom: none; }
+  .tr-item-icon { width: 44px; height: 44px; border-radius: 10px; object-fit: cover;
+    flex-shrink: 0; background: #1a1a1a; }
+  .tr-item-icon-placeholder { width: 44px; height: 44px; border-radius: 10px;
+    background: #1a1a1a; flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; font-size: .7rem; color: #555; }
+  .tr-item-body { flex: 1; min-width: 0; }
+  .tr-item-title { font-size: .9rem; font-weight: 600; color: #fff; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .tr-item-sub { font-size: .8rem; color: #555; margin-top: 2px; }
+  .tr-item-pnl { font-size: .9rem; font-weight: 600; flex-shrink: 0; }
+  .tr-item-pnl.up { color: #30d158; }
+  .tr-item-pnl.up::before { content: "▲ "; font-size: .7rem; }
+  .tr-item-pnl.down { color: #ff453a; }
+  .tr-item-pnl.down::before { content: "▼ "; font-size: .7rem; }
+
+  /* Bottom action buttons */
+  .tr-actions { display: flex; gap: 12px; margin-top: 40px; padding-bottom: 20px; }
+  .tr-btn { flex: 1; background: #fff; color: #000; border: none; border-radius: 14px;
+    padding: 16px 20px; font-size: .95rem; font-weight: 600; display: flex;
+    align-items: center; justify-content: space-between; cursor: pointer; }
+  .tr-btn:hover { background: #e5e5e5; }
+
+  /* Avatar */
+  .tr-avatar { width: 36px; height: 36px; border-radius: 50%; background: #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; font-weight: 700; color: #fff; position: relative; }
+  .tr-avatar-dot { position: absolute; top: 1px; right: 1px; width: 8px; height: 8px;
+    background: #0a84ff; border-radius: 50%; border: 2px solid #000; }
+
+  /* Empty state */
+  .tr-empty { text-align: center; padding: 60px 0; color: #333; }
+  .tr-empty h3 { color: #555; font-weight: 600; margin-top: 12px; }
+  .tr-empty p { color: #333; font-size: .9rem; }
+</style>
+
+<!-- Top bar -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="tr-tabs">
+    <button class="tr-tab active">Portfolio</button>
+    <button class="tr-tab">Cash</button>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card p-3 text-center">
-      <div class="text-secondary mb-1" style="font-size:.8rem;">Barguthaben</div>
-      <div class="fs-5 fw-bold">${{ "%.2f"|format(user.balance) }}</div>
-    </div>
+  <div class="tr-avatar">
+    {{ user.username[0] | upper }}
+    <div class="tr-avatar-dot"></div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card p-3 text-center">
-      <div class="text-secondary mb-1" style="font-size:.8rem;">Investiert</div>
-      <div class="fs-5 fw-bold">${{ "%.2f"|format(total_invested) }}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card p-3 text-center">
-      <div class="text-secondary mb-1" style="font-size:.8rem;">Unreal. P&L</div>
-      <div class="fs-5 fw-bold {% if total_pnl >= 0 %}price-up{% else %}price-down{% endif %}">
-        {% if total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(total_pnl) }}
-        <span style="font-size:.8rem;">({{ total_pnl_pct }}%)</span>
-      </div>
-    </div>
-  </div>
+</div>
+
+<!-- Total value -->
+<div class="tr-total-label">Insgesamt</div>
+<div class="d-flex align-items-baseline flex-wrap gap-1">
+  <div class="tr-total-value">${{ "%.2f"|format(portfolio_value) }}</div>
+  {% if total_pnl_pct >= 0 %}
+  <span class="tr-total-change tr-up">▲ {{ "%.2f"|format(total_pnl_pct) }} %</span>
+  {% else %}
+  <span class="tr-total-change tr-down">▼ {{ "%.2f"|format(total_pnl_pct | abs) }} %</span>
+  {% endif %}
+</div>
+
+<!-- Time range tabs -->
+<div class="tr-timerange">
+  {% for label in ["1T", "1W", "1M", "1J", "Max"] %}
+  <button class="tr-tr-btn {% if loop.first %}active{% endif %}" onclick="switchRange(this)">{{ label }}</button>
+  {% endfor %}
+</div>
+
+<!-- Chart -->
+<div class="tr-chart-wrap" style="height:160px;">
+  <canvas id="sparkChart" style="width:100%;height:160px;"></canvas>
+</div>
+
+<!-- Investments section -->
+<div class="tr-section">
+  <h2>Investments</h2>
+  <span>Seit Kauf ▾</span>
 </div>
 
 {% if holdings_data %}
-
-<!-- Charts row -->
-<div class="row g-4 mb-4">
-
-  <!-- Donut chart: allocation -->
-  <div class="col-md-5">
-    <div class="card p-3 h-100">
-      <h6 class="fw-semibold mb-3 text-secondary">Allocation</h6>
-      <div style="position:relative;max-height:280px;">
-        <canvas id="donutChart"></canvas>
-      </div>
+<div>
+  {% for item in holdings_data %}
+  <a href="/video/{{ item.youtube_id }}" class="tr-item">
+    {% if item.video.thumbnail_url %}
+    <img src="{{ item.video.thumbnail_url }}" class="tr-item-icon" />
+    {% else %}
+    <div class="tr-item-icon-placeholder">📺</div>
+    {% endif %}
+    <div class="tr-item-body">
+      <div class="tr-item-title">{{ item.video.title[:50] }}{% if item.video.title|length > 50 %}…{% endif %}</div>
+      <div class="tr-item-sub">${{ "%.2f"|format(item.current_val) }}</div>
     </div>
-  </div>
-
-  <!-- Bar chart: P&L per position -->
-  <div class="col-md-7">
-    <div class="card p-3 h-100">
-      <h6 class="fw-semibold mb-3 text-secondary">P&L pro Position</h6>
-      <div style="position:relative;max-height:280px;">
-        <canvas id="pnlChart"></canvas>
-      </div>
+    <div class="tr-item-pnl {% if item.pnl_pct >= 0 %}up{% else %}down{% endif %}">
+      {{ "%.2f"|format(item.pnl_pct | abs) }} %
     </div>
-  </div>
-
-</div>
-
-<!-- Holdings table -->
-<h5 class="fw-semibold mb-3">Positionen</h5>
-<div class="table-responsive mb-4">
-  <table class="table table-dark table-hover align-middle">
-    <thead class="text-secondary" style="font-size:.85rem;">
-      <tr>
-        <th>Video</th>
-        <th class="text-end">Anteile</th>
-        <th class="text-end">Ø Kaufpreis</th>
-        <th class="text-end">Kurs</th>
-        <th class="text-end">Wert</th>
-        <th class="text-end">P&L</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in holdings_data %}
-      <tr>
-        <td>
-          <div class="d-flex align-items-center gap-2">
-            <img src="{{ item.video.thumbnail_url }}" width="56" height="32" style="object-fit:cover;border-radius:4px;" />
-            <div>
-              <a href="/video/{{ item.youtube_id }}" class="text-white" style="font-size:.85rem;">
-                {{ item.video.title[:45] }}{% if item.video.title|length > 45 %}…{% endif %}
-              </a>
-              <div class="text-secondary" style="font-size:.75rem;">{{ item.video.channel_name }}</div>
-            </div>
-          </div>
-        </td>
-        <td class="text-end">{{ "%.2f"|format(item.shares) }}</td>
-        <td class="text-end">${{ "%.2f"|format(item.avg_cost) }}</td>
-        <td class="text-end">${{ "%.2f"|format(item.video.current_price) }}</td>
-        <td class="text-end fw-bold">${{ "%.2f"|format(item.current_val) }}</td>
-        <td class="text-end {% if item.pnl >= 0 %}price-up{% else %}price-down{% endif %}">
-          {% if item.pnl >= 0 %}+{% endif %}{{ "%.2f"|format(item.pnl_pct) }}%
-        </td>
-        <td><a href="/video/{{ item.youtube_id }}" class="btn btn-sm btn-outline-secondary">→</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  </a>
+  {% endfor %}
 </div>
 
 {% else %}
-<div class="text-center py-5 text-secondary">
-  <p class="fs-1 mb-2">📭</p>
-  <h5>Noch keine Positionen</h5>
+<div class="tr-empty">
+  <div style="font-size:2.5rem;">📺</div>
+  <h3>Noch keine Investments</h3>
   <p>Suche ein YouTube Video und investiere dein Startkapital.</p>
-  <a href="/search" class="btn btn-buy mt-2">Video suchen →</a>
 </div>
 {% endif %}
+
+<!-- Bottom actions -->
+<div class="tr-actions">
+  <a href="/search" class="tr-btn" style="text-decoration:none;">
+    <span>Suche</span>
+    <span>🔍</span>
+  </a>
+  <a href="/" class="tr-btn" style="text-decoration:none;">
+    <span>Markt</span>
+    <span>›</span>
+  </a>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
-{% if holdings_data %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  const labels = {{ chart_labels | tojson }};
-  const values = {{ chart_values | tojson }};
+  const sparkLabels = {{ spark_labels | tojson }};
+  const sparkValues = {{ spark_values | tojson }};
+  const startVal    = sparkValues.length > 0 ? sparkValues[0] : 10000;
+  const endVal      = sparkValues.length > 0 ? sparkValues[sparkValues.length - 1] : 10000;
+  const isUp        = endVal >= startVal;
 
-  // Colour palette
-  const palette = [
-    "#58a6ff","#3fb950","#f78166","#d2a8ff","#ffa657",
-    "#79c0ff","#56d364","#ff7b72","#bc8cff","#ffb86c",
-    "#8b949e","#6e7681","#484f58","#30363d","#21262d",
-  ];
+  // Pad to at least 2 points so chart renders
+  const labels = sparkLabels.length > 1 ? sparkLabels : ["Start", "Jetzt"];
+  const values = sparkValues.length > 1 ? sparkValues : [10000, endVal];
 
-  // Donut chart
-  new Chart(document.getElementById("donutChart"), {
-    type: "doughnut",
+  const ctx = document.getElementById("sparkChart").getContext("2d");
+
+  new Chart(ctx, {
+    type: "line",
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         data: values,
-        backgroundColor: palette.slice(0, labels.length),
-        borderColor: "#0d1117",
+        borderColor: "#fff",
         borderWidth: 2,
-        hoverOffset: 8,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: "#fff",
+        fill: false,
+        tension: 0.3,
       }]
     },
     options: {
-      cutout: "65%",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600, easing: "easeInOutQuart" },
+      interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: {
-          position: "bottom",
-          labels: { color: "#8b949e", font: { size: 11 }, boxWidth: 12, padding: 10 }
-        },
+        legend: { display: false },
         tooltip: {
-          callbacks: {
-            label: ctx => ` $${ctx.parsed.toFixed(2)} (${(ctx.parsed / values.reduce((a,b)=>a+b,0)*100).toFixed(1)}%)`
-          }
+          backgroundColor: "#000",
+          borderColor: "#333",
+          borderWidth: 1,
+          titleColor: "#555",
+          bodyColor: "#fff",
+          callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)}` }
         }
-      }
-    }
-  });
-
-  // P&L bar chart (excluding Cash)
-  const pnlLabels = {{ holdings_data | map(attribute='video') | map(attribute='title') | list | tojson }};
-  const pnlValues = {{ holdings_data | map(attribute='pnl') | list | tojson }};
-  const pnlColors = pnlValues.map(v => v >= 0 ? "rgba(63,185,80,.8)" : "rgba(248,81,73,.8)");
-
-  new Chart(document.getElementById("pnlChart"), {
-    type: "bar",
-    data: {
-      labels: pnlLabels.map(l => l.length > 25 ? l.slice(0,25)+"…" : l),
-      datasets: [{
-        data: pnlValues,
-        backgroundColor: pnlColors,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
+      },
       scales: {
-        x: { ticks: { color: "#8b949e", font: { size: 11 } }, grid: { color: "#21262d" } },
+        x: { display: false },
         y: {
-          ticks: { color: "#8b949e", callback: v => "$" + v.toFixed(2) },
-          grid: { color: "#21262d" }
+          display: true,
+          position: "right",
+          grid: {
+            drawBorder: false,
+            color: ctx => ctx.tick.value === Math.min(...values) ? "rgba(255,255,255,0.15)" : "transparent",
+          },
+          ticks: { display: false },
+          border: { display: false },
         }
       }
-    }
+    },
+    plugins: [{
+      // Dashed baseline at start value
+      id: "baseline",
+      beforeDraw(chart) {
+        const { ctx, scales: { y, x } } = chart;
+        if (!y || !x) return;
+        const yPos = y.getPixelForValue(startVal);
+        ctx.save();
+        ctx.setLineDash([4, 6]);
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x.left, yPos);
+        ctx.lineTo(x.right, yPos);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }]
   });
+
+  function switchRange(btn) {
+    document.querySelectorAll(".tr-tr-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
 </script>
-{% endif %}
 {% endblock %}
