@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} — Content Market{% endblock %}
+{% block content %}
+
+{% if msg == "bought" %}
+<div class="alert alert-success alert-dismissible py-2">✅ Kauf erfolgreich! <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% elif msg == "sold" %}
+<div class="alert alert-success alert-dismissible py-2">✅ Verkauf erfolgreich! <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% elif msg == "refreshed" %}
+<div class="alert alert-info alert-dismissible py-2">🔄 Kurs aktualisiert. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% elif err == "insufficient_funds" %}
+<div class="alert alert-danger alert-dismissible py-2">❌ Nicht genug Guthaben. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% elif err == "insufficient_shares" %}
+<div class="alert alert-danger alert-dismissible py-2">❌ Nicht genug Anteile. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Left: Video info -->
+  <div class="col-lg-8">
+    <div class="card p-3 mb-4">
+      <img src="{{ video.thumbnail_url }}" class="rounded mb-3" style="width:100%;max-height:340px;object-fit:cover;" />
+      <h5 class="fw-bold mb-1">{{ video.title }}</h5>
+      <p class="text-secondary mb-2">
+        <i class="bi bi-person-circle"></i> {{ video.channel_name }}
+        &nbsp;·&nbsp;
+        <a href="https://youtube.com/watch?v={{ video.youtube_id }}" target="_blank" class="text-secondary">
+          <i class="bi bi-youtube"></i> YouTube öffnen
+        </a>
+      </p>
+
+      {% if last_stat %}
+      <div class="row text-center g-2 mb-3">
+        <div class="col-4">
+          <div class="card py-2">
+            <div class="fw-bold">{{ last_stat.view_count|fmt }}</div>
+            <div class="text-secondary" style="font-size:.8rem;">Views</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="card py-2">
+            <div class="fw-bold">{{ last_stat.like_count|fmt }}</div>
+            <div class="text-secondary" style="font-size:.8rem;">Likes</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="card py-2">
+            <div class="fw-bold">{{ info.views_per_day|int|fmt }}</div>
+            <div class="text-secondary" style="font-size:.8rem;">Views/Tag</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Price Chart -->
+      {% if price_history|length > 1 %}
+      <canvas id="priceChart" height="80"></canvas>
+      {% else %}
+      <div class="text-secondary text-center py-3" style="font-size:.85rem;">
+        Noch kein Kursverlauf — klick "Kurs aktualisieren" um mehr Datenpunkte zu sammeln.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right: Trade panel -->
+  <div class="col-lg-4">
+
+    <!-- Current price -->
+    <div class="card p-3 mb-3">
+      <div class="text-secondary mb-1" style="font-size:.85rem;">Aktueller Kurs</div>
+      <div class="fs-2 fw-bold mb-1">${{ "%.2f"|format(video.current_price) }}</div>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="badge badge-{{ info.risk_color }} rounded-pill">{{ info.risk }} Risk</span>
+        {% if info.momentum_pct > 0 %}
+        <span class="price-up"><i class="bi bi-arrow-up-short"></i>{{ info.momentum_pct }}% Momentum</span>
+        {% elif info.momentum_pct < 0 %}
+        <span class="price-down"><i class="bi bi-arrow-down-short"></i>{{ info.momentum_pct }}% Momentum</span>
+        {% else %}
+        <span class="text-secondary">stabil</span>
+        {% endif %}
+      </div>
+      <form method="post" action="/refresh/{{ video.youtube_id }}" class="mt-2">
+        <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+          <i class="bi bi-arrow-clockwise"></i> Kurs aktualisieren
+        </button>
+      </form>
+    </div>
+
+    <!-- Buy -->
+    <div class="card p-3 mb-3">
+      <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle text-success"></i> Kaufen</h6>
+      <form method="post" action="/buy/{{ video.youtube_id }}" id="buyForm">
+        <div class="mb-2">
+          <label class="form-label text-secondary" style="font-size:.85rem;">Anteile</label>
+          <input type="number" name="shares" class="form-control" min="0.1" step="0.1" value="1" id="buyShares" required />
+        </div>
+        <div class="text-secondary mb-3" style="font-size:.85rem;">
+          Kosten: <span id="buyCost" class="fw-bold text-white">${{ "%.2f"|format(video.current_price) }}</span>
+          &nbsp;·&nbsp; Guthaben: ${{ "%.2f"|format(user.balance) }}
+        </div>
+        <button type="submit" class="btn btn-buy w-100">Kaufen</button>
+      </form>
+    </div>
+
+    <!-- Sell (only if user has holdings) -->
+    {% if holding and holding.shares > 0 %}
+    <div class="card p-3 mb-3">
+      <h6 class="fw-bold mb-1"><i class="bi bi-dash-circle text-danger"></i> Verkaufen</h6>
+      <p class="text-secondary mb-2" style="font-size:.85rem;">
+        Du besitzt {{ "%.2f"|format(holding.shares) }} Anteile
+        (Ø ${{ "%.2f"|format(holding.avg_cost_basis) }})
+      </p>
+      {% set pnl = (video.current_price - holding.avg_cost_basis) / holding.avg_cost_basis * 100 %}
+      <p class="mb-2" style="font-size:.85rem;">
+        Unrealisierter P&L:
+        <span class="{% if pnl >= 0 %}price-up{% else %}price-down{% endif %} fw-bold">
+          {{ "%.2f"|format(pnl) }}%
+        </span>
+      </p>
+      <form method="post" action="/sell/{{ video.youtube_id }}" id="sellForm">
+        <div class="mb-2">
+          <label class="form-label text-secondary" style="font-size:.85rem;">Anteile verkaufen</label>
+          <input type="number" name="shares" class="form-control" min="0.1" step="0.1" value="1" max="{{ holding.shares }}" id="sellShares" required />
+        </div>
+        <div class="text-secondary mb-3" style="font-size:.85rem;">
+          Erlös: <span id="sellRevenue" class="fw-bold text-white">${{ "%.2f"|format(video.current_price) }}</span>
+        </div>
+        <button type="submit" class="btn btn-sell w-100">Verkaufen</button>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const price = {{ video.current_price }};
+
+  // Buy cost preview
+  const buyShares = document.getElementById("buyShares");
+  const buyCost   = document.getElementById("buyCost");
+  if (buyShares) {
+    buyShares.addEventListener("input", () => {
+      buyCost.textContent = "$" + (parseFloat(buyShares.value || 0) * price).toFixed(2);
+    });
+  }
+
+  // Sell revenue preview
+  const sellShares  = document.getElementById("sellShares");
+  const sellRevenue = document.getElementById("sellRevenue");
+  if (sellShares) {
+    sellShares.addEventListener("input", () => {
+      sellRevenue.textContent = "$" + (parseFloat(sellShares.value || 0) * price).toFixed(2);
+    });
+  }
+
+  // Price chart
+  {% if price_history|length > 1 %}
+  const history = {{ price_history | tojson }};
+  const ctx = document.getElementById("priceChart").getContext("2d");
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: history.map(h => h.t),
+      datasets: [{
+        data: history.map(h => h.p),
+        borderColor: "#58a6ff",
+        backgroundColor: "rgba(88,166,255,.1)",
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#8b949e", maxTicksLimit: 6 }, grid: { color: "#21262d" } },
+        y: { ticks: { color: "#8b949e", callback: v => "$" + v.toFixed(2) }, grid: { color: "#21262d" } }
+      }
+    }
+  });
+  {% endif %}
+</script>
+{% endblock %}

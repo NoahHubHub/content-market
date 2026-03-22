@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Login — Content Market{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card p-4">
+      <h4 class="mb-4 fw-bold">Anmelden</h4>
+      {% if error %}
+      <div class="alert alert-danger py-2">{{ error }}</div>
+      {% endif %}
+      <form method="post" action="/login">
+        <div class="mb-3">
+          <label class="form-label text-secondary">Username</label>
+          <input name="username" type="text" class="form-control" required autofocus />
+        </div>
+        <div class="mb-4">
+          <label class="form-label text-secondary">Passwort</label>
+          <input name="password" type="password" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-buy w-100">Einloggen</button>
+      </form>
+      <hr />
+      <p class="text-center text-secondary mb-0">
+        Noch kein Account? <a href="/register">Registrieren</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

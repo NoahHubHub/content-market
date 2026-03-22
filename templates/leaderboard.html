@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — Content Market{% endblock %}
+{% block content %}
+
+<h4 class="fw-bold mb-1">Leaderboard</h4>
+<p class="text-secondary mb-4">Wer hat aus $10.000 am meisten gemacht?</p>
+
+<div class="table-responsive">
+  <table class="table table-dark align-middle">
+    <thead class="text-secondary" style="font-size:.85rem;">
+      <tr>
+        <th width="50">Rang</th>
+        <th>Nutzer</th>
+        <th class="text-end">Portfoliowert</th>
+        <th class="text-end">Return</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in board %}
+      <tr {% if item.user.id == user.id %}style="background:rgba(88,166,255,.08);"{% endif %}>
+        <td>
+          {% if loop.index == 1 %}🥇
+          {% elif loop.index == 2 %}🥈
+          {% elif loop.index == 3 %}🥉
+          {% else %}<span class="text-secondary">{{ loop.index }}</span>
+          {% endif %}
+        </td>
+        <td class="fw-semibold">
+          {{ item.user.username }}
+          {% if item.user.id == user.id %}
+          <span class="badge bg-secondary ms-1" style="font-size:.7rem;">Du</span>
+          {% endif %}
+        </td>
+        <td class="text-end fw-bold">${{ "%.2f"|format(item.portfolio_value) }}</td>
+        <td class="text-end {% if item.return_pct >= 0 %}price-up{% else %}price-down{% endif %} fw-bold">
+          {% if item.return_pct >= 0 %}+{% endif %}{{ "%.2f"|format(item.return_pct) }}%
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
