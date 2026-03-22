@@ -1,11 +1,12 @@
 import os
 import secrets
+import traceback
 from datetime import datetime
 from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import bcrypt
 from sqlalchemy.orm import Session
@@ -72,6 +73,13 @@ def fmt(n):
 
 
 templates.env.filters["fmt"] = fmt
+
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    print(f"[ERROR] {request.method} {request.url}\n{tb}", flush=True)
+    return PlainTextResponse(f"500 – {type(exc).__name__}: {exc}\n\n{tb}", status_code=500)
 
 
 # ── video helpers ─────────────────────────────────────────────────────────────
