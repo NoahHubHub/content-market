@@ -1,44 +1,49 @@
 {% extends "base.html" %}
-{% block title %}Leaderboard — Content Market{% endblock %}
+{% block title %}Rangliste — Content Market{% endblock %}
 {% block content %}
 
-<h4 class="fw-bold mb-1">Leaderboard</h4>
-<p class="text-secondary mb-4">Wer hat aus $10.000 am meisten gemacht?</p>
+<div style="margin-bottom:28px;">
+  <div class="tr-label" style="margin-bottom:4px;">Wettbewerb</div>
+  <div class="tr-title">Rangliste</div>
+  <div class="tr-sub" style="margin-top:4px;">Wer macht aus $10.000 am meisten?</div>
+</div>
 
-<div class="table-responsive">
-  <table class="table table-dark align-middle">
-    <thead class="text-secondary" style="font-size:.85rem;">
-      <tr>
-        <th width="50">Rang</th>
-        <th>Nutzer</th>
-        <th class="text-end">Portfoliowert</th>
-        <th class="text-end">Return</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in board %}
-      <tr {% if item.user.id == user.id %}style="background:rgba(88,166,255,.08);"{% endif %}>
-        <td>
-          {% if loop.index == 1 %}🥇
-          {% elif loop.index == 2 %}🥈
-          {% elif loop.index == 3 %}🥉
-          {% else %}<span class="text-secondary">{{ loop.index }}</span>
-          {% endif %}
-        </td>
-        <td class="fw-semibold">
-          {{ item.user.username }}
-          {% if item.user.id == user.id %}
-          <span class="badge bg-secondary ms-1" style="font-size:.7rem;">Du</span>
-          {% endif %}
-        </td>
-        <td class="text-end fw-bold">${{ "%.2f"|format(item.portfolio_value) }}</td>
-        <td class="text-end {% if item.return_pct >= 0 %}price-up{% else %}price-down{% endif %} fw-bold">
-          {% if item.return_pct >= 0 %}+{% endif %}{{ "%.2f"|format(item.return_pct) }}%
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div>
+  {% for item in board %}
+  <div class="tr-row" style="{% if item.user.id is defined and item.user.id == user.id %}background:rgba(255,255,255,.03);border-radius:12px;padding:14px 12px;margin:0 -12px;{% endif %}">
+    <div style="width:32px;text-align:center;flex-shrink:0;font-size:1.1rem;">
+      {% if loop.index == 1 %}🥇
+      {% elif loop.index == 2 %}🥈
+      {% elif loop.index == 3 %}🥉
+      {% else %}<span class="tr-sub">{{ loop.index }}</span>
+      {% endif %}
+    </div>
+    <div class="tr-row-body">
+      <div class="tr-row-title">
+        {{ item.username if item.username is defined else item.user.username }}
+        {% if item.username is defined and item.username == user.username %}
+        <span style="font-size:.7rem;color:#555;font-weight:500;margin-left:6px;">Du</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="tr-row-right">
+      <div class="tr-row-price">${{ "%.2f"|format(item.portfolio_value) }}</div>
+      <div class="tr-row-pnl {% if item.return_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+        {% if item.return_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ item.return_pct | abs | round(2) }}%
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="tr-actions" style="margin-top:40px;">
+  <a href="/portfolio" class="tr-btn-primary">
+    <span>Mein Portfolio</span><span>›</span>
+  </a>
+  <a href="/search" class="tr-btn-ghost">
+    <span>Investieren</span><span>🔍</span>
+  </a>
 </div>
 
 {% endblock %}
