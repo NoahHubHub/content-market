@@ -109,9 +109,9 @@
       <h6 class="fw-bold mb-1"><i class="bi bi-dash-circle text-danger"></i> Verkaufen</h6>
       <p class="text-secondary mb-2" style="font-size:.85rem;">
         Du besitzt {{ "%.2f"|format(holding.shares) }} Anteile
-        (Ø ${{ "%.2f"|format(holding.avg_cost_basis) }})
+        (Ø ${{ "%.2f"|format(holding.avg_cost) }})
       </p>
-      {% set pnl = (video.current_price - holding.avg_cost_basis) / holding.avg_cost_basis * 100 %}
+      {% set pnl = (video.current_price - holding.avg_cost) / holding.avg_cost * 100 %}
       <p class="mb-2" style="font-size:.85rem;">
         Unrealisierter P&L:
         <span class="{% if pnl >= 0 %}price-up{% else %}price-down{% endif %} fw-bold">

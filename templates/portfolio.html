@@ -35,8 +35,34 @@
   </div>
 </div>
 
-<!-- Holdings -->
 {% if holdings_data %}
+
+<!-- Charts row -->
+<div class="row g-4 mb-4">
+
+  <!-- Donut chart: allocation -->
+  <div class="col-md-5">
+    <div class="card p-3 h-100">
+      <h6 class="fw-semibold mb-3 text-secondary">Allocation</h6>
+      <div style="position:relative;max-height:280px;">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar chart: P&L per position -->
+  <div class="col-md-7">
+    <div class="card p-3 h-100">
+      <h6 class="fw-semibold mb-3 text-secondary">P&L pro Position</h6>
+      <div style="position:relative;max-height:280px;">
+        <canvas id="pnlChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Holdings table -->
 <h5 class="fw-semibold mb-3">Positionen</h5>
 <div class="table-responsive mb-4">
   <table class="table table-dark table-hover align-middle">
@@ -53,78 +79,112 @@
     </thead>
     <tbody>
       {% for item in holdings_data %}
-      {% set h = item.holding %}
-      {% set v = item.video %}
       <tr>
         <td>
           <div class="d-flex align-items-center gap-2">
-            <img src="{{ v.thumbnail_url }}" width="56" height="32" style="object-fit:cover;border-radius:4px;" />
+            <img src="{{ item.video.thumbnail_url }}" width="56" height="32" style="object-fit:cover;border-radius:4px;" />
             <div>
-              <a href="/video/{{ v.youtube_id }}" class="text-white" style="font-size:.85rem;">
-                {{ v.title[:45] }}{% if v.title|length > 45 %}…{% endif %}
+              <a href="/video/{{ item.youtube_id }}" class="text-white" style="font-size:.85rem;">
+                {{ item.video.title[:45] }}{% if item.video.title|length > 45 %}…{% endif %}
               </a>
-              <div class="text-secondary" style="font-size:.75rem;">{{ v.channel_name }}</div>
+              <div class="text-secondary" style="font-size:.75rem;">{{ item.video.channel_name }}</div>
             </div>
           </div>
         </td>
-        <td class="text-end">{{ "%.2f"|format(h.shares) }}</td>
-        <td class="text-end">${{ "%.2f"|format(h.avg_cost_basis) }}</td>
-        <td class="text-end">${{ "%.2f"|format(v.current_price) }}</td>
+        <td class="text-end">{{ "%.2f"|format(item.shares) }}</td>
+        <td class="text-end">${{ "%.2f"|format(item.avg_cost) }}</td>
+        <td class="text-end">${{ "%.2f"|format(item.video.current_price) }}</td>
         <td class="text-end fw-bold">${{ "%.2f"|format(item.current_val) }}</td>
         <td class="text-end {% if item.pnl >= 0 %}price-up{% else %}price-down{% endif %}">
           {% if item.pnl >= 0 %}+{% endif %}{{ "%.2f"|format(item.pnl_pct) }}%
         </td>
-        <td><a href="/video/{{ v.youtube_id }}" class="btn btn-sm btn-outline-secondary">→</a></td>
+        <td><a href="/video/{{ item.youtube_id }}" class="btn btn-sm btn-outline-secondary">→</a></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
 {% else %}
-<div class="text-center py-4 text-secondary">
-  <p>Noch keine Positionen. <a href="/search">Video suchen und investieren →</a></p>
+<div class="text-center py-5 text-secondary">
+  <p class="fs-1 mb-2">📭</p>
+  <h5>Noch keine Positionen</h5>
+  <p>Suche ein YouTube Video und investiere dein Startkapital.</p>
+  <a href="/search" class="btn btn-buy mt-2">Video suchen →</a>
 </div>
 {% endif %}
 
-<!-- Recent transactions -->
-{% if txns %}
-<h5 class="fw-semibold mb-3">Letzte Transaktionen</h5>
-<div class="table-responsive">
-  <table class="table table-dark align-middle" style="font-size:.85rem;">
-    <thead class="text-secondary">
-      <tr>
-        <th>Typ</th>
-        <th>Video</th>
-        <th class="text-end">Anteile</th>
-        <th class="text-end">Preis</th>
-        <th class="text-end">Gesamt</th>
-        <th class="text-end">Datum</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in txns %}
-      <tr>
-        <td>
-          {% if t.transaction_type == "buy" %}
-          <span class="badge bg-success">Kauf</span>
-          {% else %}
-          <span class="badge bg-danger">Verkauf</span>
-          {% endif %}
-        </td>
-        <td>
-          <a href="/video/{{ t.video.youtube_id }}" class="text-white">
-            {{ t.video.title[:40] }}{% if t.video.title|length > 40 %}…{% endif %}
-          </a>
-        </td>
-        <td class="text-end">{{ "%.2f"|format(t.shares) }}</td>
-        <td class="text-end">${{ "%.2f"|format(t.price_per_share) }}</td>
-        <td class="text-end">${{ "%.2f"|format(t.total_amount) }}</td>
-        <td class="text-end text-secondary">{{ t.executed_at.strftime("%d.%m.%y %H:%M") }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
+{% endblock %}
 
+{% block scripts %}
+{% if holdings_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const labels = {{ chart_labels | tojson }};
+  const values = {{ chart_values | tojson }};
+
+  // Colour palette
+  const palette = [
+    "#58a6ff","#3fb950","#f78166","#d2a8ff","#ffa657",
+    "#79c0ff","#56d364","#ff7b72","#bc8cff","#ffb86c",
+    "#8b949e","#6e7681","#484f58","#30363d","#21262d",
+  ];
+
+  // Donut chart
+  new Chart(document.getElementById("donutChart"), {
+    type: "doughnut",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: palette.slice(0, labels.length),
+        borderColor: "#0d1117",
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      cutout: "65%",
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { color: "#8b949e", font: { size: 11 }, boxWidth: 12, padding: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` $${ctx.parsed.toFixed(2)} (${(ctx.parsed / values.reduce((a,b)=>a+b,0)*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+
+  // P&L bar chart (excluding Cash)
+  const pnlLabels = {{ holdings_data | map(attribute='video') | map(attribute='title') | list | tojson }};
+  const pnlValues = {{ holdings_data | map(attribute='pnl') | list | tojson }};
+  const pnlColors = pnlValues.map(v => v >= 0 ? "rgba(63,185,80,.8)" : "rgba(248,81,73,.8)");
+
+  new Chart(document.getElementById("pnlChart"), {
+    type: "bar",
+    data: {
+      labels: pnlLabels.map(l => l.length > 25 ? l.slice(0,25)+"…" : l),
+      datasets: [{
+        data: pnlValues,
+        backgroundColor: pnlColors,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#8b949e", font: { size: 11 } }, grid: { color: "#21262d" } },
+        y: {
+          ticks: { color: "#8b949e", callback: v => "$" + v.toFixed(2) },
+          grid: { color: "#21262d" }
+        }
+      }
+    }
+  });
+</script>
+{% endif %}
 {% endblock %}
