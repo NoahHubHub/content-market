@@ -31,9 +31,12 @@ templates = Jinja2Templates(directory="templates")
 
 class User:
     """Lightweight user object backed by session — no database needed."""
-    def __init__(self, username: str, balance: float):
+    def __init__(self, username: str, balance: float, portfolio: dict):
         self.username = username
         self.balance = balance
+        self.holdings_count = len(portfolio)
+        self.cost_basis = sum(h["shares"] * h["avg_cost"] for h in portfolio.values())
+        self.estimated_value = round(balance + self.cost_basis, 2)
 
 
 def get_user(request: Request) -> User:
@@ -47,7 +50,8 @@ def get_user(request: Request) -> User:
         request.session["username"] = f"Player_{suffix}"
         request.session["balance"] = 10000.0
         request.session["portfolio"] = {}
-    return User(request.session["username"], request.session["balance"])
+    portfolio = request.session.get("portfolio", {})
+    return User(request.session["username"], request.session["balance"], portfolio)
 
 
 def get_portfolio(request: Request) -> dict:
@@ -135,24 +139,95 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
     return video
 
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def calc_total_portfolio_value(portfolio: dict, balance: float, db: Session) -> float:
+    """Sum balance + market value of all holdings."""
+    total = balance
+    for yt_id, h in portfolio.items():
+        v = db.query(models.Video).filter(models.Video.youtube_id == yt_id).first()
+        if v:
+            total += h["shares"] * v.current_price
+    return round(total, 2)
+
+
+def upsert_leaderboard(username: str, portfolio_value: float, db: Session):
+    return_pct = round((portfolio_value - 10000) / 10000 * 100, 2)
+    entry = db.query(models.LeaderboardEntry).filter_by(username=username).first()
+    if entry:
+        entry.portfolio_value = portfolio_value
+        entry.return_pct = return_pct
+        entry.recorded_at = datetime.utcnow()
+    else:
+        db.add(models.LeaderboardEntry(username=username, portfolio_value=portfolio_value, return_pct=return_pct))
+    db.commit()
+
+
+def record_tx(request: Request, tx_type: str, youtube_id: str, title: str,
+              shares: float, price: float, total: float):
+    txs = request.session.get("transactions", [])
+    txs.append({
+        "type": tx_type,
+        "youtube_id": youtube_id,
+        "title": title[:40],
+        "shares": round(shares, 4),
+        "price": round(price, 2),
+        "total": round(total, 2),
+        "ts": datetime.utcnow().strftime("%d.%m %H:%M"),
+    })
+    request.session["transactions"] = txs[-50:]
+
+
+def record_port_snap(request: Request, portfolio: dict, balance: float):
+    total_cost = sum(h["shares"] * h["avg_cost"] for h in portfolio.values())
+    snaps = request.session.get("port_snaps", [])
+    snaps.append({"ts": datetime.utcnow().strftime("%d.%m %H:%M"), "v": round(total_cost, 2)})
+    request.session["port_snaps"] = snaps[-50:]
+
+
 # ── market ────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request, db: Session = Depends(get_db)):
+async def home(request: Request, sort: str = "new", db: Session = Depends(get_db)):
     user = get_user(request)
-    videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(24).all()
+    videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(48).all()
 
     video_data = []
     for v in videos:
         if not v.stats:
             continue
         last = v.stats[-1]
-        prev = v.stats[-2] if len(v.stats) > 1 else None
-        info = calculate_price(last.view_count, last.like_count, last.comment_count,
-                               v.published_at, prev.view_count if prev else None)
+        info = calculate_price(last.view_count, last.like_count, last.comment_count, v.published_at)
         video_data.append({"video": v, "info": info, "last_stat": last})
 
-    return templates.TemplateResponse("index.html", {"request": request, "user": user, "video_data": video_data})
+    # Trending: top 3 by momentum (RPS vs creator avg)
+    trending = sorted(video_data, key=lambda x: x["info"]["momentum_pct"], reverse=True)[:3]
+
+    # Sort market list
+    if sort == "price_asc":
+        video_data.sort(key=lambda x: x["video"].current_price)
+    elif sort == "price_desc":
+        video_data.sort(key=lambda x: x["video"].current_price, reverse=True)
+    elif sort == "momentum":
+        video_data.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
+    # "new" = default, already ordered by last_updated desc
+
+    portfolio = get_portfolio(request)
+    portfolio_ids = set(portfolio.keys())
+    watchlist = request.session.get("watchlist", [])
+    watchlist_data = []
+    for yt_id in watchlist:
+        wv = db.query(models.Video).filter(models.Video.youtube_id == yt_id).first()
+        if wv and wv.stats:
+            wlast = wv.stats[-1]
+            winfo = calculate_price(wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at)
+            watchlist_data.append({"video": wv, "info": winfo})
+
+    return templates.TemplateResponse("index.html", {
+        "request": request, "user": user,
+        "video_data": video_data, "trending": trending, "sort": sort,
+        "portfolio_ids": portfolio_ids, "watchlist_data": watchlist_data,
+    })
 
 
 @app.get("/search", response_class=HTMLResponse)
@@ -160,6 +235,7 @@ async def search_page(request: Request, q: str = "", db: Session = Depends(get_d
     user = get_user(request)
     results, error = [], None
 
+    portfolio_ids = set(get_portfolio(request).keys())
     if q:
         try:
             vid = extract_video_id(q)
@@ -172,7 +248,8 @@ async def search_page(request: Request, q: str = "", db: Session = Depends(get_d
             error = str(e)
 
     return templates.TemplateResponse("search.html",
-        {"request": request, "user": user, "query": q, "results": results, "error": error})
+        {"request": request, "user": user, "query": q, "results": results,
+         "error": error, "portfolio_ids": portfolio_ids})
 
 
 @app.get("/video/{youtube_id}", response_class=HTMLResponse)
@@ -193,20 +270,47 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
                            video.published_at, channel_videos=channel_vids) if last \
         else {"risk": "Unknown", "risk_color": "secondary", "momentum_pct": 0, "views_per_day": 0, "rps": 1.0}
 
-    price_history = [{"t": s.recorded_at.strftime("%d.%m %H:%M"), "p": s.price_at_time}
-                     for s in video.stats[-30:]]
+    price_history = [{"t": s.recorded_at.strftime("%d.%m %H:%M"), "p": s.price_at_time,
+                      "ts": s.recorded_at.timestamp()}
+                     for s in video.stats]
 
     # holding from session
     portfolio = get_portfolio(request)
     holding = portfolio.get(youtube_id)
 
+    # related videos from same channel
+    related = []
+    if video.channel_id:
+        related = (db.query(models.Video)
+                   .filter(models.Video.channel_id == video.channel_id,
+                           models.Video.youtube_id != youtube_id)
+                   .order_by(models.Video.current_price.desc())
+                   .limit(5).all())
+
+    watchlist = request.session.get("watchlist", [])
+    is_watching = youtube_id in watchlist
+
     return templates.TemplateResponse("video.html", {
         "request": request, "user": user, "video": video,
         "last_stat": last, "info": info, "price_history": price_history,
-        "holding": holding,
+        "holding": holding, "related": related, "is_watching": is_watching,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
     })
+
+
+@app.post("/watch/{youtube_id}")
+async def toggle_watchlist(request: Request, youtube_id: str):
+    get_user(request)
+    watchlist = request.session.get("watchlist", [])
+    if youtube_id in watchlist:
+        watchlist.remove(youtube_id)
+        msg = "unwatched"
+    else:
+        watchlist.append(youtube_id)
+        msg = "watched"
+    request.session["watchlist"] = watchlist
+    return RedirectResponse(f"/video/{youtube_id}?msg={msg}", status_code=302)
 
 
 @app.post("/refresh/{youtube_id}")
@@ -263,7 +367,12 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...), db: 
             "avg_cost": round(video.current_price, 4),
         }
 
-    save_portfolio(request, portfolio, round(balance - total_cost, 2))
+    new_balance = round(balance - total_cost, 2)
+    save_portfolio(request, portfolio, new_balance)
+    record_tx(request, "buy", youtube_id, video.title, shares, video.current_price, total_cost)
+    record_port_snap(request, portfolio, new_balance)
+    total_val = calc_total_portfolio_value(portfolio, new_balance, db)
+    upsert_leaderboard(request.session["username"], total_val, db)
     return RedirectResponse(f"/video/{youtube_id}?msg=bought", status_code=302)
 
 
@@ -288,14 +397,19 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...), db:
     if holding["shares"] <= 0.001:
         del portfolio[youtube_id]
 
-    save_portfolio(request, portfolio, round(balance + revenue, 2))
+    new_balance = round(balance + revenue, 2)
+    save_portfolio(request, portfolio, new_balance)
+    record_tx(request, "sell", youtube_id, video.title, shares, video.current_price, revenue)
+    record_port_snap(request, portfolio, new_balance)
+    total_val = calc_total_portfolio_value(portfolio, new_balance, db)
+    upsert_leaderboard(request.session["username"], total_val, db)
     return RedirectResponse(f"/video/{youtube_id}?msg=sold", status_code=302)
 
 
 # ── portfolio ─────────────────────────────────────────────────────────────────
 
 @app.get("/portfolio", response_class=HTMLResponse)
-async def portfolio_page(request: Request, db: Session = Depends(get_db)):
+async def portfolio_page(request: Request, psort: str = "value", db: Session = Depends(get_db)):
     user = get_user(request)
     portfolio = get_portfolio(request)
 
@@ -324,7 +438,12 @@ async def portfolio_page(request: Request, db: Session = Depends(get_db)):
         total_invested += invested_val
         total_current += current_val
 
-    holdings_data.sort(key=lambda x: x["current_val"], reverse=True)
+    if psort == "pnl":
+        holdings_data.sort(key=lambda x: x["pnl_pct"], reverse=True)
+    elif psort == "name":
+        holdings_data.sort(key=lambda x: x["video"].title.lower())
+    else:
+        holdings_data.sort(key=lambda x: x["current_val"], reverse=True)
     total_pnl = round(total_current - total_invested, 2)
     total_pnl_pct = round(total_pnl / total_invested * 100, 2) if total_invested else 0
     portfolio_value = round(user.balance + total_current, 2)
@@ -336,6 +455,9 @@ async def portfolio_page(request: Request, db: Session = Depends(get_db)):
         donut_labels.append("Cash")
         donut_values.append(round(user.balance, 2))
 
+    port_snaps = request.session.get("port_snaps", [])
+    transactions = request.session.get("transactions", [])
+
     return templates.TemplateResponse("portfolio.html", {
         "request": request, "user": user,
         "holdings_data": holdings_data,
@@ -346,17 +468,27 @@ async def portfolio_page(request: Request, db: Session = Depends(get_db)):
         "portfolio_value": portfolio_value,
         "donut_labels": donut_labels,
         "donut_values": donut_values,
+        "port_snaps": port_snaps,
+        "transactions": list(reversed(transactions)),
+        "psort": psort,
+        "net_pnl": round(portfolio_value - 10000, 2),
+        "net_pnl_pct": round((portfolio_value - 10000) / 10000 * 100, 2),
     })
 
 
 # ── leaderboard ───────────────────────────────────────────────────────────────
 
 @app.get("/leaderboard", response_class=HTMLResponse)
-async def leaderboard(request: Request):
+async def leaderboard(request: Request, db: Session = Depends(get_db)):
     user = get_user(request)
-    # Session-only: leaderboard shows only current user for now
-    portfolio = get_portfolio(request)
+    entries = (db.query(models.LeaderboardEntry)
+               .order_by(models.LeaderboardEntry.portfolio_value.desc())
+               .limit(20).all())
+    board = [{"username": e.username, "portfolio_value": e.portfolio_value, "return_pct": e.return_pct}
+             for e in entries]
+    if not board:
+        board = [{"username": user.username, "portfolio_value": user.balance,
+                  "return_pct": round((user.balance - 10000) / 10000 * 100, 2)}]
     return templates.TemplateResponse("leaderboard.html", {
-        "request": request, "user": user,
-        "board": [{"username": user.username, "portfolio_value": user.balance, "return_pct": round((user.balance - 10000) / 10000 * 100, 2)}],
+        "request": request, "user": user, "board": board,
     })

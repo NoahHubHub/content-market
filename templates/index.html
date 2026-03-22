@@ -2,23 +2,135 @@
 {% block title %}Markt — Content Market{% endblock %}
 {% block content %}
 
+<!-- User stats bar -->
+{% if user and user.holdings_count > 0 %}
+<div style="display:flex;gap:16px;padding:12px 16px;background:#0a0a0a;border-radius:14px;
+            margin-bottom:20px;flex-wrap:wrap;">
+  <div>
+    <div style="font-size:.65rem;color:#555;margin-bottom:1px;">CASH</div>
+    <div style="font-size:.9rem;font-weight:700;">${{ "%.0f"|format(user.balance) }}</div>
+  </div>
+  <div style="width:1px;background:#111;flex-shrink:0;"></div>
+  <div>
+    <div style="font-size:.65rem;color:#555;margin-bottom:1px;">POSITIONEN</div>
+    <div style="font-size:.9rem;font-weight:700;">{{ user.holdings_count }}</div>
+  </div>
+  <div style="width:1px;background:#111;flex-shrink:0;"></div>
+  <div>
+    <div style="font-size:.65rem;color:#555;margin-bottom:1px;">INVESTIERT</div>
+    <div style="font-size:.9rem;font-weight:700;">${{ "%.0f"|format(user.cost_basis) }}</div>
+  </div>
+  <div style="margin-left:auto;">
+    <a href="/portfolio" style="font-size:.78rem;color:#555;font-weight:600;">Portfolio ›</a>
+  </div>
+</div>
+{% endif %}
+
 <div class="tr-section" style="margin-top:0;">
   <h2>Markt</h2>
   <a href="/search" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">+ Video</a>
 </div>
+
+{% if trending and trending | length > 0 %}
+<!-- Trending strip -->
+<div style="margin-bottom:28px;">
+  <div class="tr-label" style="margin-bottom:10px;">🔥 Trending</div>
+  <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
+    {% for item in trending %}
+    {% set v = item.video %}
+    {% set info = item.info %}
+    <a href="/video/{{ v.youtube_id }}"
+       style="flex-shrink:0;width:140px;background:#0a0a0a;border-radius:14px;padding:12px;
+              text-decoration:none;display:block;position:relative;">
+      {% if v.youtube_id in portfolio_ids %}
+      <div style="position:absolute;top:8px;right:8px;width:8px;height:8px;
+                  border-radius:50%;background:#30d158;border:2px solid #0a0a0a;"></div>
+      {% endif %}
+      {% if v.thumbnail_url %}
+      <img src="{{ v.thumbnail_url }}"
+           style="width:100%;border-radius:8px;aspect-ratio:16/9;object-fit:cover;margin-bottom:8px;" />
+      {% endif %}
+      <div style="font-size:.75rem;font-weight:600;color:#fff;line-height:1.3;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;">
+        {{ v.title[:28] }}{% if v.title|length > 28 %}…{% endif %}
+      </div>
+      <div style="font-size:.8rem;font-weight:700;">${{ "%.2f"|format(v.current_price) }}</div>
+      <div style="font-size:.72rem;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+        {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ info.momentum_pct | abs }}%
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Watchlist section -->
+{% if watchlist_data %}
+<div style="margin-bottom:28px;">
+  <div class="tr-label" style="margin-bottom:10px;">★ Beobachtungsliste</div>
+  <div>
+    {% for item in watchlist_data %}
+    {% set v = item.video %}
+    {% set info = item.info %}
+    <a href="/video/{{ v.youtube_id }}" class="tr-row">
+      {% if v.thumbnail_url %}
+      <img src="{{ v.thumbnail_url }}" class="tr-row-icon" />
+      {% else %}
+      <div class="tr-row-icon-placeholder">📺</div>
+      {% endif %}
+      <div class="tr-row-body">
+        <div class="tr-row-title">{{ v.title[:52] }}{% if v.title|length > 52 %}…{% endif %}</div>
+        <div class="tr-row-sub">
+          {{ v.channel_name }}
+          &nbsp;·&nbsp;
+          <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+        </div>
+      </div>
+      <div class="tr-row-right">
+        <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
+        <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+          {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
+          {{ info.momentum_pct | abs | round(1) }}%
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Sort controls -->
+{% if video_data %}
+<div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;">
+  {% for s, label in [("new", "Neu"), ("momentum", "Momentum"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑")] %}
+  <a href="/?sort={{ s }}"
+     style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;
+            text-decoration:none;
+            {% if sort == s %}background:#fff;color:#000;{% else %}background:#111;color:#555;{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
 
 {% if video_data %}
 <div>
   {% for item in video_data %}
   {% set v = item.video %}
   {% set info = item.info %}
-  {% set stat = item.last_stat %}
-  <a href="/video/{{ v.youtube_id }}" class="tr-row">
-    {% if v.thumbnail_url %}
-    <img src="{{ v.thumbnail_url }}" class="tr-row-icon" />
-    {% else %}
-    <div class="tr-row-icon-placeholder">📺</div>
-    {% endif %}
+  <a href="/video/{{ v.youtube_id }}" class="tr-row" style="position:relative;">
+    <div style="position:relative;flex-shrink:0;">
+      {% if v.thumbnail_url %}
+      <img src="{{ v.thumbnail_url }}" class="tr-row-icon" />
+      {% else %}
+      <div class="tr-row-icon-placeholder">📺</div>
+      {% endif %}
+      {% if v.youtube_id in portfolio_ids %}
+      <div style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;
+                  border-radius:50%;background:#30d158;border:2px solid #000;"></div>
+      {% endif %}
+    </div>
     <div class="tr-row-body">
       <div class="tr-row-title">{{ v.title[:52] }}{% if v.title|length > 52 %}…{% endif %}</div>
       <div class="tr-row-sub">

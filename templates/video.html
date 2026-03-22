@@ -8,14 +8,29 @@
 <div class="tr-alert tr-alert-success">✓ Verkauf erfolgreich</div>
 {% elif msg == "refreshed" %}
 <div class="tr-alert tr-alert-info">Kurs aktualisiert</div>
+{% elif msg == "watched" %}
+<div class="tr-alert tr-alert-info">★ Zur Beobachtungsliste hinzugefügt</div>
+{% elif msg == "unwatched" %}
+<div class="tr-alert tr-alert-info">Aus Beobachtungsliste entfernt</div>
 {% elif err == "insufficient_funds" %}
 <div class="tr-alert tr-alert-error">Nicht genug Guthaben</div>
 {% elif err == "insufficient_shares" %}
 <div class="tr-alert tr-alert-error">Nicht genug Anteile</div>
 {% endif %}
 
-<!-- Back -->
-<a href="/" class="tr-sub" style="display:inline-block;margin-bottom:20px;">← Markt</a>
+<!-- Back + Watchlist toggle -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <a href="/" class="tr-sub">← Markt</a>
+  <form method="post" action="/watch/{{ video.youtube_id }}" style="margin:0;">
+    <button type="submit"
+      style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:4px 8px;
+             color:{% if is_watching %}#ff9f0a{% else %}#333{% endif %};
+             transition:color .15s;"
+      title="{% if is_watching %}Aus Beobachtungsliste entfernen{% else %}Zur Beobachtungsliste{% endif %}">
+      {% if is_watching %}★{% else %}☆{% endif %}
+    </button>
+  </form>
+</div>
 
 <!-- Thumbnail -->
 <img
@@ -38,13 +53,25 @@
     <span class="tr-down" style="font-size:.95rem;font-weight:500;">▼ {{ info.momentum_pct | abs }}%</span>
     {% endif %}
     <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+    <!-- Signal -->
+    {% if info.rps >= 2.0 %}
+    <span style="font-size:.78rem;font-weight:700;color:#30d158;">● Bullish</span>
+    {% elif info.rps >= 1.2 %}
+    <span style="font-size:.78rem;font-weight:700;color:#56d364;">● Leicht bullish</span>
+    {% elif info.rps >= 0.8 %}
+    <span style="font-size:.78rem;font-weight:700;color:#555;">● Neutral</span>
+    {% elif info.rps >= 0.5 %}
+    <span style="font-size:.78rem;font-weight:700;color:#ff9f0a;">● Schwächelnd</span>
+    {% else %}
+    <span style="font-size:.78rem;font-weight:700;color:#ff453a;">● Bearish</span>
+    {% endif %}
   </div>
 </div>
 
 <!-- Time range tabs -->
 <div class="tr-timerange" style="margin-bottom:0;">
   {% for label in ["1T", "1W", "1M", "1J", "Max"] %}
-  <button class="tr-tr-btn {% if loop.first %}active{% endif %}" onclick="switchRange(this)">{{ label }}</button>
+  <button class="tr-tr-btn {% if loop.first %}active{% endif %}" onclick="switchRange(this, '{{ label }}')">{{ label }}</button>
   {% endfor %}
 </div>
 
@@ -56,23 +83,27 @@
 <!-- Stats row -->
 {% if last_stat %}
 <div style="display:flex;gap:0;margin:20px 0 28px;border-top:1px solid #111;border-bottom:1px solid #111;">
-  <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid #111;">
-    <div style="font-size:.7rem;color:#555;margin-bottom:2px;">VIEWS</div>
-    <div style="font-weight:700;">{{ last_stat.view_count | fmt }}</div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">VIEWS</div>
+    <div style="font-weight:700;font-size:.9rem;">{{ last_stat.view_count | fmt }}</div>
   </div>
-  <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid #111;">
-    <div style="font-size:.7rem;color:#555;margin-bottom:2px;">LIKES</div>
-    <div style="font-weight:700;">{{ last_stat.like_count | fmt }}</div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">LIKES</div>
+    <div style="font-weight:700;font-size:.9rem;">{{ last_stat.like_count | fmt }}</div>
   </div>
-  <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid #111;">
-    <div style="font-size:.7rem;color:#555;margin-bottom:2px;">VIEWS/TAG</div>
-    <div style="font-weight:700;">{{ info.views_per_day | int | fmt }}</div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">VIEWS/TAG</div>
+    <div style="font-weight:700;font-size:.9rem;">{{ info.views_per_day | int | fmt }}</div>
   </div>
-  <div style="flex:1;padding:14px 0;text-align:center;">
-    <div style="font-size:.7rem;color:#555;margin-bottom:2px;">RPS</div>
-    <div style="font-weight:700;{% if info.rps >= 1 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">RPS</div>
+    <div style="font-weight:700;font-size:.9rem;{% if info.rps >= 1 %}color:#30d158{% else %}color:#ff453a{% endif %}">
       {{ "%.2f"|format(info.rps) }}×
     </div>
+  </div>
+  <div style="flex:1;padding:12px 0;text-align:center;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">AUFN</div>
+    <div style="font-weight:700;font-size:.9rem;color:#555;">{{ video.stats | length }}</div>
   </div>
 </div>
 {% endif %}
@@ -106,6 +137,22 @@
       Kaufen
     </button>
   </form>
+  <!-- Quick-fill buttons -->
+  <div style="display:flex;gap:6px;margin-top:8px;">
+    {% for pct in [25, 50, 75] %}
+    <button onclick="setBuyPct({{ pct }})"
+      style="flex:1;background:#111;border:none;color:#555;font-size:.75rem;font-weight:600;
+             padding:7px 0;border-radius:8px;cursor:pointer;transition:color .15s;"
+      onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#555'">
+      {{ pct }}%
+    </button>
+    {% endfor %}
+    <button onclick="setBuyMax()"
+      style="flex:1;background:#111;border:none;color:#fff;font-size:.75rem;font-weight:600;
+             padding:7px 0;border-radius:8px;cursor:pointer;">
+      Max
+    </button>
+  </div>
   <div class="tr-sub" style="margin-top:6px;">
     Kosten: <span id="buyCost" style="color:#fff;font-weight:600;">${{ "%.2f"|format(video.current_price) }}</span>
     &nbsp;·&nbsp; Guthaben: ${{ "%.2f"|format(user.balance) }}
@@ -123,6 +170,17 @@
       Verkaufen
     </button>
   </form>
+  <!-- Quick-sell buttons -->
+  <div style="display:flex;gap:6px;margin-top:8px;">
+    {% for pct, label in [(25, "25%"), (50, "50%"), (75, "75%"), (100, "Alle")] %}
+    <button onclick="setSellPct({{ pct }})"
+      style="flex:1;background:#111;border:none;color:#555;font-size:.75rem;font-weight:600;
+             padding:7px 0;border-radius:8px;cursor:pointer;transition:color .15s;"
+      onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#555'">
+      {{ label }}
+    </button>
+    {% endfor %}
+  </div>
   <div class="tr-sub" style="margin-top:6px;">
     Erlös: <span id="sellRevenue" style="color:#fff;font-weight:600;">${{ "%.2f"|format(video.current_price) }}</span>
   </div>
@@ -136,6 +194,29 @@
   </button>
 </form>
 
+<!-- Related videos from same channel -->
+{% if related %}
+<div style="margin-top:32px;">
+  <div class="tr-label" style="margin-bottom:12px;">Weitere Videos von {{ video.channel_name }}</div>
+  {% for rv in related %}
+  <a href="/video/{{ rv.youtube_id }}" class="tr-row">
+    {% if rv.thumbnail_url %}
+    <img src="{{ rv.thumbnail_url }}" class="tr-row-icon" />
+    {% else %}
+    <div class="tr-row-icon-placeholder">📺</div>
+    {% endif %}
+    <div class="tr-row-body">
+      <div class="tr-row-title">{{ rv.title[:50] }}{% if rv.title|length > 50 %}…{% endif %}</div>
+      <div class="tr-row-sub">${{ "%.2f"|format(rv.current_price) }}</div>
+    </div>
+    <div class="tr-row-right">
+      <div class="tr-sub" style="font-size:.78rem;">ansehen →</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- YouTube link -->
 <div style="text-align:center;margin-top:20px;">
   <a href="https://youtube.com/watch?v={{ video.youtube_id }}" target="_blank" class="tr-sub">
@@ -148,46 +229,81 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  const price = {{ video.current_price }};
+  const price    = {{ video.current_price }};
+  const balance  = {{ user.balance }};
+  const maxShares = {{ holding.shares if holding else 0 }};
 
-  // Buy cost preview
-  const buyShares = document.getElementById("buyShares");
-  const buyCost   = document.getElementById("buyCost");
-  if (buyShares) {
-    buyShares.addEventListener("input", () => {
-      buyCost.textContent = "$" + (parseFloat(buyShares.value || 0) * price).toFixed(2);
+  // ── Buy quick-fill ───────────────────────────────────────────────────────
+  const buySharesEl = document.getElementById("buyShares");
+  const buyCostEl   = document.getElementById("buyCost");
+
+  function setBuyMax() {
+    const max = Math.floor(balance / price * 10) / 10;
+    buySharesEl.value = max > 0 ? max : 0.1;
+    buyCostEl.textContent = "$" + (parseFloat(buySharesEl.value) * price).toFixed(2);
+  }
+  function setBuyPct(pct) {
+    const max = Math.floor(balance / price * 10) / 10;
+    const v = Math.floor(max * pct / 100 * 10) / 10;
+    buySharesEl.value = v > 0 ? v : 0.1;
+    buyCostEl.textContent = "$" + (parseFloat(buySharesEl.value) * price).toFixed(2);
+  }
+  if (buySharesEl) {
+    buySharesEl.addEventListener("input", () => {
+      buyCostEl.textContent = "$" + (parseFloat(buySharesEl.value || 0) * price).toFixed(2);
     });
   }
 
-  // Sell revenue preview
-  const sellShares  = document.getElementById("sellShares");
-  const sellRevenue = document.getElementById("sellRevenue");
-  if (sellShares) {
-    sellShares.addEventListener("input", () => {
-      sellRevenue.textContent = "$" + (parseFloat(sellShares.value || 0) * price).toFixed(2);
+  // ── Sell quick-fill ──────────────────────────────────────────────────────
+  const sellSharesEl  = document.getElementById("sellShares");
+  const sellRevenueEl = document.getElementById("sellRevenue");
+
+  function setSellPct(pct) {
+    if (!sellSharesEl) return;
+    const v = Math.round(maxShares * pct / 100 * 10000) / 10000;
+    sellSharesEl.value = v;
+    sellRevenueEl.textContent = "$" + (v * price).toFixed(2);
+  }
+  if (sellSharesEl) {
+    sellSharesEl.addEventListener("input", () => {
+      sellRevenueEl.textContent = "$" + (parseFloat(sellSharesEl.value || 0) * price).toFixed(2);
     });
   }
 
-  // Price chart
-  const history = {{ price_history | tojson }};
-  const labels  = history.length > 1 ? history.map(h => h.t) : ["Start", "Jetzt"];
-  const values  = history.length > 1 ? history.map(h => h.p) : [price, price];
-  const startV  = values[0];
-  const isUp    = values[values.length - 1] >= startV;
+  // ── Price chart ──────────────────────────────────────────────────────────
+  const fullHistory = {{ price_history | tojson }};
+  const now = Date.now() / 1000;
+  const RANGES = { "1T": 86400, "1W": 604800, "1M": 2592000, "1J": 31536000, "Max": Infinity };
 
+  function filterHistory(rangeLabel) {
+    const secs = RANGES[rangeLabel] || Infinity;
+    if (secs === Infinity) return fullHistory;
+    return fullHistory.filter(h => now - h.ts <= secs);
+  }
+
+  function buildDataset(filtered) {
+    const labels = filtered.length > 1 ? filtered.map(h => h.t) : ["Start", "Jetzt"];
+    const values = filtered.length > 1 ? filtered.map(h => h.p) : [price, price];
+    const startV = values[0];
+    const up     = values[values.length - 1] >= startV;
+    return { labels, values, startV, up };
+  }
+
+  const initData = buildDataset(fullHistory);
   const ctx = document.getElementById("priceChart").getContext("2d");
-  new Chart(ctx, {
+  const priceChart = new Chart(ctx, {
     type: "line",
     data: {
-      labels,
+      labels: initData.labels,
       datasets: [{
-        data: values,
-        borderColor: "#fff",
+        data: initData.values,
+        borderColor: initData.up ? "#30d158" : "#ff453a",
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 4,
-        pointHoverBackgroundColor: "#fff",
-        fill: false,
+        pointHoverBackgroundColor: initData.up ? "#30d158" : "#ff453a",
+        fill: true,
+        backgroundColor: initData.up ? "rgba(48,209,88,0.06)" : "rgba(255,69,58,0.06)",
         tension: 0.3,
       }]
     },
@@ -217,6 +333,7 @@
       beforeDraw(chart) {
         const { ctx, scales: { y, x } } = chart;
         if (!y || !x) return;
+        const startV = chart.data.datasets[0].data[0];
         const yPos = y.getPixelForValue(startV);
         ctx.save();
         ctx.setLineDash([4, 6]);
@@ -231,9 +348,17 @@
     }]
   });
 
-  function switchRange(btn) {
+  function switchRange(btn, rangeLabel) {
     document.querySelectorAll(".tr-tr-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
+    const filtered = filterHistory(rangeLabel);
+    const d = buildDataset(filtered);
+    priceChart.data.labels = d.labels;
+    priceChart.data.datasets[0].data = d.values;
+    priceChart.data.datasets[0].borderColor = d.up ? "#30d158" : "#ff453a";
+    priceChart.data.datasets[0].backgroundColor = d.up ? "rgba(48,209,88,0.06)" : "rgba(255,69,58,0.06)";
+    priceChart.data.datasets[0].pointHoverBackgroundColor = d.up ? "#30d158" : "#ff453a";
+    priceChart.update();
   }
 </script>
 {% endblock %}

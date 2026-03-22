@@ -77,3 +77,13 @@ class Transaction(Base):
 
     user = relationship("User", back_populates="transactions")
     video = relationship("Video", back_populates="transactions")
+
+
+class LeaderboardEntry(Base):
+    __tablename__ = "leaderboard_entries"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    portfolio_value = Column(Float, nullable=False)
+    return_pct = Column(Float, nullable=False)
+    recorded_at = Column(DateTime, default=datetime.utcnow)

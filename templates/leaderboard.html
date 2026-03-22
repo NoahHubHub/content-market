@@ -10,7 +10,8 @@
 
 <div>
   {% for item in board %}
-  <div class="tr-row" style="{% if item.user.id is defined and item.user.id == user.id %}background:rgba(255,255,255,.03);border-radius:12px;padding:14px 12px;margin:0 -12px;{% endif %}">
+  <div class="tr-row" style="{% if item.username == user.username %}background:rgba(48,209,88,.05);border-radius:12px;padding:14px 12px;margin:0 -12px;border:1px solid rgba(48,209,88,.12);{% endif %}"
+       id="{% if item.username == user.username %}my-rank{% endif %}">
     <div style="width:32px;text-align:center;flex-shrink:0;font-size:1.1rem;">
       {% if loop.index == 1 %}🥇
       {% elif loop.index == 2 %}🥈

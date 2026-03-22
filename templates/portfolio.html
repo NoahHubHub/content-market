@@ -89,10 +89,18 @@
     <canvas id="sparkChart" style="width:100%;height:150px;"></canvas>
   </div>
 
-  <!-- Investments list -->
+  <!-- Investments list + sort -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin:28px 0 8px;">
     <span style="font-size:1.05rem;font-weight:700;">Investments</span>
-    <span class="tr-sub">Seit Kauf ▾</span>
+    <div style="display:flex;gap:6px;">
+      {% for s, label in [("value", "Wert"), ("pnl", "P&L"), ("name", "A–Z")] %}
+      <a href="/portfolio?psort={{ s }}"
+         style="padding:4px 10px;border-radius:14px;font-size:.72rem;font-weight:600;text-decoration:none;
+                {% if psort == s %}background:#fff;color:#000;{% else %}background:#111;color:#555;{% endif %}">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
   </div>
 
   {% if holdings_data %}
@@ -108,9 +116,14 @@
         <div class="tr-item-title">{{ item.video.title[:50] }}{% if item.video.title|length > 50 %}…{% endif %}</div>
         <div class="tr-item-sub">${{ "%.2f"|format(item.current_val) }}</div>
       </div>
-      <div class="tr-item-pnl {% if item.pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
-        {% if item.pnl_pct >= 0 %}▲{% else %}▼{% endif %}
-        {{ "%.2f"|format(item.pnl_pct | abs) }} %
+      <div style="text-align:right;flex-shrink:0;">
+        <div class="tr-item-pnl {% if item.pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+          {% if item.pnl_pct >= 0 %}▲{% else %}▼{% endif %}
+          {{ "%.2f"|format(item.pnl_pct | abs) }}%
+        </div>
+        <div style="font-size:.72rem;color:#555;margin-top:1px;">
+          {% if item.pnl >= 0 %}+{% endif %}${{ "%.2f"|format(item.pnl) }}
+        </div>
       </div>
     </a>
     {% endfor %}
@@ -120,6 +133,35 @@
     <div style="font-size:2.5rem;margin-bottom:12px;">📺</div>
     <div style="color:#555;font-weight:600;margin-bottom:8px;">Noch keine Investments</div>
     <a href="/search" class="tr-btn-primary" style="font-size:.9rem;padding:12px 20px;">Video suchen</a>
+  </div>
+  {% endif %}
+
+  <!-- Transaction history -->
+  {% if transactions %}
+  <div style="margin-top:32px;">
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:12px;">Verlauf</div>
+    {% for tx in transactions %}
+    <a href="/video/{{ tx.youtube_id }}" style="display:flex;align-items:center;gap:12px;
+       padding:12px 0;border-bottom:1px solid #0d0d0d;text-decoration:none;">
+      <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;
+                  align-items:center;justify-content:center;font-size:.8rem;font-weight:700;
+                  {% if tx.type == 'buy' %}background:rgba(48,209,88,0.12);color:#30d158;
+                  {% else %}background:rgba(255,69,58,0.12);color:#ff453a;{% endif %}">
+        {{ "K" if tx.type == "buy" else "V" }}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.85rem;font-weight:600;color:#fff;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis;">{{ tx.title }}</div>
+        <div class="tr-sub" style="font-size:.72rem;">
+          {{ tx.shares }} Anteile · ${{ "%.2f"|format(tx.price) }} · {{ tx.ts }}
+        </div>
+      </div>
+      <div style="font-size:.88rem;font-weight:600;flex-shrink:0;
+                  {% if tx.type == 'buy' %}color:#ff453a;{% else %}color:#30d158;{% endif %}">
+        {% if tx.type == "buy" %}-{% else %}+{% endif %}${{ "%.2f"|format(tx.total) }}
+      </div>
+    </a>
+    {% endfor %}
   </div>
   {% endif %}
 
@@ -137,13 +179,30 @@
       <span class="tr-sub">Startkapital</span>
       <span style="font-weight:600;">$10.000,00</span>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1a1a1a;">
-      <span class="tr-sub">Investiert</span>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+      <span class="tr-sub">Investiert (Kostenbasis)</span>
       <span style="font-weight:600;">${{ "%.2f"|format(total_invested) }}</span>
     </div>
-    <div style="display:flex;justify-content:space-between;">
-      <span class="tr-sub">Noch verfügbar</span>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+      <span class="tr-sub">Aktueller Wert</span>
+      <span style="font-weight:600;">${{ "%.2f"|format(total_current) }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1a1a1a;">
+      <span class="tr-sub">Unrealisierter P&L</span>
+      <span style="font-weight:600;{% if total_current >= total_invested %}color:#30d158{% else %}color:#ff453a{% endif %}">
+        {% if total_current >= total_invested %}+{% endif %}${{ "%.2f"|format(total_current - total_invested) }}
+      </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid #1a1a1a;margin-bottom:14px;">
+      <span class="tr-sub">Cash</span>
       <span style="font-weight:700;font-size:1.05rem;">${{ "%.2f"|format(user.balance) }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;">
+      <span class="tr-sub">Gesamtrendite</span>
+      <span style="font-weight:700;font-size:1.05rem;{% if net_pnl >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+        {% if net_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(net_pnl) }}
+        <span style="font-size:.8rem;">({% if net_pnl_pct >= 0 %}+{% endif %}{{ "%.2f"|format(net_pnl_pct) }}%)</span>
+      </span>
     </div>
   </div>
 
@@ -240,23 +299,34 @@
     "#79c0ff","#56d364","#ffb86c","#bc8cff","#ff7b72",
   ];
 
-  // ── Sparkline: Einstiegswert → aktueller Investmentwert ──
+  // ── Sparkline ─────────────────────────────────────────
   const totalInvested = {{ total_invested }};
   const totalCurrent  = {{ total_current }};
   const cashBalance   = {{ user.balance }};
   const isUp          = totalCurrent >= totalInvested;
 
+  const portSnaps = {{ port_snaps | tojson }};
+  let sparkLabels, sparkValues;
+  if (portSnaps.length > 1) {
+    sparkLabels = portSnaps.map(s => s.ts);
+    sparkValues = portSnaps.map(s => s.v);
+  } else {
+    sparkLabels = ["Einstieg", "Jetzt"];
+    sparkValues = [totalInvested || 0, totalCurrent || 0];
+  }
+
   const sparkCtx = document.getElementById("sparkChart").getContext("2d");
   new Chart(sparkCtx, {
     type: "line",
     data: {
-      labels: ["Einstieg", "Jetzt"],
+      labels: sparkLabels,
       datasets: [{
-        data: [totalInvested || 10000, totalCurrent || 10000],
+        data: sparkValues,
         borderColor: isUp ? "#30d158" : "#ff453a",
         borderWidth: 2.5,
-        pointRadius: [0, 4],
-        pointBackgroundColor: isUp ? "#30d158" : "#ff453a",
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: isUp ? "#30d158" : "#ff453a",
         fill: true,
         backgroundColor: isUp ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)",
         tension: 0.4,
@@ -265,7 +335,15 @@
     options: {
       responsive: true, maintainAspectRatio: false,
       animation: { duration: 800, easing: "easeInOutQuart" },
-      plugins: { legend: { display: false }, tooltip: { display: false } },
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#111", borderColor: "#222", borderWidth: 1,
+          titleColor: "#555", bodyColor: "#fff",
+          callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)} investiert` }
+        }
+      },
       scales: { x: { display: false }, y: { display: false } }
     },
     plugins: [{
@@ -273,7 +351,7 @@
       beforeDraw(chart) {
         const { ctx, scales: { y, x } } = chart;
         if (!y || !x) return;
-        const baseline = totalInvested || 10000;
+        const baseline = sparkValues[0] || 0;
         const yPos = y.getPixelForValue(baseline);
         ctx.save();
         ctx.setLineDash([4, 6]);

@@ -39,6 +39,13 @@
     .tr-nav-balance {
       font-size: .85rem; font-weight: 600; color: #fff;
     }
+    .tr-nav-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 17px; height: 17px; padding: 0 4px;
+      background: #30d158; color: #000; border-radius: 20px;
+      font-size: .65rem; font-weight: 800; margin-left: 4px;
+      vertical-align: middle; line-height: 1;
+    }
 
     /* ── Page wrapper ─────────────────────────────────── */
     .tr-page {
@@ -206,9 +213,11 @@
       <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Markt</a>
       <a href="/search" class="{% if request.url.path == '/search' %}active{% endif %}">Suche</a>
       <a href="/leaderboard" class="{% if request.url.path == '/leaderboard' %}active{% endif %}">Rangliste</a>
-      <a href="/portfolio" class="{% if request.url.path == '/portfolio' %}active{% endif %}">Portfolio</a>
+      <a href="/portfolio" class="{% if request.url.path == '/portfolio' %}active{% endif %}">
+        Portfolio{% if user and user.holdings_count > 0 %}<span class="tr-nav-badge">{{ user.holdings_count }}</span>{% endif %}
+      </a>
       {% if user %}
-      <span class="tr-nav-balance">${{ "%.0f"|format(user.balance) }}</span>
+      <span class="tr-nav-balance" title="Cash · {{ user.holdings_count }} Positionen">${{ "%.0f"|format(user.balance) }}</span>
       {% endif %}
     </div>
   </div>
