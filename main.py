@@ -18,7 +18,10 @@ load_dotenv()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Content Market")
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"), max_age=86400 * 30)
+
+# Zufälliger Key bei jedem Start → alle Sessions werden zurückgesetzt
+_session_key = os.getenv("SECRET_KEY") or "".join(random.choices(string.ascii_letters + string.digits, k=32))
+app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 templates = Jinja2Templates(directory="templates")
 
 
