@@ -20,8 +20,9 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Content Market")
 
-# Kryptografisch zufälliger Key bei jedem Modulimport → Sessions immer ungültig nach Neustart
-_session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
+# Kryptografisch zufälliger Key + Startup-Token bei jedem Start
+_session_key   = os.getenv("SECRET_KEY") or secrets.token_hex(32)
+_startup_token = secrets.token_hex(8)  # wird in jeder Session geprüft
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 templates = Jinja2Templates(directory="templates")
 
@@ -36,6 +37,11 @@ class User:
 
 
 def get_user(request: Request) -> User:
+    # Startup-Token stimmt nicht überein → Server wurde neu gestartet → Session löschen
+    if request.session.get("_startup") != _startup_token:
+        request.session.clear()
+        request.session["_startup"] = _startup_token
+
     if "username" not in request.session:
         suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
         request.session["username"] = f"Player_{suffix}"
