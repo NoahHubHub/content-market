@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from database import Base, engine, get_db
 import models
 from pricing import calculate_price
-from youtube import extract_video_id, get_video_by_id, search_videos
+from youtube import extract_video_id, get_video_by_id, get_video_details, search_videos
 
 load_dotenv()
 Base.metadata.create_all(bind=engine)
@@ -215,6 +215,18 @@ async def refresh_video(youtube_id: str, db: Session = Depends(get_db)):
     if yt_list:
         upsert_video(db, yt_list[0])
     return RedirectResponse(f"/video/{youtube_id}?msg=refreshed", status_code=302)
+
+
+@app.post("/refresh-portfolio")
+async def refresh_portfolio(request: Request, db: Session = Depends(get_db)):
+    """Refresh YouTube stats for every video currently in the user's portfolio."""
+    get_user(request)
+    portfolio = get_portfolio(request)
+    if portfolio:
+        yt_list = get_video_details(list(portfolio.keys()))
+        for yt in yt_list:
+            upsert_video(db, yt)
+    return RedirectResponse("/portfolio?msg=refreshed", status_code=302)
 
 
 # ── trading ───────────────────────────────────────────────────────────────────

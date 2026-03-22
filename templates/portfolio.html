@@ -45,14 +45,34 @@
 </div>
 
 <!-- Total value — updates per tab -->
-<div class="tr-total-label" id="val-label">Investiert</div>
-<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-  <div class="tr-total-value" id="val-main">${{ "%.2f"|format(total_current) }}</div>
-  <span class="tr-total-change {% if total_pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}"
-        id="val-change">
-    {% if total_pnl_pct >= 0 %}▲{% else %}▼{% endif %}
-    {{ "%.2f"|format(total_pnl_pct | abs) }} %
-  </span>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;">
+  <div>
+    <div class="tr-total-label" id="val-label">Investiert</div>
+    <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+      <div class="tr-total-value" id="val-main">${{ "%.2f"|format(total_current) }}</div>
+      <span class="tr-total-change {% if total_pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}"
+            id="val-change">
+        {% if total_pnl_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ "%.2f"|format(total_pnl_pct | abs) }} %
+      </span>
+    </div>
+  </div>
+  {% if request.query_params.get('msg') == 'refreshed' %}
+  <form method="post" action="/refresh-portfolio" style="margin-top:4px;">
+    <button type="submit" title="Kurse aktualisieren"
+      style="background:none;border:none;color:#30d158;font-size:1.3rem;cursor:pointer;padding:4px;">
+      ↻
+    </button>
+  </form>
+  {% else %}
+  <form method="post" action="/refresh-portfolio" style="margin-top:4px;">
+    <button type="submit" title="Kurse aktualisieren"
+      style="background:none;border:none;color:#555;font-size:1.3rem;cursor:pointer;padding:4px;transition:color .15s;"
+      onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#555'">
+      ↻
+    </button>
+  </form>
+  {% endif %}
 </div>
 
 <!-- ── TAB: Portfolio ─────────────────────────────── -->
