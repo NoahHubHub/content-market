@@ -1,4 +1,6 @@
 import os
+import random
+import string
 from datetime import datetime
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
@@ -20,16 +22,24 @@ app = FastAPI(title="Content Market")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dev-secret"))
 templates = Jinja2Templates(directory="templates")
 
-DEMO_PASSWORD = "demo"  # placeholder: jeder nutzt dieses Passwort
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def current_user(request: Request, db: Session):
+def current_user(request: Request, db: Session) -> models.User:
+    """Returns the current user. Auto-creates one on first visit — no login needed."""
     uid = request.session.get("user_id")
-    if not uid:
-        return None
-    return db.query(models.User).filter(models.User.id == uid).first()
+    if uid:
+        user = db.query(models.User).filter(models.User.id == uid).first()
+        if user:
+            return user
+    # First visit: create a new anonymous user
+    suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
+    user = models.User(username=f"Player_{suffix}", password_hash="")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    request.session["user_id"] = user.id
+    return user
 
 
 def fmt(n):
@@ -92,66 +102,11 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
     return video
 
 
-# ── auth ─────────────────────────────────────────────────────────────────────
-
-@app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
-
-
-@app.post("/register")
-async def register(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    if db.query(models.User).filter(models.User.username == username).first():
-        return templates.TemplateResponse(
-            "register.html", {"request": request, "error": "Username bereits vergeben"}
-        )
-    user = models.User(username=username, password_hash=DEMO_PASSWORD)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    request.session["user_id"] = user.id
-    return RedirectResponse("/", status_code=302)
-
-
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-
-@app.post("/login")
-async def login(
-    request: Request,
-    username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = db.query(models.User).filter(models.User.username == username).first()
-    if not user or password != DEMO_PASSWORD:
-        return templates.TemplateResponse(
-            "login.html", {"request": request, "error": "Falsches Passwort (Tipp: demo)"}
-        )
-    request.session["user_id"] = user.id
-    return RedirectResponse("/", status_code=302)
-
-
-@app.get("/logout")
-async def logout(request: Request):
-    request.session.clear()
-    return RedirectResponse("/login", status_code=302)
-
-
 # ── market ───────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
     user = current_user(request, db)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
 
     videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(24).all()
 
@@ -175,8 +130,6 @@ async def home(request: Request, db: Session = Depends(get_db)):
 @app.get("/search", response_class=HTMLResponse)
 async def search_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     user = current_user(request, db)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
 
     results = []
     error = None
@@ -210,8 +163,6 @@ async def video_detail(
     request: Request, youtube_id: str, db: Session = Depends(get_db)
 ):
     user = current_user(request, db)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
 
     video = db.query(models.Video).filter(models.Video.youtube_id == youtube_id).first()
     if not video:
@@ -280,107 +231,6 @@ async def buy(
     db: Session = Depends(get_db),
 ):
     user = current_user(request, db)
-    if not user:
-        raise HTTPException(status_code=401)
-
-    video = db.query(models.Video).filter(models.Video.youtube_id == youtube_id).first()
-    if not video:
-        raise HTTPException(status_code=404)
-
-    if shares <= 0:
-        return RedirectResponse(f"/video/{youtube_id}?err=invalid_amount", status_code=302)
-
-    total_cost = round(shares * video.current_price, 2)
-    if user.balance < total_cost:
-        return RedirectResponse(f"/video/{youtube_id}?err=insufficient_funds", status_code=302)
-
-    user.balance = round(user.balance - total_cost, 2)
-
-    holding = (
-        db.query(models.Holding)
-        .filter(models.Holding.user_id == user.id, models.Holding.video_id == video.id)
-        .first()
-    )
-    if holding:
-        new_total = holding.shares + shares
-        holding.avg_cost_basis = (
-            holding.shares * holding.avg_cost_basis + shares * video.current_price
-        ) / new_total
-        holding.shares = new_total
-    else:
-        db.add(
-            models.Holding(
-                user_id=user.id,
-                video_id=video.id,
-                shares=shares,
-                avg_cost_basis=video.current_price,
-            )
-        )
-
-    db.add(
-        models.Transaction(
-            user_id=user.id,
-            video_id=video.id,
-            transaction_type="buy",
-            shares=shares,
-            price_per_share=video.current_price,
-            total_amount=total_cost,
-        )
-    )
-    db.commit()
-    return RedirectResponse(f"/video/{youtube_id}?msg=bought", status_code=302)
-
-
-@app.post("/sell/{youtube_id}")
-async def sell(
-    request: Request,
-    youtube_id: str,
-    shares: float = Form(...),
-    db: Session = Depends(get_db),
-):
-    user = current_user(request, db)
-    if not user:
-        raise HTTPException(status_code=401)
-
-    video = db.query(models.Video).filter(models.Video.youtube_id == youtube_id).first()
-    if not video:
-        raise HTTPException(status_code=404)
-
-    holding = (
-        db.query(models.Holding)
-        .filter(models.Holding.user_id == user.id, models.Holding.video_id == video.id)
-        .first()
-    )
-    if not holding or holding.shares < shares:
-        return RedirectResponse(f"/video/{youtube_id}?err=insufficient_shares", status_code=302)
-
-    revenue = round(shares * video.current_price, 2)
-    user.balance = round(user.balance + revenue, 2)
-    holding.shares -= shares
-    if holding.shares <= 0.0001:
-        db.delete(holding)
-
-    db.add(
-        models.Transaction(
-            user_id=user.id,
-            video_id=video.id,
-            transaction_type="sell",
-            shares=shares,
-            price_per_share=video.current_price,
-            total_amount=revenue,
-        )
-    )
-    db.commit()
-    return RedirectResponse(f"/video/{youtube_id}?msg=sold", status_code=302)
-
-
-# ── portfolio & leaderboard ───────────────────────────────────────────────────
-
-@app.get("/portfolio", response_class=HTMLResponse)
-async def portfolio(request: Request, db: Session = Depends(get_db)):
-    user = current_user(request, db)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
 
     holdings_data = []
     total_invested = 0.0
@@ -439,8 +289,6 @@ async def portfolio(request: Request, db: Session = Depends(get_db)):
 @app.get("/leaderboard", response_class=HTMLResponse)
 async def leaderboard(request: Request, db: Session = Depends(get_db)):
     user = current_user(request, db)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
 
     all_users = db.query(models.User).all()
     board = []
