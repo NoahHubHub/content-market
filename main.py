@@ -163,19 +163,19 @@ def record_port_snap(request: Request, db_user: models.User):
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse("register.html",
-        {"request": request, "user": None, "error": None})
+    return templates.TemplateResponse(request, "register.html",
+        {"user": None, "error": None})
 
 
 @app.post("/register", response_class=HTMLResponse)
 async def register(request: Request, username: str = Form(...), password: str = Form(...),
                    db: Session = Depends(get_db)):
     if len(username) < 3:
-        return templates.TemplateResponse("register.html",
-            {"request": request, "user": None, "error": "Username zu kurz (min. 3 Zeichen)"})
+        return templates.TemplateResponse(request, "register.html",
+            {"user": None, "error": "Username zu kurz (min. 3 Zeichen)"})
     if db.query(models.User).filter(models.User.username == username).first():
-        return templates.TemplateResponse("register.html",
-            {"request": request, "user": None, "error": "Username bereits vergeben"})
+        return templates.TemplateResponse(request, "register.html",
+            {"user": None, "error": "Username bereits vergeben"})
     db_user = models.User(
         username=username,
         password_hash=_hash_pw(password),
@@ -191,8 +191,8 @@ async def register(request: Request, username: str = Form(...), password: str = 
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html",
-        {"request": request, "user": None, "error": None})
+    return templates.TemplateResponse(request, "login.html",
+        {"user": None, "error": None})
 
 
 @app.post("/login", response_class=HTMLResponse)
@@ -200,8 +200,8 @@ async def login(request: Request, username: str = Form(...), password: str = For
                 db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == username).first()
     if not db_user or not _verify_pw(password, db_user.password_hash):
-        return templates.TemplateResponse("login.html",
-            {"request": request, "user": None, "error": "Ungültige Zugangsdaten"})
+        return templates.TemplateResponse(request, "login.html",
+            {"user": None, "error": "Ungültige Zugangsdaten"})
     request.session.clear()
     request.session["user_id"] = db_user.id
     return RedirectResponse("/", status_code=302)
@@ -250,8 +250,8 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
             winfo = calculate_price(wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at)
             watchlist_data.append({"video": wv, "info": winfo})
 
-    return templates.TemplateResponse("index.html", {
-        "request": request, "user": user,
+    return templates.TemplateResponse(request, "index.html", {
+        "user": user,
         "video_data": video_data, "trending": trending, "sort": sort,
         "portfolio_ids": portfolio_ids, "watchlist_data": watchlist_data,
     })
@@ -277,8 +277,8 @@ async def search_page(request: Request, q: str = "", db: Session = Depends(get_d
         except Exception as e:
             error = str(e)
 
-    return templates.TemplateResponse("search.html",
-        {"request": request, "user": user, "query": q, "results": results,
+    return templates.TemplateResponse(request, "search.html",
+        {"user": user, "query": q, "results": results,
          "error": error, "portfolio_ids": portfolio_ids})
 
 
@@ -321,8 +321,8 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
     watchlist   = request.session.get("watchlist", [])
     is_watching = youtube_id in watchlist
 
-    return templates.TemplateResponse("video.html", {
-        "request": request, "user": user, "video": video,
+    return templates.TemplateResponse(request, "video.html", {
+        "user": user, "video": video,
         "last_stat": last, "info": info, "price_history": price_history,
         "holding": holding, "related": related, "is_watching": is_watching,
         "msg": request.query_params.get("msg"),
@@ -508,8 +508,8 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
 
     port_snaps = request.session.get("port_snaps", [])
 
-    return templates.TemplateResponse("portfolio.html", {
-        "request": request, "user": user,
+    return templates.TemplateResponse(request, "portfolio.html", {
+        "user": user,
         "holdings_data":  holdings_data,
         "total_current":  round(total_current, 2),
         "total_invested": round(total_invested, 2),
@@ -541,6 +541,6 @@ async def leaderboard(request: Request, db: Session = Depends(get_db)):
         board = [{"username": user.username, "portfolio_value": user.balance,
                   "return_pct": round((user.balance - 10000) / 10000 * 100, 2)}]
 
-    return templates.TemplateResponse("leaderboard.html", {
-        "request": request, "user": user, "board": board,
+    return templates.TemplateResponse(request, "leaderboard.html", {
+        "user": user, "board": board,
     })
