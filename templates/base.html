@@ -202,6 +202,42 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #000; }
     ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+
+    /* ── Vy Companion ─────────────────────────────────── */
+    .vy-wrap {
+      display: flex; align-items: flex-start; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .vy-avatar {
+      width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #ff9f0a, #ff453a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 0 18px rgba(255,159,10,.45);
+      animation: vy-float 2.4s ease-in-out infinite;
+    }
+    @keyframes vy-float {
+      0%, 100% { transform: translateY(0); box-shadow: 0 0 18px rgba(255,159,10,.45); }
+      50%       { transform: translateY(-5px); box-shadow: 0 0 28px rgba(255,159,10,.7); }
+    }
+    .vy-bubble {
+      background: #111; border-radius: 0 14px 14px 14px;
+      padding: 12px 14px; flex: 1; position: relative;
+      border: 1px solid #1e1e1e;
+    }
+    .vy-bubble::before {
+      content: ""; position: absolute; top: 12px; left: -7px;
+      border: 7px solid transparent;
+      border-right-color: #111; border-left: none;
+    }
+    .vy-name {
+      font-size: .65rem; font-weight: 800; color: #ff9f0a;
+      letter-spacing: .07em; text-transform: uppercase; margin-bottom: 4px;
+    }
+    .vy-text {
+      font-size: .88rem; color: #ddd; line-height: 1.45;
+    }
+    .vy-text strong { color: #fff; }
   </style>
 </head>
 <body>

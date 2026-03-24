@@ -474,6 +474,12 @@ async def logout(request: Request):
     return RedirectResponse("/login", status_code=302)
 
 
+@app.post("/vy/dismiss")
+async def vy_dismiss(request: Request):
+    request.session["vy_dismissed"] = True
+    return RedirectResponse("/", status_code=302)
+
+
 # ── market ────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)

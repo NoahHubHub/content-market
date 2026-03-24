@@ -39,6 +39,35 @@
 </div>
 {% endif %}
 
+<!-- Vy Onboarding — erscheint nur wenn noch kein Trade gemacht -->
+{% if user and user.holdings_count == 0 and not request.session.get('vy_dismissed') %}
+{% if user.level == 1 %}
+<div class="vy-wrap" style="margin-bottom:24px;">
+  <div class="vy-avatar">⚡</div>
+  <div class="vy-bubble">
+    <div class="vy-name">Vy</div>
+    <div class="vy-text">
+      Yo! Ich bin <strong>Vy</strong> — ich lebe in jedem Video das gerade viral geht.<br>
+      Hier kannst du in YouTube-Videos investieren wie in Aktien.<br>
+      <strong>Video steigt viral → dein Investment steigt mit.</strong><br><br>
+      Such ein Video das du für heiß hältst und kauf deinen ersten Anteil. Los.
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <a href="/search" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">
+        🔍 Video suchen
+      </a>
+      <form method="post" action="/vy/dismiss" style="margin:0;">
+        <button type="submit"
+          style="background:none;border:none;color:#333;font-size:.82rem;cursor:pointer;padding:10px 4px;">
+          Ich kenn mich aus
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
 <!-- Täglicher Bonus -->
 {% if bonus_available %}
 <form method="post" action="/bonus/claim" style="margin-bottom:16px;">
@@ -84,6 +113,16 @@
   </a>
 
   {% if not today_hot_take %}
+  <!-- Vy's Instinkt -->
+  <div class="vy-wrap" style="margin-bottom:12px;">
+    <div class="vy-avatar" style="width:36px;height:36px;font-size:1rem;">⚡</div>
+    <div class="vy-bubble">
+      <div class="vy-name">Vy</div>
+      <div class="vy-text" style="font-size:.82rem;">
+        Ich sag nichts. Das ist <em>dein</em> Tipp. Aber ich hab so ein Gefühl...
+      </div>
+    </div>
+  </div>
   <div style="font-size:.82rem;color:#555;margin-bottom:10px;text-align:center;">
     Hat dieses Video morgen mehr Views als heute?
   </div>
@@ -210,6 +249,17 @@
 <!-- Daily Drop -->
 {% if daily_drops %}
 <div style="margin-bottom:28px;">
+  <!-- Vy beim Daily Drop -->
+  <div class="vy-wrap" style="margin-bottom:14px;">
+    <div class="vy-avatar">⚡</div>
+    <div class="vy-bubble">
+      <div class="vy-name">Vy</div>
+      <div class="vy-text">
+        Ich spür's in meinen Flammen. <strong>Diese Videos heute.</strong>
+        Limitierte Anteile — wer zuerst kommt.
+      </div>
+    </div>
+  </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:8px;">
       <span class="tr-label">🎯 Daily Drop</span>
