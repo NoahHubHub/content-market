@@ -17,7 +17,7 @@ from database import Base, engine, get_db, SessionLocal
 import models
 from models import get_level_info
 from pricing import calculate_price
-from youtube import extract_video_id, get_video_by_id, get_video_details, search_videos
+from youtube import extract_video_id, get_video_by_id, get_video_details, search_videos, get_trending_videos
 
 load_dotenv()
 Base.metadata.create_all(bind=engine)
@@ -28,10 +28,12 @@ app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 3
 templates = Jinja2Templates(directory="templates")
 
 # ── XP rewards ────────────────────────────────────────────────────────────────
-XP_BUY        = 10
+XP_BUY         = 10
 XP_SELL_PROFIT = 30
 XP_SELL_LOSS   = 5
 XP_DAILY_LOGIN = 5
+
+STREAK_BONUS = {3: 15, 7: 50, 14: 100, 30: 250}  # Streak-Tag → Bonus XP
 
 # ── Scheduler: auto-refresh prices & daily drop ───────────────────────────────
 
@@ -90,10 +92,35 @@ def _generate_daily_drop():
         db.close()
 
 
+def _seed_market():
+    """Markt mit Trending-Videos befüllen falls er leer ist."""
+    db = SessionLocal()
+    try:
+        count = db.query(models.Video).count()
+        if count >= 15:
+            return
+        try:
+            yt_list = get_trending_videos(region="DE", max_results=20)
+            for yt in yt_list:
+                upsert_video(db, yt)
+        except Exception:
+            pass
+    finally:
+        db.close()
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(_auto_refresh_prices, "cron", hour=6, minute=0)
 scheduler.add_job(_generate_daily_drop,  "cron", hour=0, minute=5)
+scheduler.add_job(_seed_market,          "cron", hour=3, minute=0)
 scheduler.start()
+
+# Beim Start sofort seeden falls nötig
+try:
+    _seed_market()
+    _generate_daily_drop()
+except Exception:
+    pass
 
 
 def _hash_pw(password: str) -> str:
@@ -117,6 +144,7 @@ class UserCtx:
         self.estimated_value = round(db_user.balance + self.cost_basis, 2)
         self.xp              = db_user.xp or 0
         self.level_info      = get_level_info(self.xp)
+        self.streak_days     = db_user.streak_days or 0
 
 
 def get_login(request: Request, db: Session) -> Optional[models.User]:
@@ -324,11 +352,22 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
             winfo = calculate_price(wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at)
             watchlist_data.append({"video": wv, "info": winfo})
 
-    # Daily login XP (einmal pro Session)
-    if not request.session.get("daily_xp_given"):
-        db_user.xp = (db_user.xp or 0) + XP_DAILY_LOGIN
+    # Streak & Daily Login XP
+    streak_bonus = 0
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    if db_user.last_login_date != today_str:
+        from datetime import timedelta
+        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+        if db_user.last_login_date == yesterday:
+            db_user.streak_days = (db_user.streak_days or 0) + 1
+        else:
+            db_user.streak_days = 1
+        db_user.last_login_date = today_str
+        xp_gain = XP_DAILY_LOGIN
+        streak_bonus = STREAK_BONUS.get(db_user.streak_days, 0)
+        xp_gain += streak_bonus
+        db_user.xp = (db_user.xp or 0) + xp_gain
         db.commit()
-        request.session["daily_xp_given"] = True
 
     daily_drops = get_todays_drops(db)
 
@@ -337,6 +376,7 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "video_data": video_data, "trending": trending, "sort": sort,
         "portfolio_ids": portfolio_ids, "watchlist_data": watchlist_data,
         "daily_drops": daily_drops,
+        "streak_bonus": streak_bonus,
     })
 
 
@@ -690,8 +730,16 @@ async def leaderboard(request: Request, db: Session = Depends(get_db)):
     entries = (db.query(models.LeaderboardEntry)
                .order_by(models.LeaderboardEntry.portfolio_value.desc())
                .limit(20).all())
-    board = [{"username": e.username, "portfolio_value": e.portfolio_value, "return_pct": e.return_pct}
-             for e in entries]
+    board = []
+    for e in entries:
+        u = db.query(models.User).filter_by(username=e.username).first()
+        board.append({
+            "username": e.username,
+            "portfolio_value": e.portfolio_value,
+            "return_pct": e.return_pct,
+            "streak": u.streak_days if u else 0,
+            "level": get_level_info(u.xp or 0)["level"] if u else 1,
+        })
     if not board:
         board = [{"username": user.username, "portfolio_value": user.balance,
                   "return_pct": round((user.balance - 10000) / 10000 * 100, 2)}]

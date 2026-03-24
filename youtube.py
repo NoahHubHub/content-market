@@ -83,3 +83,15 @@ def search_videos(query: str, max_results: int = 8) -> list:
     )
     video_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
     return get_video_details(video_ids)
+
+
+def get_trending_videos(region: str = "DE", max_results: int = 20) -> list:
+    """Fetch trending/most popular videos. Costs 1 quota unit."""
+    yt = _client()
+    response = (
+        yt.videos()
+        .list(chart="mostPopular", regionCode=region,
+              part="statistics,snippet", maxResults=max_results)
+        .execute()
+    )
+    return _parse_items(response.get("items", []))

@@ -38,6 +38,8 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     balance = Column(Float, default=10000.0)
     xp = Column(Integer, default=0)
+    streak_days = Column(Integer, default=0)
+    last_login_date = Column(String, nullable=True)  # "2026-03-24"
     created_at = Column(DateTime, default=datetime.utcnow)
 
     holdings = relationship("Holding", back_populates="user")

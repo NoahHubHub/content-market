@@ -26,6 +26,12 @@
         <span style="font-size:.7rem;color:#555;font-weight:500;margin-left:6px;">Du</span>
         {% endif %}
       </div>
+      <div style="display:flex;gap:8px;margin-top:2px;">
+        <span style="font-size:.7rem;color:#ff9f0a;font-weight:600;">⚡ Lv.{{ item.level }}</span>
+        {% if item.streak >= 2 %}
+        <span style="font-size:.7rem;color:#ff6b00;font-weight:600;">🔥 {{ item.streak }}d</span>
+        {% endif %}
+      </div>
     </div>
     <div class="tr-row-right">
       <div class="tr-row-price">${{ "%.2f"|format(item.portfolio_value) }}</div>
