@@ -120,20 +120,6 @@ def _seed_market():
         db.close()
 
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(_auto_refresh_prices, "cron", hour=6,  minute=0)
-scheduler.add_job(_generate_daily_drop,  "cron", hour=0,  minute=5)
-scheduler.add_job(_seed_market,          "cron", hour=3,  minute=0)
-scheduler.add_job(_resolve_hot_takes,    "cron", hour=7,  minute=0)
-scheduler.add_job(_end_season,           "cron", day_of_week="mon", hour=0, minute=10)
-scheduler.start()
-
-# Beim Start sofort seeden falls nötig
-try:
-    _seed_market()
-    _generate_daily_drop()
-except Exception:
-    pass
 
 
 def _hash_pw(password: str) -> str:
@@ -1163,6 +1149,22 @@ def _end_season():
         db.commit()
     finally:
         db.close()
+
+
+# ── Scheduler (nach allen Funktionsdefinitionen) ──────────────────────────────
+scheduler = BackgroundScheduler()
+scheduler.add_job(_auto_refresh_prices, "cron", hour=6,  minute=0)
+scheduler.add_job(_generate_daily_drop,  "cron", hour=0,  minute=5)
+scheduler.add_job(_seed_market,          "cron", hour=3,  minute=0)
+scheduler.add_job(_resolve_hot_takes,    "cron", hour=7,  minute=0)
+scheduler.add_job(_end_season,           "cron", day_of_week="mon", hour=0, minute=10)
+scheduler.start()
+
+try:
+    _seed_market()
+    _generate_daily_drop()
+except Exception:
+    pass
 
 
 @app.get("/season", response_class=HTMLResponse)
