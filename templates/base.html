@@ -15,10 +15,10 @@
       min-height: 100vh;
     }
 
-    /* ── Navbar ───────────────────────────────────────── */
+    /* ── Top Navbar ───────────────────────────────────── */
     .tr-nav {
       background: #000;
-      padding: 16px 0 8px;
+      padding: 14px 0 10px;
       border-bottom: 1px solid #111;
       position: sticky; top: 0; z-index: 100;
     }
@@ -30,26 +30,59 @@
       font-size: 1rem; font-weight: 700; color: #fff; text-decoration: none;
       letter-spacing: -.01em;
     }
-    .tr-nav-links { display: flex; gap: 20px; align-items: center; }
-    .tr-nav-links a {
-      font-size: .85rem; color: #555; text-decoration: none; font-weight: 500;
-      transition: color .15s;
+    .tr-nav-right { display: flex; align-items: center; gap: 10px; }
+    .tr-nav-balance { font-size: .88rem; font-weight: 600; color: #fff; }
+    .tr-nav-level {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #111; border-radius: 20px;
+      padding: 3px 9px; font-size: .72rem; font-weight: 700;
     }
-    .tr-nav-links a:hover, .tr-nav-links a.active { color: #fff; }
-    .tr-nav-balance {
-      font-size: .85rem; font-weight: 600; color: #fff;
+
+    /* ── Bottom Tab Bar ───────────────────────────────── */
+    .tr-tabbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.92);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid #1a1a1a;
+      display: flex; align-items: stretch;
+      z-index: 200;
+      padding-bottom: env(safe-area-inset-bottom);
     }
-    .tr-nav-badge {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 17px; height: 17px; padding: 0 4px;
-      background: #30d158; color: #000; border-radius: 20px;
-      font-size: .65rem; font-weight: 800; margin-left: 4px;
-      vertical-align: middle; line-height: 1;
+    .tr-tab-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 4px 8px;
+      text-decoration: none; color: #444;
+      font-size: .6rem; font-weight: 600; letter-spacing: .02em;
+      gap: 4px; transition: color .15s; position: relative;
     }
+    .tr-tab-item.active { color: #fff; }
+    .tr-tab-item.active .tr-tab-icon { transform: scale(1.08); }
+    .tr-tab-icon { font-size: 1.35rem; line-height: 1; transition: transform .15s; }
+    .tr-tab-badge {
+      position: absolute; top: 6px;
+      right: calc(50% - 16px);
+      min-width: 15px; height: 15px; padding: 0 3px;
+      background: #30d158; color: #000;
+      border-radius: 20px; font-size: .58rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid #000;
+    }
+    /* Mittlerer Tab (Suche) leicht hervorgehoben */
+    .tr-tab-center .tr-tab-icon-wrap {
+      background: #fff; border-radius: 50%;
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: -12px;
+      box-shadow: 0 4px 16px rgba(255,255,255,.15);
+    }
+    .tr-tab-center.active .tr-tab-icon-wrap { background: #fff; }
+    .tr-tab-center .tr-tab-icon { font-size: 1.2rem; filter: invert(1); }
 
     /* ── Page wrapper ─────────────────────────────────── */
     .tr-page {
-      max-width: 540px; margin: 0 auto; padding: 28px 20px 80px;
+      max-width: 540px; margin: 0 auto;
+      padding: 24px 20px 100px; /* Extra unten wegen Tab Bar */
     }
 
     /* ── Typography ───────────────────────────────────── */
@@ -148,9 +181,7 @@
     .tr-btn-ghost:hover { background: #1a1a1a; color: #fff; }
 
     /* ── Action bar (bottom) ──────────────────────────── */
-    .tr-actions {
-      display: flex; gap: 12px; margin-top: 40px;
-    }
+    .tr-actions { display: flex; gap: 12px; margin-top: 40px; }
     .tr-actions .tr-btn-primary,
     .tr-actions .tr-btn-ghost {
       flex: 1; display: flex; align-items: center;
@@ -234,51 +265,78 @@
       font-size: .65rem; font-weight: 800; color: #ff9f0a;
       letter-spacing: .07em; text-transform: uppercase; margin-bottom: 4px;
     }
-    .vy-text {
-      font-size: .88rem; color: #ddd; line-height: 1.45;
-    }
+    .vy-text { font-size: .88rem; color: #ddd; line-height: 1.45; }
     .vy-text strong { color: #fff; }
   </style>
 </head>
 <body>
 
+<!-- Top Navbar: nur Logo + Balance + Level -->
 <nav class="tr-nav">
   <div class="tr-nav-inner">
-    <a href="/" class="tr-nav-brand">Content Market</a>
-    <div class="tr-nav-links">
-      <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Markt</a>
-      <a href="/search" class="{% if request.url.path == '/search' %}active{% endif %}">Suche</a>
-      <a href="/leaderboard" class="{% if request.url.path == '/leaderboard' %}active{% endif %}">Rangliste</a>
-      <a href="/season" class="{% if request.url.path == '/season' %}active{% endif %}">Season</a>
-      <a href="/duels" class="{% if request.url.path == '/duels' %}active{% endif %}">Duelle</a>
-      <a href="/portfolio" class="{% if request.url.path == '/portfolio' %}active{% endif %}">
-        Portfolio{% if user and user.holdings_count > 0 %}<span class="tr-nav-badge">{{ user.holdings_count }}</span>{% endif %}
-      </a>
-      {% if user %}
-      <span class="tr-nav-balance" title="Cash · {{ user.holdings_count }} Positionen">${{ "%.0f"|format(user.balance) }}</span>
-      <!-- Level Badge -->
-      <span title="Level {{ user.level_info.level }} · {{ user.level_info.xp }} XP"
-        style="display:inline-flex;align-items:center;gap:4px;background:#111;border-radius:20px;
-               padding:3px 9px;font-size:.72rem;font-weight:700;cursor:default;">
+    <a href="/" class="tr-nav-brand">⚡ Content Market</a>
+    {% if user %}
+    <div class="tr-nav-right">
+      <span class="tr-nav-balance">${{ "%.0f"|format(user.balance) }}</span>
+      <span class="tr-nav-level">
         <span style="color:#ff9f0a;">⚡</span>
-        <span style="color:#fff;">Lv.{{ user.level_info.level }}</span>
+        <span>Lv.{{ user.level }}</span>
+        {% if user.streak_days >= 2 %}
+        <span style="color:#ff6b00;margin-left:2px;">🔥{{ user.streak_days }}</span>
+        {% endif %}
       </span>
       <form method="post" action="/logout" style="margin:0;">
         <button type="submit"
-          style="background:none;border:none;color:#333;font-size:.82rem;font-weight:500;
+          style="background:none;border:none;color:#333;font-size:.88rem;
                  cursor:pointer;padding:0;transition:color .15s;"
-          onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#333'">
-          ↩
-        </button>
+          onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#333'">↩</button>
       </form>
-      {% endif %}
     </div>
+    {% endif %}
   </div>
 </nav>
 
 <div class="tr-page">
   {% block content %}{% endblock %}
 </div>
+
+<!-- Bottom Tab Bar -->
+{% if user %}
+{% set path = request.url.path %}
+<nav class="tr-tabbar">
+
+  <a href="/" class="tr-tab-item {% if path == '/' %}active{% endif %}">
+    <span class="tr-tab-icon">📈</span>
+    <span>Markt</span>
+  </a>
+
+  <a href="/leaderboard" class="tr-tab-item {% if path == '/leaderboard' or path == '/season' %}active{% endif %}">
+    <span class="tr-tab-icon">🏆</span>
+    <span>Rangliste</span>
+  </a>
+
+  <a href="/search" class="tr-tab-item tr-tab-center {% if path == '/search' %}active{% endif %}">
+    <span class="tr-tab-icon-wrap">
+      <span class="tr-tab-icon">🔍</span>
+    </span>
+    <span style="margin-top:2px;">Suche</span>
+  </a>
+
+  <a href="/duels" class="tr-tab-item {% if path == '/duels' %}active{% endif %}">
+    <span class="tr-tab-icon">⚔️</span>
+    <span>Duelle</span>
+  </a>
+
+  <a href="/portfolio" class="tr-tab-item {% if path == '/portfolio' %}active{% endif %}">
+    <span class="tr-tab-icon">👤</span>
+    {% if user.holdings_count > 0 %}
+    <span class="tr-tab-badge">{{ user.holdings_count }}</span>
+    {% endif %}
+    <span>Portfolio</span>
+  </a>
+
+</nav>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% block scripts %}{% endblock %}
