@@ -7,3 +7,4 @@ python-dotenv
 google-api-python-client
 itsdangerous
 bcrypt
+apscheduler

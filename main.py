@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime
 from typing import Optional
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -12,8 +13,9 @@ import bcrypt
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from database import Base, engine, get_db
+from database import Base, engine, get_db, SessionLocal
 import models
+from models import get_level_info
 from pricing import calculate_price
 from youtube import extract_video_id, get_video_by_id, get_video_details, search_videos
 
@@ -24,6 +26,76 @@ app = FastAPI(title="Content Market")
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 templates = Jinja2Templates(directory="templates")
+
+# ── XP rewards ────────────────────────────────────────────────────────────────
+XP_BUY        = 10
+XP_SELL_PROFIT = 30
+XP_SELL_LOSS   = 5
+XP_DAILY_LOGIN = 5
+
+# ── Scheduler: auto-refresh prices & daily drop ───────────────────────────────
+
+def _auto_refresh_prices():
+    """Täglich alle Videos mit aktiven Holdings neu laden."""
+    db = SessionLocal()
+    try:
+        active = db.query(models.Holding).filter(models.Holding.shares > 0.001).all()
+        yt_ids = list({h.video.youtube_id for h in active if h.video})
+        if not yt_ids:
+            return
+        for i in range(0, len(yt_ids), 50):
+            batch = yt_ids[i:i+50]
+            try:
+                yt_list = get_video_details(batch)
+                for yt in yt_list:
+                    upsert_video(db, yt)
+            except Exception:
+                pass
+    finally:
+        db.close()
+
+
+def _generate_daily_drop():
+    """Täglich 5 Videos mit höchstem Momentum als Daily Drop featuren."""
+    db = SessionLocal()
+    try:
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        existing = db.query(models.DailyDrop).filter_by(date=today).count()
+        if existing > 0:
+            return
+
+        videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(50).all()
+        scored = []
+        for v in videos:
+            if not v.stats:
+                continue
+            last = v.stats[-1]
+            info = calculate_price(
+                last.view_count, last.like_count, last.comment_count, v.published_at
+            )
+            scored.append((info["momentum_pct"], v))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top5 = [v for _, v in scored[:5]]
+
+        for video in top5:
+            db.add(models.DailyDrop(
+                video_id=video.id,
+                date=today,
+                total_shares=100.0,
+                shares_remaining=100.0,
+            ))
+        db.commit()
+    finally:
+        db.close()
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(_auto_refresh_prices, "cron", hour=6, minute=0)
+scheduler.add_job(_generate_daily_drop,  "cron", hour=0, minute=5)
+scheduler.start()
+
+
 def _hash_pw(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -43,6 +115,8 @@ class UserCtx:
         self.holdings_count  = len(active)
         self.cost_basis      = round(sum(h.shares * h.avg_cost_basis for h in active), 2)
         self.estimated_value = round(db_user.balance + self.cost_basis, 2)
+        self.xp              = db_user.xp or 0
+        self.level_info      = get_level_info(self.xp)
 
 
 def get_login(request: Request, db: Session) -> Optional[models.User]:
@@ -250,10 +324,19 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
             winfo = calculate_price(wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at)
             watchlist_data.append({"video": wv, "info": winfo})
 
+    # Daily login XP (einmal pro Session)
+    if not request.session.get("daily_xp_given"):
+        db_user.xp = (db_user.xp or 0) + XP_DAILY_LOGIN
+        db.commit()
+        request.session["daily_xp_given"] = True
+
+    daily_drops = get_todays_drops(db)
+
     return templates.TemplateResponse(request, "index.html", {
         "user": user,
         "video_data": video_data, "trending": trending, "sort": sort,
         "portfolio_ids": portfolio_ids, "watchlist_data": watchlist_data,
+        "daily_drops": daily_drops,
     })
 
 
@@ -327,6 +410,7 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         "holding": holding, "related": related, "is_watching": is_watching,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
+        "xp":  request.query_params.get("xp"),
     })
 
 
@@ -406,9 +490,11 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
     db.commit()
     db.refresh(db_user)
 
+    db_user.xp = (db_user.xp or 0) + XP_BUY
+    db.commit()
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
-    return RedirectResponse(f"/video/{youtube_id}?msg=bought", status_code=302)
+    return RedirectResponse(f"/video/{youtube_id}?msg=bought&xp={XP_BUY}", status_code=302)
 
 
 @app.post("/sell/{youtube_id}")
@@ -426,6 +512,7 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
     if not h or h.shares < shares:
         return RedirectResponse(f"/video/{youtube_id}?err=insufficient_shares", status_code=302)
 
+    avg_cost = h.avg_cost_basis
     revenue = round(shares * video.current_price, 2)
     h.shares = round(h.shares - shares, 4)
     if h.shares <= 0.001:
@@ -436,12 +523,16 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
         user_id=db_user.id, video_id=video.id, transaction_type="sell",
         shares=shares, price_per_share=video.current_price, total_amount=revenue,
     ))
+
+    profit = video.current_price >= avg_cost
+    xp_gained = XP_SELL_PROFIT if profit else XP_SELL_LOSS
+    db_user.xp = (db_user.xp or 0) + xp_gained
     db.commit()
     db.refresh(db_user)
 
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
-    return RedirectResponse(f"/video/{youtube_id}?msg=sold", status_code=302)
+    return RedirectResponse(f"/video/{youtube_id}?msg=sold&xp={xp_gained}", status_code=302)
 
 
 # ── portfolio ─────────────────────────────────────────────────────────────────
@@ -521,6 +612,70 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "net_pnl":     round(portfolio_value - 10000, 2),
         "net_pnl_pct": round((portfolio_value - 10000) / 10000 * 100, 2),
     })
+
+
+# ── daily drop ────────────────────────────────────────────────────────────────
+
+def get_todays_drops(db: Session) -> list:
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    drops = db.query(models.DailyDrop).filter_by(date=today).all()
+    result = []
+    for drop in drops:
+        if not drop.video or not drop.video.stats:
+            continue
+        last = drop.video.stats[-1]
+        info = calculate_price(
+            last.view_count, last.like_count, last.comment_count, drop.video.published_at
+        )
+        result.append({"drop": drop, "video": drop.video, "info": info})
+    return result
+
+
+@app.post("/daily-drop/buy/{drop_id}")
+async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(...),
+                         db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    drop = db.query(models.DailyDrop).filter_by(id=drop_id).first()
+    if not drop or not drop.video:
+        raise HTTPException(status_code=404)
+
+    shares = round(min(shares, drop.shares_remaining), 4)
+    if shares <= 0:
+        return RedirectResponse(f"/video/{drop.video.youtube_id}?err=drop_sold_out", status_code=302)
+
+    total_cost = round(shares * drop.video.current_price, 2)
+    if db_user.balance < total_cost:
+        return RedirectResponse(f"/video/{drop.video.youtube_id}?err=insufficient_funds", status_code=302)
+
+    drop.shares_remaining = round(drop.shares_remaining - shares, 4)
+
+    h = db.query(models.Holding).filter_by(user_id=db_user.id, video_id=drop.video_id).first()
+    if h:
+        new_total = h.shares + shares
+        h.avg_cost_basis = round(
+            (h.shares * h.avg_cost_basis + shares * drop.video.current_price) / new_total, 4
+        )
+        h.shares = round(new_total, 4)
+    else:
+        db.add(models.Holding(
+            user_id=db_user.id, video_id=drop.video_id,
+            shares=round(shares, 4), avg_cost_basis=round(drop.video.current_price, 4),
+        ))
+
+    db_user.balance = round(db_user.balance - total_cost, 2)
+    db.add(models.Transaction(
+        user_id=db_user.id, video_id=drop.video_id, transaction_type="buy",
+        shares=shares, price_per_share=drop.video.current_price, total_amount=total_cost,
+    ))
+    db_user.xp = (db_user.xp or 0) + XP_BUY + 5  # Bonus XP für Daily Drop
+    db.commit()
+    db.refresh(db_user)
+
+    upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
+    return RedirectResponse(f"/video/{drop.video.youtube_id}?msg=bought&xp={XP_BUY + 5}", status_code=302)
 
 
 # ── leaderboard ───────────────────────────────────────────────────────────────

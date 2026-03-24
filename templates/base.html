@@ -218,6 +218,13 @@
       </a>
       {% if user %}
       <span class="tr-nav-balance" title="Cash · {{ user.holdings_count }} Positionen">${{ "%.0f"|format(user.balance) }}</span>
+      <!-- Level Badge -->
+      <span title="Level {{ user.level_info.level }} · {{ user.level_info.xp }} XP"
+        style="display:inline-flex;align-items:center;gap:4px;background:#111;border-radius:20px;
+               padding:3px 9px;font-size:.72rem;font-weight:700;cursor:default;">
+        <span style="color:#ff9f0a;">⚡</span>
+        <span style="color:#fff;">Lv.{{ user.level_info.level }}</span>
+      </span>
       <form method="post" action="/logout" style="margin:0;">
         <button type="submit"
           style="background:none;border:none;color:#333;font-size:.82rem;font-weight:500;

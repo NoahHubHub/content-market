@@ -3,9 +3,15 @@
 {% block content %}
 
 {% if msg == "bought" %}
-<div class="tr-alert tr-alert-success">✓ Kauf erfolgreich</div>
+<div class="tr-alert tr-alert-success">
+  ✓ Kauf erfolgreich
+  {% if xp %}&nbsp;·&nbsp;<span style="color:#ff9f0a;font-weight:700;">+{{ xp }} XP ⚡</span>{% endif %}
+</div>
 {% elif msg == "sold" %}
-<div class="tr-alert tr-alert-success">✓ Verkauf erfolgreich</div>
+<div class="tr-alert tr-alert-success">
+  ✓ Verkauf erfolgreich
+  {% if xp %}&nbsp;·&nbsp;<span style="color:#ff9f0a;font-weight:700;">+{{ xp }} XP ⚡</span>{% endif %}
+</div>
 {% elif msg == "refreshed" %}
 <div class="tr-alert tr-alert-info">Kurs aktualisiert</div>
 {% elif msg == "watched" %}

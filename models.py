@@ -1,7 +1,33 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
+
+
+XP_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000, 6000, 10000]
+LEVEL_NAMES = [
+    "Rookie", "Trader", "Analyst", "Investor", "Broker",
+    "Fund Manager", "Hedge Fund", "Whale", "Market Maker", "Legend"
+]
+
+
+def get_level_info(xp: int) -> dict:
+    level = 1
+    for i, threshold in enumerate(XP_THRESHOLDS):
+        if xp >= threshold:
+            level = i + 1
+    level = min(level, 10)
+    xp_current = XP_THRESHOLDS[level - 1]
+    xp_next = XP_THRESHOLDS[level] if level < 10 else XP_THRESHOLDS[-1]
+    progress = round((xp - xp_current) / max(xp_next - xp_current, 1) * 100, 1)
+    return {
+        "level": level,
+        "name": LEVEL_NAMES[level - 1],
+        "xp": xp,
+        "xp_current": xp_current,
+        "xp_next": xp_next,
+        "progress": min(progress, 100),
+    }
 
 
 class User(Base):
@@ -11,6 +37,7 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     balance = Column(Float, default=10000.0)
+    xp = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     holdings = relationship("Holding", back_populates="user")
@@ -34,6 +61,7 @@ class Video(Base):
     stats = relationship("VideoStats", back_populates="video", order_by="VideoStats.recorded_at")
     holdings = relationship("Holding", back_populates="video")
     transactions = relationship("Transaction", back_populates="video")
+    daily_drops = relationship("DailyDrop", back_populates="video")
 
 
 class VideoStats(Base):
@@ -87,3 +115,15 @@ class LeaderboardEntry(Base):
     portfolio_value = Column(Float, nullable=False)
     return_pct = Column(Float, nullable=False)
     recorded_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DailyDrop(Base):
+    __tablename__ = "daily_drops"
+
+    id = Column(Integer, primary_key=True)
+    video_id = Column(Integer, ForeignKey("videos.id"))
+    date = Column(String, index=True)          # "2026-03-24"
+    total_shares = Column(Float, default=100.0)
+    shares_remaining = Column(Float, default=100.0)
+
+    video = relationship("Video", back_populates="daily_drops")

@@ -2,6 +2,23 @@
 {% block title %}Markt — Content Market{% endblock %}
 {% block content %}
 
+<!-- XP Level Bar -->
+{% if user %}
+<div style="background:#0a0a0a;border-radius:14px;padding:12px 16px;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:.8rem;font-weight:700;color:#ff9f0a;">⚡ Level {{ user.level_info.level }}</span>
+      <span style="font-size:.75rem;color:#555;">{{ user.level_info.name }}</span>
+    </div>
+    <span style="font-size:.72rem;color:#555;">{{ user.level_info.xp }} / {{ user.level_info.xp_next }} XP</span>
+  </div>
+  <div style="background:#1a1a1a;border-radius:99px;height:4px;overflow:hidden;">
+    <div style="background:linear-gradient(90deg,#ff9f0a,#ff6b00);height:100%;border-radius:99px;
+                width:{{ user.level_info.progress }}%;transition:width .5s ease;"></div>
+  </div>
+</div>
+{% endif %}
+
 <!-- User stats bar -->
 {% if user and user.holdings_count > 0 %}
 <div style="display:flex;gap:16px;padding:12px 16px;background:#0a0a0a;border-radius:14px;
@@ -62,6 +79,73 @@
     </a>
     {% endfor %}
   </div>
+</div>
+{% endif %}
+
+<!-- Daily Drop -->
+{% if daily_drops %}
+<div style="margin-bottom:28px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="tr-label">🎯 Daily Drop</span>
+      <span style="background:rgba(255,69,58,.15);color:#ff453a;font-size:.65rem;font-weight:700;
+                   padding:2px 7px;border-radius:20px;">Limitiert</span>
+    </div>
+    <span style="font-size:.72rem;color:#555;">Heute verfügbar</span>
+  </div>
+  {% for item in daily_drops %}
+  {% set drop = item.drop %}
+  {% set v = item.video %}
+  {% set info = item.info %}
+  <div style="background:#0a0a0a;border-radius:14px;padding:14px;margin-bottom:10px;">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+      {% if v.thumbnail_url %}
+      <img src="{{ v.thumbnail_url }}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;" />
+      {% endif %}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          {{ v.title[:45] }}{% if v.title|length > 45 %}…{% endif %}
+        </div>
+        <div style="font-size:.75rem;color:#555;margin-top:2px;">{{ v.channel_name }}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <span style="font-size:.88rem;font-weight:700;">${{ "%.2f"|format(v.current_price) }}</span>
+          <span class="{% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}" style="font-size:.78rem;">
+            {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}{{ info.momentum_pct | abs }}%
+          </span>
+        </div>
+      </div>
+    </div>
+    <!-- Verfügbarkeits-Bar -->
+    {% set pct_remaining = (drop.shares_remaining / drop.total_shares * 100) | round(0) %}
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:.7rem;color:#555;">Noch verfügbar</span>
+        <span style="font-size:.7rem;font-weight:700;
+          {% if pct_remaining < 25 %}color:#ff453a{% elif pct_remaining < 60 %}color:#ff9f0a{% else %}color:#30d158{% endif %}">
+          {{ drop.shares_remaining | round(1) }} / {{ drop.total_shares | round(0) | int }} Anteile
+        </span>
+      </div>
+      <div style="background:#1a1a1a;border-radius:99px;height:4px;">
+        <div style="height:100%;border-radius:99px;
+          {% if pct_remaining < 25 %}background:#ff453a{% elif pct_remaining < 60 %}background:#ff9f0a{% else %}background:#30d158{% endif %};
+          width:{{ pct_remaining }}%;"></div>
+      </div>
+    </div>
+    {% if drop.shares_remaining > 0 %}
+    <form method="post" action="/daily-drop/buy/{{ drop.id }}" style="display:flex;gap:8px;">
+      <input type="number" name="shares" value="1" min="0.1" max="{{ drop.shares_remaining }}" step="0.1"
+             class="tr-input" style="flex:1;padding:10px 14px;font-size:.88rem;" />
+      <button type="submit" class="tr-btn-buy" style="flex-shrink:0;padding:10px 18px;font-size:.85rem;width:auto;">
+        Kaufen <span style="font-size:.65rem;opacity:.7;">+{{ 10 + 5 }} XP</span>
+      </button>
+    </form>
+    {% else %}
+    <div style="text-align:center;padding:10px;font-size:.82rem;color:#555;font-weight:600;">
+      Ausverkauft
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
