@@ -39,33 +39,47 @@
 </div>
 {% endif %}
 
-<!-- Vy Onboarding — erscheint nur wenn noch kein Trade gemacht -->
-{% if user and user.holdings_count == 0 and not request.session.get('vy_dismissed') %}
-{% if user.level == 1 %}
+<!-- Vy Tutorial Step 0: Willkommen -->
+{% if user and user.tutorial_step == 0 %}
 <div class="vy-wrap" style="margin-bottom:24px;">
   <div class="vy-avatar">⚡</div>
   <div class="vy-bubble">
-    <div class="vy-name">Vy</div>
+    <div class="vy-name">Vy · Schritt 1 von 4</div>
     <div class="vy-text">
-      Yo! Ich bin <strong>Vy</strong> — ich lebe in jedem Video das gerade viral geht.<br>
-      Hier kannst du in YouTube-Videos investieren wie in Aktien.<br>
-      <strong>Video steigt viral → dein Investment steigt mit.</strong><br><br>
-      Such ein Video das du für heiß hältst und kauf deinen ersten Anteil. Los.
+      Yo! Ich bin <strong>Vy</strong> — dein Begleiter im Content Market.<br>
+      Hier investierst du in YouTube-Videos wie in Aktien.<br>
+      <strong>Ein Video geht viral → dein Investment steigt mit.</strong><br><br>
+      Ich zeig dir kurz wie das läuft. Dauert 2 Minuten.
     </div>
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      <a href="/search" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">
-        🔍 Video suchen
-      </a>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+      <form method="post" action="/vy/dismiss" style="margin:0;">
+        <button type="submit" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">
+          Los geht's →
+        </button>
+      </form>
       <form method="post" action="/vy/dismiss" style="margin:0;">
         <button type="submit"
-          style="background:none;border:none;color:#333;font-size:.82rem;cursor:pointer;padding:10px 4px;">
-          Ich kenn mich aus
+          style="background:none;border:none;color:#333;font-size:.78rem;cursor:pointer;padding:10px 4px;">
+          Überspringen
         </button>
       </form>
     </div>
   </div>
 </div>
 {% endif %}
+
+<!-- Vy Tutorial Step 1: Zeige auf ein Video -->
+{% if user and user.tutorial_step == 1 %}
+<div class="vy-wrap" style="margin-bottom:20px;">
+  <div class="vy-avatar" style="width:38px;height:38px;font-size:1.1rem;">⚡</div>
+  <div class="vy-bubble">
+    <div class="vy-name">Vy · Schritt 2 von 4</div>
+    <div class="vy-text">
+      Scroll durch den Markt und klick ein Video an das dir heiß vorkommt.<br>
+      <span style="color:#ff9f0a;font-weight:700;">↓ Da unten stehen die Videos.</span>
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <!-- Täglicher Bonus -->

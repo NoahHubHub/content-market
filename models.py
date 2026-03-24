@@ -100,6 +100,7 @@ class User(Base):
     streak_days = Column(Integer, default=0)
     last_login_date = Column(String, nullable=True)
     last_bonus_date = Column(String, nullable=True)
+    tutorial_step = Column(Integer, default=0)  # 0-4 aktiv, 99=fertig
     created_at = Column(DateTime, default=datetime.utcnow)
 
     holdings = relationship("Holding", back_populates="user")

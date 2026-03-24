@@ -31,6 +31,29 @@
   .tab-panel.active { display: block; }
 </style>
 
+<!-- Vy Tutorial Step 3: Portfolio erklären -->
+{% if user and user.tutorial_step == 3 %}
+<div class="vy-wrap" style="margin-bottom:20px;">
+  <div class="vy-avatar">⚡</div>
+  <div class="vy-bubble" style="border-color:rgba(48,209,88,.3);background:#0d1a0d;">
+    <div class="vy-name">Vy · Schritt 4 von 4</div>
+    <div class="vy-text">
+      YOOO du hast dein erstes Investment! 🚀<br>
+      Hier siehst du ob du im <strong>Gewinn</strong> oder <strong>Verlust</strong> bist.<br>
+      Grün = Video läuft gut. Rot = Zeit zum Verkaufen oder Hodln.<br>
+      <span style="color:#30d158;font-weight:700;">Tutorial fertig. Du weißt was du tust.</span>
+    </div>
+    <div style="margin-top:10px;">
+      <form method="post" action="/tutorial/next" style="margin:0;">
+        <button type="submit" class="tr-btn-primary" style="padding:9px 18px;font-size:.85rem;">
+          Verstanden ✓
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Header -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
   <div class="tr-tabs">

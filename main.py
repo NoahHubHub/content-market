@@ -228,6 +228,7 @@ class UserCtx:
         self.level_info      = get_level_info(self.xp)
         self.level           = db_user.level or 1
         self.streak_days     = db_user.streak_days or 0
+        self.tutorial_step   = db_user.tutorial_step if db_user.tutorial_step is not None else 0
 
 
 def get_login(request: Request, db: Session) -> Optional[models.User]:
@@ -475,9 +476,20 @@ async def logout(request: Request):
 
 
 @app.post("/vy/dismiss")
-async def vy_dismiss(request: Request):
-    request.session["vy_dismissed"] = True
+async def vy_dismiss(request: Request, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if db_user and (db_user.tutorial_step or 0) == 0:
+        db_user.tutorial_step = 1
+        db.commit()
     return RedirectResponse("/", status_code=302)
+
+@app.post("/tutorial/next")
+async def tutorial_next(request: Request, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if db_user and (db_user.tutorial_step or 0) < 99:
+        db_user.tutorial_step = (db_user.tutorial_step or 0) + 1
+        db.commit()
+    return RedirectResponse(request.headers.get("referer", "/"), status_code=302)
 
 
 # ── market ────────────────────────────────────────────────────────────────────
@@ -606,6 +618,12 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
             raise HTTPException(status_code=404, detail="Video not found")
         video = upsert_video(db, yt_list[0])
 
+    # Tutorial: Schritt 1→2 wenn User erstmals ein Video öffnet
+    if (db_user.tutorial_step or 0) == 1:
+        db_user.tutorial_step = 2
+        db.commit()
+        user = UserCtx(db_user)
+
     last = video.stats[-1] if video.stats else None
     channel_vids = get_channel_videos(db, video.channel_id or "", video.youtube_id)
     info = calculate_price(last.view_count, last.like_count, last.comment_count,
@@ -725,6 +743,9 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
     db.refresh(db_user)
 
     db_user.xp = (db_user.xp or 0) + XP_BUY
+    # Tutorial: Schritt 2→3 nach erstem Kauf
+    if (db_user.tutorial_step or 0) <= 2:
+        db_user.tutorial_step = 3
     db.commit()
     # Task-Updates
     active_holdings = len([h for h in db_user.holdings if h.shares > 0.001])
@@ -794,6 +815,12 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=302)
+
+    # Tutorial: Schritt 3→99 (fertig) wenn Portfolio besucht wird
+    if (db_user.tutorial_step or 0) == 3:
+        db_user.tutorial_step = 99
+        db.commit()
+
     user = UserCtx(db_user)
 
     holdings_data  = []

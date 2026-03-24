@@ -53,6 +53,21 @@
 </div>
 {% endfor %}
 
+<!-- Vy Tutorial Step 2: Kauferklärung -->
+{% if user and user.tutorial_step == 2 %}
+<div class="vy-wrap" style="margin-bottom:20px;">
+  <div class="vy-avatar">⚡</div>
+  <div class="vy-bubble" style="border-color:rgba(255,159,10,.3);">
+    <div class="vy-name">Vy · Schritt 3 von 4</div>
+    <div class="vy-text">
+      Gut. Jetzt siehst du den aktuellen Kurs dieses Videos.<br>
+      <strong>Gib unten eine Anzahl Anteile ein und drück Kaufen.</strong><br>
+      <span style="color:#555;font-size:.8rem;">Start klein — 1 Anteil reicht zum Üben.</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% if video.is_ipo %}
 <div style="background:linear-gradient(135deg,rgba(255,159,10,.2),rgba(255,107,0,.1));
             border:1px solid rgba(255,159,10,.4);border-radius:14px;padding:14px 16px;
