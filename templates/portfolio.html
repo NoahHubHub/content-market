@@ -73,7 +73,8 @@
   <div>
     <div class="tr-total-label" id="val-label">Investiert</div>
     <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-      <div class="tr-total-value" id="val-main">${{ "%.2f"|format(total_current) }}</div>
+      <div class="tr-total-value" id="val-main"
+           data-value="{{ total_current }}" style="animation:slide-up .4s cubic-bezier(.22,1,.36,1) both;">$—</div>
       <span class="tr-total-change {% if total_pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}"
             id="val-change">
         {% if total_pnl_pct >= 0 %}▲{% else %}▼{% endif %}
@@ -500,5 +501,43 @@
     document.querySelectorAll(".tr-tr-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
   }
+
+  // ── Total Value Count-Up ──────────────────────────────
+  (function() {
+    const el = document.getElementById('val-main');
+    if (!el) return;
+    const target = parseFloat(el.dataset.value) || 0;
+    const duration = 900;
+    const start = performance.now();
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 4);
+      el.textContent = '$' + (target * ease).toFixed(2);
+      if (progress < 1) requestAnimationFrame(tick);
+      else el.textContent = '$' + target.toFixed(2);
+    }
+    requestAnimationFrame(tick);
+  })();
+
+  // ── Holdings stagger slide-in ─────────────────────────
+  document.querySelectorAll('.tr-item').forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(18px)';
+    el.style.transition = `opacity .35s ease, transform .35s cubic-bezier(.22,1,.36,1)`;
+    setTimeout(() => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 80 + i * 55);
+  });
+
+  // ── PnL flash ─────────────────────────────────────────
+  document.querySelectorAll('.tr-item-pnl').forEach(el => {
+    const isUp = el.classList.contains('tr-up');
+    el.style.animation = isUp
+      ? 'price-up 1.2s ease forwards'
+      : 'price-down 1.2s ease forwards';
+    el.style.padding = '2px 5px';
+    el.style.borderRadius = '6px';
+  });
 </script>
 {% endblock %}

@@ -95,37 +95,47 @@
 </div>
 
 <!-- Thumbnail -->
-<img
-  src="{{ video.thumbnail_url }}"
-  style="width:100%;border-radius:16px;aspect-ratio:16/9;object-fit:cover;margin-bottom:20px;"
-/>
+<div style="position:relative;overflow:hidden;border-radius:16px;margin-bottom:20px;animation:fade-in .4s ease both;">
+  <img
+    src="{{ video.thumbnail_url }}"
+    style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;
+           animation:fade-in .5s ease both, slide-up .5s cubic-bezier(.22,1,.36,1) both;"
+  />
+  <!-- Live-Indikator -->
+  <div style="position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:5px;
+              background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;">
+    <span style="width:7px;height:7px;border-radius:50%;background:#ff453a;
+                 animation:pulse-glow 1.2s ease-in-out infinite;box-shadow:0 0 6px #ff453a;"></span>
+    <span style="font-size:.68rem;font-weight:700;color:#fff;">LIVE</span>
+  </div>
+</div>
 
 <!-- Title & channel -->
-<div class="tr-label" style="margin-bottom:4px;">{{ video.channel_name }}</div>
-<div style="font-size:1.1rem;font-weight:700;line-height:1.3;margin-bottom:20px;">{{ video.title }}</div>
+<div class="tr-label" style="margin-bottom:4px;animation:fade-in .4s .1s both;">{{ video.channel_name }}</div>
+<div style="font-size:1.1rem;font-weight:700;line-height:1.3;margin-bottom:20px;animation:slide-up .4s .12s cubic-bezier(.22,1,.36,1) both;">{{ video.title }}</div>
 
 <!-- Price block -->
-<div style="margin-bottom:8px;">
+<div style="margin-bottom:8px;animation:slide-up .4s .18s cubic-bezier(.22,1,.36,1) both;">
   <div class="tr-label" style="margin-bottom:4px;">Aktueller Kurs</div>
   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
-    <span style="font-size:2.4rem;font-weight:700;">${{ "%.2f"|format(video.current_price) }}</span>
+    <span id="priceDisplay" style="font-size:2.4rem;font-weight:700;"
+          data-price="{{ video.current_price }}">$—</span>
     {% if info.momentum_pct >= 0 %}
-    <span class="tr-up" style="font-size:.95rem;font-weight:500;">▲ {{ info.momentum_pct }}%</span>
+    <span class="tr-up" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▲ {{ info.momentum_pct }}%</span>
     {% else %}
-    <span class="tr-down" style="font-size:.95rem;font-weight:500;">▼ {{ info.momentum_pct | abs }}%</span>
+    <span class="tr-down" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▼ {{ info.momentum_pct | abs }}%</span>
     {% endif %}
     <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
-    <!-- Signal -->
     {% if info.rps >= 2.0 %}
-    <span style="font-size:.78rem;font-weight:700;color:#30d158;">● Bullish</span>
+    <span style="font-size:.78rem;font-weight:700;color:#30d158;animation:fade-in .4s .35s both;">● Bullish</span>
     {% elif info.rps >= 1.2 %}
-    <span style="font-size:.78rem;font-weight:700;color:#56d364;">● Leicht bullish</span>
+    <span style="font-size:.78rem;font-weight:700;color:#56d364;animation:fade-in .4s .35s both;">● Leicht bullish</span>
     {% elif info.rps >= 0.8 %}
-    <span style="font-size:.78rem;font-weight:700;color:#555;">● Neutral</span>
+    <span style="font-size:.78rem;font-weight:700;color:#555;animation:fade-in .4s .35s both;">● Neutral</span>
     {% elif info.rps >= 0.5 %}
-    <span style="font-size:.78rem;font-weight:700;color:#ff9f0a;">● Schwächelnd</span>
+    <span style="font-size:.78rem;font-weight:700;color:#ff9f0a;animation:fade-in .4s .35s both;">● Schwächelnd</span>
     {% else %}
-    <span style="font-size:.78rem;font-weight:700;color:#ff453a;">● Bearish</span>
+    <span style="font-size:.78rem;font-weight:700;color:#ff453a;animation:fade-in .4s .35s both;">● Bearish</span>
     {% endif %}
   </div>
 </div>
@@ -422,5 +432,22 @@
     priceChart.data.datasets[0].pointHoverBackgroundColor = d.up ? "#30d158" : "#ff453a";
     priceChart.update();
   }
+
+  // ── Price Count-Up Animation ─────────────────────────────
+  (function() {
+    const el = document.getElementById('priceDisplay');
+    if (!el) return;
+    const target = parseFloat(el.dataset.price);
+    const duration = 700;
+    const start = performance.now();
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = '$' + (target * ease).toFixed(2);
+      if (progress < 1) requestAnimationFrame(tick);
+      else el.textContent = '$' + target.toFixed(2);
+    }
+    requestAnimationFrame(tick);
+  })();
 </script>
 {% endblock %}

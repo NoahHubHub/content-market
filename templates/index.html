@@ -88,10 +88,13 @@
   <button type="submit"
     style="width:100%;background:linear-gradient(135deg,#ff9f0a,#ff6b00);border:none;
            border-radius:14px;padding:16px;color:#000;font-size:.95rem;font-weight:700;
-           cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
-    <span style="font-size:1.4rem;">🎁</span>
-    Tagesbonus abholen
-    <span style="font-size:.75rem;opacity:.7;">XP · Cash · Anteil</span>
+           cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+           position:relative;overflow:hidden;animation:bounce-in .5s cubic-bezier(.22,1,.36,1) both,
+           pulse-glow 2s ease-in-out 1s infinite;">
+    <span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);background-size:200% auto;animation:shimmer 2s linear infinite;border-radius:14px;"></span>
+    <span style="font-size:1.4rem;position:relative;">🎁</span>
+    <span style="position:relative;">Tagesbonus abholen</span>
+    <span style="font-size:.75rem;opacity:.7;position:relative;">XP · Cash · Anteil</span>
   </button>
 </form>
 {% endif %}
@@ -236,7 +239,11 @@
     {% set info = item.info %}
     <a href="/video/{{ v.youtube_id }}"
        style="flex-shrink:0;width:140px;background:#0a0a0a;border-radius:14px;padding:12px;
-              text-decoration:none;display:block;position:relative;">
+              text-decoration:none;display:block;position:relative;
+              animation:slide-up .4s cubic-bezier(.22,1,.36,1) {{ loop.index0 * 0.06 }}s both;
+              transition:transform .18s,box-shadow .18s;"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.7)'"
+       onmouseout="this.style.transform='';this.style.boxShadow=''">
       {% if v.youtube_id in portfolio_ids %}
       <div style="position:absolute;top:8px;right:8px;width:8px;height:8px;
                   border-radius:50%;background:#30d158;border:2px solid #0a0a0a;"></div>
@@ -249,8 +256,8 @@
                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;">
         {{ v.title[:28] }}{% if v.title|length > 28 %}…{% endif %}
       </div>
-      <div style="font-size:.8rem;font-weight:700;">${{ "%.2f"|format(v.current_price) }}</div>
-      <div style="font-size:.72rem;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+      <div style="font-size:.8rem;font-weight:700;" class="{{ 'flash-up' if info.momentum_pct >= 0 else 'flash-down' }}">${{ "%.2f"|format(v.current_price) }}</div>
+      <div style="font-size:.72rem;font-weight:700;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
         {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
         {{ info.momentum_pct | abs }}%
       </div>
@@ -414,7 +421,8 @@
       </div>
     </div>
     <div class="tr-row-right">
-      <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
+      <div class="tr-row-price {{ 'flash-up' if info.momentum_pct >= 0 else 'flash-down' }}"
+           style="padding:3px 6px;margin:-3px -6px;">${{ "%.2f"|format(v.current_price) }}</div>
       <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
         {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
         {{ info.momentum_pct | abs | round(1) }}%
