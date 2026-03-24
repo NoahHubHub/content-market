@@ -21,20 +21,22 @@
 
 <!-- XP Level Bar -->
 {% if user %}
-<div style="background:#0a0a0a;border-radius:14px;padding:12px 16px;margin-bottom:16px;">
+<div style="background:rgba(238,233,223,.08);border:1px solid rgba(238,233,223,.14);
+            border-radius:14px;padding:12px 16px;margin-bottom:16px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
     <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:.8rem;font-weight:700;color:#ff9f0a;">⚡ Level {{ user.level_info.level }}</span>
-      <span style="font-size:.75rem;color:#555;">{{ user.level_info.name }}</span>
+      <span style="font-size:.8rem;font-weight:700;color:#FFB162;">⚡ Level {{ user.level_info.level }}</span>
+      <span style="font-size:.75rem;color:#C9C1B1;">{{ user.level_info.name }}</span>
       {% if user.streak_days >= 2 %}
-      <span style="font-size:.75rem;font-weight:700;color:#ff6b00;">🔥 {{ user.streak_days }}d</span>
+      <span style="font-size:.75rem;font-weight:700;color:#FFB162;">🔥 {{ user.streak_days }}d</span>
       {% endif %}
     </div>
-    <span style="font-size:.72rem;color:#555;">{{ user.level_info.xp }} / {{ user.level_info.xp_next }} XP</span>
+    <span style="font-size:.72rem;color:#C9C1B1;">{{ user.level_info.xp }} / {{ user.level_info.xp_next }} XP</span>
   </div>
-  <div style="background:#1a1a1a;border-radius:99px;height:4px;overflow:hidden;">
-    <div style="background:linear-gradient(90deg,#ff9f0a,#ff6b00);height:100%;border-radius:99px;
-                width:{{ user.level_info.progress }}%;transition:width .5s ease;"></div>
+  <div style="background:rgba(238,233,223,.12);border-radius:99px;height:5px;overflow:hidden;">
+    <div style="background:linear-gradient(90deg,#FFB162,#A35139);height:100%;border-radius:99px;
+                width:{{ user.level_info.progress }}%;transition:width .8s cubic-bezier(.22,1,.36,1);
+                box-shadow:0 0 8px rgba(255,177,98,.5);"></div>
   </div>
 </div>
 {% endif %}
