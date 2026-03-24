@@ -99,12 +99,16 @@ class User(Base):
     level = Column(Integer, default=1)
     streak_days = Column(Integer, default=0)
     last_login_date = Column(String, nullable=True)
+    last_bonus_date = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")
     achievements = relationship("UserAchievement", back_populates="user")
     tasks = relationship("UserTask", back_populates="user")
+    hot_takes = relationship("HotTake", back_populates="user")
+    duels_sent = relationship("Duel", foreign_keys="Duel.challenger_id", back_populates="challenger")
+    duels_received = relationship("Duel", foreign_keys="Duel.opponent_id", back_populates="opponent")
 
 
 class Video(Base):
@@ -118,6 +122,7 @@ class Video(Base):
     thumbnail_url = Column(String)
     published_at = Column(DateTime)
     current_price = Column(Float, default=10.0)
+    is_ipo = Column(Boolean, default=False)
     added_at = Column(DateTime, default=datetime.utcnow)
     last_updated = Column(DateTime, default=datetime.utcnow)
 
@@ -219,3 +224,62 @@ class DailyDrop(Base):
     shares_remaining = Column(Float, default=100.0)
 
     video = relationship("Video", back_populates="daily_drops")
+
+
+class HotTake(Base):
+    __tablename__ = "hot_takes"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    video_id = Column(Integer, ForeignKey("videos.id"))
+    date = Column(String, index=True)          # "2026-03-24"
+    prediction = Column(String)                # "up" oder "down"
+    views_at_prediction = Column(Integer, default=0)
+    resolved = Column(Boolean, default=False)
+    correct = Column(Boolean, nullable=True)
+
+    user = relationship("User", back_populates="hot_takes")
+    video = relationship("Video")
+
+
+class Season(Base):
+    __tablename__ = "seasons"
+
+    id = Column(Integer, primary_key=True)
+    season_number = Column(Integer, unique=True)
+    start_date = Column(String)
+    end_date = Column(String, nullable=True)
+    active = Column(Boolean, default=True)
+
+    entries = relationship("SeasonEntry", back_populates="season")
+
+
+class SeasonEntry(Base):
+    __tablename__ = "season_entries"
+
+    id = Column(Integer, primary_key=True)
+    season_id = Column(Integer, ForeignKey("seasons.id"))
+    username = Column(String, index=True)
+    start_value = Column(Float, default=10000.0)
+    end_value = Column(Float, nullable=True)
+    return_pct = Column(Float, nullable=True)
+    rank = Column(Integer, nullable=True)
+
+    season = relationship("Season", back_populates="entries")
+
+
+class Duel(Base):
+    __tablename__ = "duels"
+
+    id = Column(Integer, primary_key=True)
+    challenger_id = Column(Integer, ForeignKey("users.id"))
+    opponent_id = Column(Integer, ForeignKey("users.id"))
+    start_date = Column(String)
+    end_date = Column(String)
+    challenger_start = Column(Float)
+    opponent_start = Column(Float)
+    status = Column(String, default="active")  # active, completed
+    winner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    challenger = relationship("User", foreign_keys=[challenger_id], back_populates="duels_sent")
+    opponent   = relationship("User", foreign_keys=[opponent_id],   back_populates="duels_received")

@@ -110,9 +110,11 @@ def _seed_market():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(_auto_refresh_prices, "cron", hour=6, minute=0)
-scheduler.add_job(_generate_daily_drop,  "cron", hour=0, minute=5)
-scheduler.add_job(_seed_market,          "cron", hour=3, minute=0)
+scheduler.add_job(_auto_refresh_prices, "cron", hour=6,  minute=0)
+scheduler.add_job(_generate_daily_drop,  "cron", hour=0,  minute=5)
+scheduler.add_job(_seed_market,          "cron", hour=3,  minute=0)
+scheduler.add_job(_resolve_hot_takes,    "cron", hour=7,  minute=0)
+scheduler.add_job(_end_season,           "cron", day_of_week="mon", hour=0, minute=10)
 scheduler.start()
 
 # Beim Start sofort seeden falls nötig
@@ -285,11 +287,17 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
         channel_videos=channel_vids,
     )
     if not video:
+        from datetime import timedelta
+        is_ipo = (
+            yt["published_at"] is not None and
+            (datetime.utcnow() - yt["published_at"]).total_seconds() < 86400
+        )
         video = models.Video(
             youtube_id=yt["youtube_id"], title=yt["title"],
             channel_name=yt["channel_name"], channel_id=yt.get("channel_id", ""),
             thumbnail_url=yt["thumbnail_url"], published_at=yt["published_at"],
             current_price=price_data["price"],
+            is_ipo=is_ipo,
         )
         db.add(video)
         db.flush()
@@ -524,6 +532,18 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
 
     daily_drops   = get_todays_drops(db)
     current_tasks = get_current_tasks(db_user, db)
+    _ensure_season_entry(db_user, db)
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    bonus_available   = db_user.last_bonus_date != today
+    hot_take_video    = get_hot_take_video(db)
+    today_hot_take    = db.query(models.HotTake).filter_by(
+        user_id=db_user.id, date=today
+    ).first() if hot_take_video else None
+    yesterday         = (datetime.utcnow() - __import__("datetime").timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday_take    = db.query(models.HotTake).filter_by(
+        user_id=db_user.id, date=yesterday, resolved=True
+    ).first()
 
     return templates.TemplateResponse(request, "index.html", {
         "user": user,
@@ -532,6 +552,12 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "daily_drops": daily_drops,
         "streak_bonus": streak_bonus,
         "current_tasks": current_tasks,
+        "bonus_available": bonus_available,
+        "bonus_msg": request.query_params.get("bonus"),
+        "bonus_amount": request.query_params.get("amount"),
+        "hot_take_video": hot_take_video,
+        "today_hot_take": today_hot_take,
+        "yesterday_take": yesterday_take,
     })
 
 
@@ -905,6 +931,301 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
     ach_param = ",".join(new_achievements) if new_achievements else ""
     return RedirectResponse(f"/video/{drop.video.youtube_id}?msg=bought&xp={XP_BUY + 5}&ach={ach_param}&lvl={'1' if leveled_up else ''}", status_code=302)
+
+
+# ── daily bonus ───────────────────────────────────────────────────────────────
+
+@app.post("/bonus/claim")
+async def claim_bonus(request: Request, db: Session = Depends(get_db)):
+    import random as _random
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    if db_user.last_bonus_date == today:
+        return RedirectResponse("/?bonus=already", status_code=302)
+
+    db_user.last_bonus_date = today
+    roll = _random.random()
+    if roll < 0.33:
+        xp_gain = _random.randint(15, 50)
+        db_user.xp = (db_user.xp or 0) + xp_gain
+        db.commit()
+        return RedirectResponse(f"/?bonus=xp&amount={xp_gain}", status_code=302)
+    elif roll < 0.66:
+        cash = _random.choice([50, 75, 100, 150, 200])
+        db_user.balance = round(db_user.balance + cash, 2)
+        db.commit()
+        return RedirectResponse(f"/?bonus=cash&amount={cash}", status_code=302)
+    else:
+        video = db.query(models.Video).order_by(models.Video.last_updated.desc()).first()
+        if video:
+            h = db.query(models.Holding).filter_by(user_id=db_user.id, video_id=video.id).first()
+            if h:
+                new_total = h.shares + 1
+                h.avg_cost_basis = round(
+                    (h.shares * h.avg_cost_basis + video.current_price) / new_total, 4
+                )
+                h.shares = round(new_total, 4)
+            else:
+                db.add(models.Holding(
+                    user_id=db_user.id, video_id=video.id,
+                    shares=1.0, avg_cost_basis=round(video.current_price, 4),
+                ))
+            db.commit()
+            return RedirectResponse(f"/?bonus=share&title={video.title[:30]}", status_code=302)
+        db.commit()
+        return RedirectResponse("/?bonus=xp&amount=20", status_code=302)
+
+
+# ── hot take ───────────────────────────────────────────────────────────────────
+
+def get_hot_take_video(db: Session) -> models.Video:
+    """Holt das 'Video des Tages' — dasselbe für alle User."""
+    import hashlib
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    videos = db.query(models.Video).filter(models.Video.stats.any()).all()
+    if not videos:
+        return None
+    idx = int(hashlib.md5(today.encode()).hexdigest(), 16) % len(videos)
+    return videos[idx]
+
+
+@app.post("/hottake/{video_id}")
+async def submit_hot_take(request: Request, video_id: int,
+                          prediction: str = Form(...), db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    existing = db.query(models.HotTake).filter_by(user_id=db_user.id, date=today).first()
+    if existing:
+        return RedirectResponse("/?hottake=already", status_code=302)
+
+    video = db.query(models.Video).filter_by(id=video_id).first()
+    if not video:
+        return RedirectResponse("/", status_code=302)
+
+    views_now = video.stats[-1].view_count if video.stats else 0
+    db.add(models.HotTake(
+        user_id=db_user.id, video_id=video_id,
+        date=today, prediction=prediction,
+        views_at_prediction=views_now, resolved=False,
+    ))
+    db.commit()
+    return RedirectResponse("/?hottake=submitted", status_code=302)
+
+
+def _resolve_hot_takes():
+    """Löst gestrige Hot Takes auf und vergibt XP."""
+    from datetime import timedelta
+    db = SessionLocal()
+    try:
+        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+        takes = db.query(models.HotTake).filter_by(date=yesterday, resolved=False).all()
+        for take in takes:
+            if not take.video or not take.video.stats:
+                take.resolved = True
+                continue
+            current_views = take.video.stats[-1].view_count
+            went_up = current_views > take.views_at_prediction
+            correct = (take.prediction == "up" and went_up) or (take.prediction == "down" and not went_up)
+            take.resolved = True
+            take.correct = correct
+            user = db.query(models.User).filter_by(id=take.user_id).first()
+            if user:
+                user.xp = (user.xp or 0) + (25 if correct else 5)
+        db.commit()
+    finally:
+        db.close()
+
+
+# ── season ─────────────────────────────────────────────────────────────────────
+
+def _get_or_create_season(db: Session) -> models.Season:
+    season = db.query(models.Season).filter_by(active=True).first()
+    if not season:
+        last = db.query(models.Season).order_by(models.Season.season_number.desc()).first()
+        num = (last.season_number + 1) if last else 1
+        season = models.Season(
+            season_number=num,
+            start_date=datetime.utcnow().strftime("%Y-%m-%d"),
+            active=True,
+        )
+        db.add(season)
+        db.commit()
+        db.refresh(season)
+    return season
+
+
+def _ensure_season_entry(db_user: models.User, db: Session):
+    season = _get_or_create_season(db)
+    entry = db.query(models.SeasonEntry).filter_by(
+        season_id=season.id, username=db_user.username
+    ).first()
+    if not entry:
+        portfolio_val = calc_total_portfolio_value(db_user)
+        db.add(models.SeasonEntry(
+            season_id=season.id, username=db_user.username,
+            start_value=portfolio_val,
+        ))
+        db.commit()
+
+
+def _end_season():
+    """Beendet die aktuelle Season, vergibt Badges, startet neue."""
+    db = SessionLocal()
+    try:
+        season = db.query(models.Season).filter_by(active=True).first()
+        if not season:
+            return
+        entries = db.query(models.SeasonEntry).filter_by(season_id=season.id).all()
+        for entry in entries:
+            user = db.query(models.User).filter_by(username=entry.username).first()
+            if user:
+                val = calc_total_portfolio_value(user)
+                entry.end_value = val
+                entry.return_pct = round((val - entry.start_value) / max(entry.start_value, 1) * 100, 2)
+
+        ranked = sorted([e for e in entries if e.return_pct is not None],
+                        key=lambda x: x.return_pct, reverse=True)
+        badges = {1: "season_gold", 2: "season_silver", 3: "season_bronze"}
+        for i, entry in enumerate(ranked[:3], 1):
+            entry.rank = i
+            user = db.query(models.User).filter_by(username=entry.username).first()
+            if user:
+                badge_id = f"{badges[i]}_s{season.season_number}"
+                existing = db.query(models.UserAchievement).filter_by(
+                    user_id=user.id, achievement_id=badge_id
+                ).first()
+                if not existing:
+                    db.add(models.UserAchievement(user_id=user.id, achievement_id=badge_id))
+                user.xp = (user.xp or 0) + [200, 100, 50][i - 1]
+
+        season.active = False
+        season.end_date = datetime.utcnow().strftime("%Y-%m-%d")
+        db.commit()
+
+        # Neue Season starten
+        last_num = season.season_number
+        new_season = models.Season(
+            season_number=last_num + 1,
+            start_date=datetime.utcnow().strftime("%Y-%m-%d"),
+            active=True,
+        )
+        db.add(new_season)
+        db.commit()
+    finally:
+        db.close()
+
+
+@app.get("/season", response_class=HTMLResponse)
+async def season_page(request: Request, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    user = UserCtx(db_user)
+
+    season = _get_or_create_season(db)
+    _ensure_season_entry(db_user, db)
+
+    entries = (db.query(models.SeasonEntry)
+               .filter_by(season_id=season.id)
+               .all())
+    board = []
+    for e in entries:
+        u = db.query(models.User).filter_by(username=e.username).first()
+        current = calc_total_portfolio_value(u) if u else e.start_value
+        ret = round((current - e.start_value) / max(e.start_value, 1) * 100, 2)
+        board.append({"username": e.username, "return_pct": ret,
+                      "current": round(current, 2), "is_me": e.username == db_user.username})
+    board.sort(key=lambda x: x["return_pct"], reverse=True)
+
+    return templates.TemplateResponse(request, "season.html", {
+        "user": user, "season": season, "board": board,
+    })
+
+
+# ── duel ───────────────────────────────────────────────────────────────────────
+
+@app.post("/duel/challenge")
+async def challenge_duel(request: Request, opponent_username: str = Form(...),
+                         db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    opponent = db.query(models.User).filter_by(username=opponent_username).first()
+    if not opponent or opponent.id == db_user.id:
+        return RedirectResponse("/duels?err=not_found", status_code=302)
+
+    from datetime import timedelta
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    end = (datetime.utcnow() + timedelta(days=7)).strftime("%Y-%m-%d")
+
+    db.add(models.Duel(
+        challenger_id=db_user.id, opponent_id=opponent.id,
+        start_date=today, end_date=end,
+        challenger_start=calc_total_portfolio_value(db_user),
+        opponent_start=calc_total_portfolio_value(opponent),
+        status="active",
+    ))
+    db.commit()
+    return RedirectResponse("/duels?msg=challenged", status_code=302)
+
+
+@app.get("/duels", response_class=HTMLResponse)
+async def duels_page(request: Request, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    user = UserCtx(db_user)
+
+    all_duels = db_user.duels_sent + db_user.duels_received
+    duel_data = []
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    for d in all_duels:
+        if d.status == "active" and d.end_date <= today:
+            # Auflösen
+            c_val = calc_total_portfolio_value(d.challenger)
+            o_val = calc_total_portfolio_value(d.opponent)
+            c_ret = (c_val - d.challenger_start) / max(d.challenger_start, 1) * 100
+            o_ret = (o_val - d.opponent_start) / max(d.opponent_start, 1) * 100
+            d.status = "completed"
+            if c_ret >= o_ret:
+                d.winner_id = d.challenger_id
+                winner = d.challenger
+            else:
+                d.winner_id = d.opponent_id
+                winner = d.opponent
+            winner.xp = (winner.xp or 0) + 100
+            db.commit()
+
+        opponent = d.opponent if d.challenger_id == db_user.id else d.challenger
+        is_challenger = d.challenger_id == db_user.id
+        my_start = d.challenger_start if is_challenger else d.opponent_start
+        my_val = calc_total_portfolio_value(db_user)
+        opp_val = calc_total_portfolio_value(opponent)
+        opp_start = d.opponent_start if is_challenger else d.challenger_start
+
+        duel_data.append({
+            "duel": d,
+            "opponent": opponent,
+            "my_return": round((my_val - my_start) / max(my_start, 1) * 100, 2),
+            "opp_return": round((opp_val - opp_start) / max(opp_start, 1) * 100, 2),
+            "i_am_winning": (my_val - my_start) / max(my_start, 1) >=
+                            (opp_val - opp_start) / max(opp_start, 1),
+            "i_won": d.status == "completed" and d.winner_id == db_user.id,
+        })
+
+    return templates.TemplateResponse(request, "duels.html", {
+        "user": user, "duel_data": duel_data,
+        "msg": request.query_params.get("msg"),
+        "err": request.query_params.get("err"),
+    })
 
 
 # ── leaderboard ───────────────────────────────────────────────────────────────

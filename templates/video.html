@@ -49,6 +49,18 @@
 </div>
 {% endfor %}
 
+{% if video.is_ipo %}
+<div style="background:linear-gradient(135deg,rgba(255,159,10,.2),rgba(255,107,0,.1));
+            border:1px solid rgba(255,159,10,.4);border-radius:14px;padding:14px 16px;
+            margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:1.8rem;">🚀</span>
+  <div>
+    <div style="font-size:.7rem;color:#ff9f0a;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">IPO — Neu auf dem Markt</div>
+    <div style="font-size:.88rem;color:#fff;margin-top:1px;">Dieses Video ist weniger als 24h alt. Früh kaufen = Early Investor Badge.</div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Back + Watchlist toggle -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
   <a href="/" class="tr-sub">← Markt</a>

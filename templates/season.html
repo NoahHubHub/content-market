@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Season {{ season.season_number }} — Content Market{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:4px;">Wöchentlicher Wettbewerb</div>
+  <div class="tr-title">Season {{ season.season_number }}</div>
+  <div class="tr-sub" style="margin-top:4px;">
+    Gestartet am {{ season.start_date }} · Reset jeden Montag
+  </div>
+</div>
+
+<!-- Meine Season-Stats -->
+{% for item in board %}
+{% if item.is_me %}
+<div style="background:rgba(48,209,88,.07);border:1px solid rgba(48,209,88,.15);
+            border-radius:14px;padding:14px 16px;margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:6px;">Deine Rendite diese Season</div>
+  <div style="font-size:2rem;font-weight:700;
+    {% if item.return_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+    {% if item.return_pct >= 0 %}+{% endif %}{{ "%.2f"|format(item.return_pct) }}%
+  </div>
+  <div class="tr-sub">Aktueller Portfoliowert: ${{ "%.2f"|format(item.current) }}</div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Rangliste -->
+<div class="tr-label" style="margin-bottom:10px;">Rangliste</div>
+<div>
+  {% for item in board %}
+  <div class="tr-row" style="{% if item.is_me %}background:rgba(48,209,88,.05);border-radius:12px;padding:14px 12px;margin:0 -12px;border-bottom:none;{% endif %}">
+    <div style="width:32px;text-align:center;flex-shrink:0;font-size:1.1rem;">
+      {% if loop.index == 1 %}🥇
+      {% elif loop.index == 2 %}🥈
+      {% elif loop.index == 3 %}🥉
+      {% else %}<span class="tr-sub">{{ loop.index }}</span>
+      {% endif %}
+    </div>
+    <div class="tr-row-body">
+      <div class="tr-row-title">
+        {{ item.username }}
+        {% if item.is_me %}<span style="font-size:.7rem;color:#555;margin-left:6px;">Du</span>{% endif %}
+      </div>
+    </div>
+    <div class="tr-row-right">
+      <div class="tr-row-pnl {% if item.return_pct >= 0 %}tr-up{% else %}tr-down{% endif %}"
+           style="font-size:.95rem;font-weight:700;">
+        {% if item.return_pct >= 0 %}+{% endif %}{{ "%.2f"|format(item.return_pct) }}%
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Belohnungen -->
+<div style="margin-top:32px;background:#0a0a0a;border-radius:14px;padding:16px;">
+  <div class="tr-label" style="margin-bottom:12px;">Season-Belohnungen</div>
+  {% for rank, icon, xp, label in [(1, "🥇", 200, "Gold"), (2, "🥈", 100, "Silber"), (3, "🥉", 50, "Bronze")] %}
+  <div style="display:flex;align-items:center;gap:12px;padding:8px 0;{% if not loop.last %}border-bottom:1px solid #111;{% endif %}">
+    <span style="font-size:1.4rem;">{{ icon }}</span>
+    <div style="flex:1;">
+      <div style="font-size:.88rem;font-weight:600;">Platz {{ rank }} — {{ label }}</div>
+      <div style="font-size:.75rem;color:#555;">Exklusiver Season-Badge</div>
+    </div>
+    <span style="font-size:.82rem;color:#ff9f0a;font-weight:700;">+{{ xp }} XP</span>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

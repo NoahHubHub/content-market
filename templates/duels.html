@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Duelle — Content Market{% endblock %}
+{% block content %}
+
+{% if msg == "challenged" %}
+<div class="tr-alert tr-alert-success">⚔️ Duell gestartet! 7 Tage Laufzeit.</div>
+{% elif err == "not_found" %}
+<div class="tr-alert tr-alert-error">User nicht gefunden oder ungültig.</div>
+{% endif %}
+
+<div style="margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:4px;">Wer hat das bessere Händchen?</div>
+  <div class="tr-title">Duelle</div>
+  <div class="tr-sub" style="margin-top:4px;">Fordere einen anderen Trader heraus — 7 Tage, beste Rendite gewinnt.</div>
+</div>
+
+<!-- Challenge Form -->
+<div style="background:#0a0a0a;border-radius:14px;padding:16px;margin-bottom:28px;">
+  <div class="tr-label" style="margin-bottom:10px;">Neues Duell starten</div>
+  <form method="post" action="/duel/challenge" style="display:flex;gap:10px;">
+    <input type="text" name="opponent_username" class="tr-input"
+           placeholder="Username eingeben…" style="flex:1;" required />
+    <button type="submit" class="tr-btn-primary"
+            style="flex-shrink:0;padding:14px 20px;font-size:.9rem;">
+      ⚔️ Herausfordern
+    </button>
+  </form>
+</div>
+
+<!-- Aktive & abgeschlossene Duelle -->
+{% if duel_data %}
+<div class="tr-label" style="margin-bottom:10px;">Deine Duelle</div>
+{% for item in duel_data %}
+{% set d = item.duel %}
+<div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div>
+      <div style="font-size:.88rem;font-weight:700;">⚔️ vs. {{ item.opponent.username }}</div>
+      <div style="font-size:.72rem;color:#555;">
+        {% if d.status == "active" %}Endet am {{ d.end_date }}{% else %}Beendet{% endif %}
+      </div>
+    </div>
+    {% if d.status == "completed" %}
+      {% if item.i_won %}
+      <span style="background:rgba(48,209,88,.15);color:#30d158;font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px;">Gewonnen 🏆</span>
+      {% else %}
+      <span style="background:rgba(255,69,58,.12);color:#ff453a;font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px;">Verloren</span>
+      {% endif %}
+    {% else %}
+      {% if item.i_am_winning %}
+      <span style="background:rgba(48,209,88,.12);color:#30d158;font-size:.75rem;font-weight:600;padding:4px 10px;border-radius:20px;">Du führst</span>
+      {% else %}
+      <span style="background:rgba(255,69,58,.1);color:#ff453a;font-size:.75rem;font-weight:600;padding:4px 10px;border-radius:20px;">Du liegst zurück</span>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- Vergleich -->
+  <div style="display:flex;gap:0;border-radius:10px;overflow:hidden;">
+    <div style="flex:1;padding:10px 12px;
+      {% if item.i_am_winning or item.i_won %}background:#0d2e1a{% else %}background:#1a1a1a{% endif %}">
+      <div style="font-size:.7rem;color:#555;margin-bottom:2px;">Du</div>
+      <div style="font-size:1.1rem;font-weight:700;
+        {% if item.my_return >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+        {% if item.my_return >= 0 %}+{% endif %}{{ "%.2f"|format(item.my_return) }}%
+      </div>
+    </div>
+    <div style="width:1px;background:#111;"></div>
+    <div style="flex:1;padding:10px 12px;
+      {% if not item.i_am_winning and not item.i_won %}background:#2e0d0d{% else %}background:#1a1a1a{% endif %}">
+      <div style="font-size:.7rem;color:#555;margin-bottom:2px;">{{ item.opponent.username }}</div>
+      <div style="font-size:1.1rem;font-weight:700;
+        {% if item.opp_return >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+        {% if item.opp_return >= 0 %}+{% endif %}{{ "%.2f"|format(item.opp_return) }}%
+      </div>
+    </div>
+  </div>
+  {% if d.status == "completed" and item.i_won %}
+  <div style="margin-top:8px;font-size:.75rem;color:#ff9f0a;text-align:center;">+100 XP für den Sieg 🏆</div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% else %}
+<div style="text-align:center;padding:60px 0;color:#333;">
+  <div style="font-size:3rem;margin-bottom:12px;">⚔️</div>
+  <div style="font-size:1rem;font-weight:600;color:#555;">Noch keine Duelle</div>
+  <div class="tr-sub" style="margin-top:4px;">Fordere einen Trader oben heraus!</div>
+</div>
+{% endif %}
+
+{% endblock %}

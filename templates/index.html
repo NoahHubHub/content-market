@@ -2,6 +2,15 @@
 {% block title %}Markt — Content Market{% endblock %}
 {% block content %}
 
+<!-- Bonus Toast -->
+{% if bonus_msg == "xp" %}
+<div class="tr-alert tr-alert-success">🎁 Tagesbonus: <strong>+{{ bonus_amount }} XP</strong> kassiert!</div>
+{% elif bonus_msg == "cash" %}
+<div class="tr-alert tr-alert-success">🎁 Tagesbonus: <strong>+${{ bonus_amount }}</strong> auf dein Konto!</div>
+{% elif bonus_msg == "share" %}
+<div class="tr-alert tr-alert-success">🎁 Tagesbonus: <strong>1 kostenloser Anteil</strong> erhalten!</div>
+{% endif %}
+
 <!-- Streak Bonus Toast -->
 {% if streak_bonus %}
 <div class="tr-alert tr-alert-success" style="display:flex;align-items:center;gap:8px;">
@@ -27,6 +36,75 @@
     <div style="background:linear-gradient(90deg,#ff9f0a,#ff6b00);height:100%;border-radius:99px;
                 width:{{ user.level_info.progress }}%;transition:width .5s ease;"></div>
   </div>
+</div>
+{% endif %}
+
+<!-- Täglicher Bonus -->
+{% if bonus_available %}
+<form method="post" action="/bonus/claim" style="margin-bottom:16px;">
+  <button type="submit"
+    style="width:100%;background:linear-gradient(135deg,#ff9f0a,#ff6b00);border:none;
+           border-radius:14px;padding:16px;color:#000;font-size:.95rem;font-weight:700;
+           cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
+    <span style="font-size:1.4rem;">🎁</span>
+    Tagesbonus abholen
+    <span style="font-size:.75rem;opacity:.7;">XP · Cash · Anteil</span>
+  </button>
+</form>
+{% endif %}
+
+<!-- Hot Take -->
+{% if hot_take_video %}
+<div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <span class="tr-label">🔮 Hot Take — Video des Tages</span>
+    {% if today_hot_take %}
+    <span style="font-size:.72rem;color:#555;">Getippt ✓</span>
+    {% else %}
+    <span style="font-size:.72rem;color:#ff9f0a;font-weight:700;">+25 XP wenn richtig</span>
+    {% endif %}
+  </div>
+
+  {% if yesterday_take and yesterday_take.resolved %}
+  <div style="margin-bottom:10px;padding:8px 12px;border-radius:10px;font-size:.8rem;font-weight:600;
+    {% if yesterday_take.correct %}background:rgba(48,209,88,.12);color:#30d158;
+    {% else %}background:rgba(255,69,58,.12);color:#ff453a;{% endif %}">
+    {% if yesterday_take.correct %}✓ Gestern richtig getippt! +25 XP{% else %}✗ Gestern leider falsch. +5 XP{% endif %}
+  </div>
+  {% endif %}
+
+  <a href="/video/{{ hot_take_video.youtube_id }}" style="display:flex;gap:12px;align-items:center;margin-bottom:12px;text-decoration:none;">
+    {% if hot_take_video.thumbnail_url %}
+    <img src="{{ hot_take_video.thumbnail_url }}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;" />
+    {% endif %}
+    <div>
+      <div style="font-size:.85rem;font-weight:600;color:#fff;">{{ hot_take_video.title[:45] }}{% if hot_take_video.title|length > 45 %}…{% endif %}</div>
+      <div style="font-size:.75rem;color:#555;">{{ hot_take_video.channel_name }}</div>
+    </div>
+  </a>
+
+  {% if not today_hot_take %}
+  <div style="font-size:.82rem;color:#555;margin-bottom:10px;text-align:center;">
+    Hat dieses Video morgen mehr Views als heute?
+  </div>
+  <form method="post" action="/hottake/{{ hot_take_video.id }}" style="display:flex;gap:8px;">
+    <button type="submit" name="prediction" value="up"
+      style="flex:1;background:#0d2e1a;border:1px solid #30d158;border-radius:12px;
+             color:#30d158;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;">
+      📈 Steigt
+    </button>
+    <button type="submit" name="prediction" value="down"
+      style="flex:1;background:#2e0d0d;border:1px solid #ff453a;border-radius:12px;
+             color:#ff453a;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;">
+      📉 Fällt
+    </button>
+  </form>
+  {% else %}
+  <div style="text-align:center;padding:10px;font-size:.85rem;color:#555;">
+    Dein Tipp: <strong style="color:#fff;">{% if today_hot_take.prediction == 'up' %}📈 Steigt{% else %}📉 Fällt{% endif %}</strong>
+    · Ergebnis morgen früh
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -268,6 +346,7 @@
         {{ v.channel_name }}
         &nbsp;·&nbsp;
         <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+        {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,159,10,.2);color:#ff9f0a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
       </div>
     </div>
     <div class="tr-row-right">

@@ -213,6 +213,8 @@
       <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Markt</a>
       <a href="/search" class="{% if request.url.path == '/search' %}active{% endif %}">Suche</a>
       <a href="/leaderboard" class="{% if request.url.path == '/leaderboard' %}active{% endif %}">Rangliste</a>
+      <a href="/season" class="{% if request.url.path == '/season' %}active{% endif %}">Season</a>
+      <a href="/duels" class="{% if request.url.path == '/duels' %}active{% endif %}">Duelle</a>
       <a href="/portfolio" class="{% if request.url.path == '/portfolio' %}active{% endif %}">
         Portfolio{% if user and user.holdings_count > 0 %}<span class="tr-nav-badge">{{ user.holdings_count }}</span>{% endif %}
       </a>
