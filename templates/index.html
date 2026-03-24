@@ -30,6 +30,42 @@
 </div>
 {% endif %}
 
+<!-- Aktuelle Aufgaben -->
+{% if current_tasks %}
+<div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <span class="tr-label">Aufgaben — Level {{ user.level }}</span>
+    <span style="font-size:.72rem;color:#555;">
+      {{ current_tasks | selectattr('completed') | list | length }} / {{ current_tasks | length }} erledigt
+    </span>
+  </div>
+  {% for task in current_tasks %}
+  {% set pct = (task.progress / task.target * 100) | round(0) | int %}
+  <div style="margin-bottom:{% if not loop.last %}12px{% else %}0{% endif %};">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+      <span style="font-size:1rem;">{{ task.icon }}</span>
+      <span style="font-size:.85rem;font-weight:600;{% if task.completed %}color:#30d158;{% endif %}">
+        {{ task.name }}
+      </span>
+      {% if task.completed %}
+      <span style="font-size:.72rem;color:#30d158;font-weight:700;margin-left:auto;">✓ Fertig</span>
+      {% else %}
+      <span style="font-size:.72rem;color:#555;margin-left:auto;">{{ task.progress }} / {{ task.target }}</span>
+      {% endif %}
+    </div>
+    <div style="background:#1a1a1a;border-radius:99px;height:3px;overflow:hidden;">
+      <div style="height:100%;border-radius:99px;
+                  {% if task.completed %}background:#30d158{% else %}background:#fff{% endif %};
+                  width:{{ [pct, 100] | min }}%;transition:width .4s ease;"></div>
+    </div>
+    {% if not task.completed %}
+    <div style="font-size:.72rem;color:#333;margin-top:2px;">{{ task.desc }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- User stats bar -->
 {% if user and user.holdings_count > 0 %}
 <div style="display:flex;gap:16px;padding:12px 16px;background:#0a0a0a;border-radius:14px;

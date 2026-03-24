@@ -24,6 +24,16 @@
 <div class="tr-alert tr-alert-error">Nicht genug Anteile</div>
 {% endif %}
 
+{% if request.query_params.get('lvl') %}
+<div style="background:linear-gradient(135deg,rgba(48,209,88,.2),rgba(10,132,255,.1));
+            border:1px solid rgba(48,209,88,.4);border-radius:14px;padding:16px;
+            margin-bottom:12px;text-align:center;">
+  <div style="font-size:1.8rem;margin-bottom:4px;">🎉</div>
+  <div style="font-size:1rem;font-weight:700;color:#30d158;">Level Up!</div>
+  <div style="font-size:.82rem;color:#555;margin-top:2px;">Du hast Level {{ user.level }} erreicht · 3 neue Aufgaben warten</div>
+</div>
+{% endif %}
+
 {% for ach in new_achievements %}
 <div style="background:linear-gradient(135deg,rgba(255,159,10,.15),rgba(255,107,0,.1));
             border:1px solid rgba(255,159,10,.3);border-radius:14px;padding:14px 16px;

@@ -15,7 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from database import Base, engine, get_db, SessionLocal
 import models
-from models import get_level_info, ACHIEVEMENTS
+from models import get_level_info, ACHIEVEMENTS, generate_tasks_for_level
 from pricing import calculate_price
 from youtube import extract_video_id, get_video_by_id, get_video_details, search_videos, get_trending_videos
 
@@ -224,6 +224,7 @@ class UserCtx:
         self.estimated_value = round(db_user.balance + self.cost_basis, 2)
         self.xp              = db_user.xp or 0
         self.level_info      = get_level_info(self.xp)
+        self.level           = db_user.level or 1
         self.streak_days     = db_user.streak_days or 0
 
 
@@ -341,6 +342,76 @@ def record_port_snap(request: Request, db_user: models.User):
     request.session["port_snaps"] = snaps[-50:]
 
 
+# ── task system ───────────────────────────────────────────────────────────────
+
+def ensure_tasks(db_user: models.User, db: Session):
+    """Erstellt Tasks für den User falls noch keine aktiven vorhanden."""
+    active = [t for t in db_user.tasks if not t.completed and t.level_assigned == (db_user.level or 1)]
+    if not active:
+        _assign_new_tasks(db_user, db)
+
+
+def _assign_new_tasks(db_user: models.User, db: Session):
+    """Generiert 3 neue Tasks für das aktuelle Level."""
+    level = db_user.level or 1
+    chosen = generate_tasks_for_level(level)
+    for t in chosen:
+        db.add(models.UserTask(
+            user_id=db_user.id,
+            task_type=t["type"],
+            name=t["name"],
+            icon=t["icon"],
+            desc=t["desc"],
+            target=t["target"],
+            progress=0,
+            completed=False,
+            level_assigned=level,
+        ))
+    db.commit()
+    db.refresh(db_user)
+
+
+def update_tasks(db_user: models.User, db: Session, event: str, value: int = 1) -> bool:
+    """
+    Aktualisiert Task-Fortschritt nach einem Event.
+    Events: 'buy', 'sell', 'profit', 'daily_drop', 'streak', 'portfolio', 'trades', 'invest', 'watchlist'
+    Gibt True zurück wenn ein Level-Up passiert ist.
+    """
+    active_tasks = [t for t in db_user.tasks
+                    if not t.completed and t.level_assigned == (db_user.level or 1)
+                    and t.task_type == event]
+
+    for task in active_tasks:
+        task.progress = min(task.progress + value, task.target)
+        if task.progress >= task.target:
+            task.completed = True
+
+    db.commit()
+    db.refresh(db_user)
+
+    # Prüfen ob alle Tasks abgeschlossen → Level Up
+    all_tasks = [t for t in db_user.tasks if t.level_assigned == (db_user.level or 1)]
+    if all_tasks and all(t.completed for t in all_tasks):
+        return _level_up(db_user, db)
+    return False
+
+
+def _level_up(db_user: models.User, db: Session) -> bool:
+    """Level-Up durchführen und neue Tasks generieren."""
+    db_user.level = (db_user.level or 1) + 1
+    db_user.xp = (db_user.xp or 0) + 200  # Bonus XP für Level-Up
+    db.commit()
+    _assign_new_tasks(db_user, db)
+    return True
+
+
+def get_current_tasks(db_user: models.User, db: Session) -> list:
+    """Holt die aktuellen 3 Tasks des Users."""
+    ensure_tasks(db_user, db)
+    return [t for t in db_user.tasks
+            if t.level_assigned == (db_user.level or 1)]
+
+
 # ── auth routes ───────────────────────────────────────────────────────────────
 
 @app.get("/register", response_class=HTMLResponse)
@@ -448,8 +519,11 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         xp_gain += streak_bonus
         db_user.xp = (db_user.xp or 0) + xp_gain
         db.commit()
+        update_tasks(db_user, db, "streak", value=db_user.streak_days)
+        ensure_tasks(db_user, db)
 
-    daily_drops = get_todays_drops(db)
+    daily_drops   = get_todays_drops(db)
+    current_tasks = get_current_tasks(db_user, db)
 
     return templates.TemplateResponse(request, "index.html", {
         "user": user,
@@ -457,6 +531,7 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "portfolio_ids": portfolio_ids, "watchlist_data": watchlist_data,
         "daily_drops": daily_drops,
         "streak_bonus": streak_bonus,
+        "current_tasks": current_tasks,
     })
 
 
@@ -541,7 +616,8 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
 
 @app.post("/watch/{youtube_id}")
 async def toggle_watchlist(request: Request, youtube_id: str, db: Session = Depends(get_db)):
-    if not get_login(request, db):
+    db_user = get_login(request, db)
+    if not db_user:
         return RedirectResponse("/login", status_code=302)
     watchlist = request.session.get("watchlist", [])
     if youtube_id in watchlist:
@@ -550,6 +626,7 @@ async def toggle_watchlist(request: Request, youtube_id: str, db: Session = Depe
     else:
         watchlist.append(youtube_id)
         msg = "watched"
+        update_tasks(db_user, db, "watchlist", value=len(watchlist))
     request.session["watchlist"] = watchlist
     return RedirectResponse(f"/video/{youtube_id}?msg={msg}", status_code=302)
 
@@ -617,11 +694,19 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
 
     db_user.xp = (db_user.xp or 0) + XP_BUY
     db.commit()
+    # Task-Updates
+    active_holdings = len([h for h in db_user.holdings if h.shares > 0.001])
+    total_invested  = sum(t.total_amount for t in db_user.transactions if t.transaction_type == "buy")
+    total_trades    = len(db_user.transactions)
+    update_tasks(db_user, db, "buy",       value=1)
+    update_tasks(db_user, db, "trades",    value=total_trades)
+    update_tasks(db_user, db, "portfolio", value=active_holdings)
+    leveled_up = update_tasks(db_user, db, "invest", value=int(total_invested))
     new_achievements = check_achievements(db_user, db)
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
     ach_param = ",".join(new_achievements) if new_achievements else ""
-    return RedirectResponse(f"/video/{youtube_id}?msg=bought&xp={XP_BUY}&ach={ach_param}", status_code=302)
+    return RedirectResponse(f"/video/{youtube_id}?msg=bought&xp={XP_BUY}&ach={ach_param}&lvl={'1' if leveled_up else ''}", status_code=302)
 
 
 @app.post("/sell/{youtube_id}")
@@ -656,6 +741,13 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
     db_user.xp = (db_user.xp or 0) + xp_gained
     db.commit()
     db.refresh(db_user)
+    # Task-Updates
+    total_trades = len(db_user.transactions)
+    update_tasks(db_user, db, "sell",   value=1)
+    update_tasks(db_user, db, "trades", value=total_trades)
+    if profit:
+        update_tasks(db_user, db, "profit", value=1)
+    leveled_up = False  # sell allein löst kein Level-Up aus (invest/portfolio fehlen)
     new_achievements = check_achievements(db_user, db)
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
@@ -803,10 +895,16 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
     db_user.xp = (db_user.xp or 0) + XP_BUY + 5  # Bonus XP für Daily Drop
     db.commit()
     db.refresh(db_user)
+    total_drops = sum(1 for t in db_user.transactions
+                      if t.transaction_type == "buy" and
+                      db.query(models.DailyDrop).filter_by(video_id=t.video_id).first())
+    update_tasks(db_user, db, "buy",        value=1)
+    update_tasks(db_user, db, "daily_drop", value=total_drops)
+    leveled_up = update_tasks(db_user, db, "trades", value=len(db_user.transactions))
     new_achievements = check_achievements(db_user, db)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
     ach_param = ",".join(new_achievements) if new_achievements else ""
-    return RedirectResponse(f"/video/{drop.video.youtube_id}?msg=bought&xp={XP_BUY + 5}&ach={ach_param}", status_code=302)
+    return RedirectResponse(f"/video/{drop.video.youtube_id}?msg=bought&xp={XP_BUY + 5}&ach={ach_param}&lvl={'1' if leveled_up else ''}", status_code=302)
 
 
 # ── leaderboard ───────────────────────────────────────────────────────────────
