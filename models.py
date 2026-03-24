@@ -10,6 +10,19 @@ LEVEL_NAMES = [
     "Fund Manager", "Hedge Fund", "Whale", "Market Maker", "Legend"
 ]
 
+ACHIEVEMENTS = {
+    "first_buy":    {"name": "Erste Investition", "icon": "🚀", "desc": "Dein erstes Video gekauft",              "xp": 20},
+    "first_profit": {"name": "Im Gewinn",         "icon": "📈", "desc": "Einen Verkauf mit Gewinn abgeschlossen", "xp": 25},
+    "diversified":  {"name": "Diversifiziert",    "icon": "📊", "desc": "3 verschiedene Videos im Portfolio",     "xp": 30},
+    "whale":        {"name": "Wal",               "icon": "🐋", "desc": "50+ Anteile eines Videos gekauft",       "xp": 50},
+    "trader_10":    {"name": "Aktiver Trader",    "icon": "💼", "desc": "10 Trades abgeschlossen",                "xp": 40},
+    "daily_drop":   {"name": "Early Adopter",     "icon": "🎯", "desc": "Ersten Daily Drop gekauft",              "xp": 20},
+    "streak_3":     {"name": "Auf Kurs",          "icon": "🔥", "desc": "3 Tage Streak erreicht",                 "xp": 15},
+    "streak_7":     {"name": "Unaufhaltsam",      "icon": "⚡", "desc": "7 Tage Streak erreicht",                 "xp": 50},
+    "diamond_hands":{"name": "Diamond Hands",     "icon": "💎", "desc": "Eine Position 7+ Tage gehalten",         "xp": 100},
+    "level_5":      {"name": "Aufsteiger",        "icon": "⭐", "desc": "Level 5 erreicht",                       "xp": 75},
+}
+
 
 def get_level_info(xp: int) -> dict:
     level = 1
@@ -44,6 +57,7 @@ class User(Base):
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")
+    achievements = relationship("UserAchievement", back_populates="user")
 
 
 class Video(Base):
@@ -117,6 +131,17 @@ class LeaderboardEntry(Base):
     portfolio_value = Column(Float, nullable=False)
     return_pct = Column(Float, nullable=False)
     recorded_at = Column(DateTime, default=datetime.utcnow)
+
+
+class UserAchievement(Base):
+    __tablename__ = "user_achievements"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    achievement_id = Column(String, nullable=False)
+    earned_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="achievements")
 
 
 class DailyDrop(Base):

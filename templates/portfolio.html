@@ -37,6 +37,7 @@
     <button class="tr-tab active" onclick="switchTab(this,'portfolio')">Portfolio</button>
     <button class="tr-tab" onclick="switchTab(this,'diversifizierung')">Diversifizierung</button>
     <button class="tr-tab" onclick="switchTab(this,'cash')">Cash</button>
+    <button class="tr-tab" onclick="switchTab(this,'achievements')">Erfolge</button>
   </div>
   <div class="tr-avatar">
     {{ user.username[0] | upper }}
@@ -279,6 +280,39 @@
 
 </div>
 
+<!-- ── TAB: Achievements ──────────────────────────── -->
+<div id="panel-achievements" class="tab-panel">
+  <div style="margin-bottom:20px;">
+    <div class="tr-sub">{{ user_achievements | length }} / {{ all_achievements | length }} freigeschaltet</div>
+    <div style="background:#111;border-radius:99px;height:4px;overflow:hidden;margin-top:6px;">
+      <div style="background:linear-gradient(90deg,#ff9f0a,#ff6b00);height:100%;border-radius:99px;
+                  width:{{ (user_achievements | length / all_achievements | length * 100) | round(0) }}%;"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;gap:10px;">
+    {% for aid, ach in all_achievements.items() %}
+    {% set earned = aid in user_achievements %}
+    <div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;
+                display:flex;align-items:center;gap:14px;
+                {% if not earned %}opacity:.4;{% endif %}">
+      <span style="font-size:1.8rem;flex-shrink:0;">{{ ach.icon }}</span>
+      <div style="flex:1;">
+        <div style="font-size:.9rem;font-weight:700;">{{ ach.name }}</div>
+        <div style="font-size:.78rem;color:#555;margin-top:2px;">{{ ach.desc }}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        {% if earned %}
+        <div style="font-size:.7rem;color:#30d158;font-weight:700;">✓ Verdient</div>
+        {% else %}
+        <div style="font-size:.7rem;color:#555;">+{{ ach.xp }} XP</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
 <!-- Bottom actions -->
 <div class="tr-actions" style="margin-top:36px;">
   <a href="/search" class="tr-btn-primary">
@@ -433,6 +467,10 @@
     document.getElementById("val-change").style.display = meta.change ? "" : "none";
 
     if (panelId === "diversifizierung") buildDonut();
+    if (panelId === "achievements") {
+      document.getElementById("val-label").textContent = "Erfolge";
+      document.getElementById("val-main").textContent  = "";
+    }
   }
 
   function switchRange(btn) {

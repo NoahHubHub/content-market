@@ -15,7 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from database import Base, engine, get_db, SessionLocal
 import models
-from models import get_level_info
+from models import get_level_info, ACHIEVEMENTS
 from pricing import calculate_price
 from youtube import extract_video_id, get_video_by_id, get_video_details, search_videos, get_trending_videos
 
@@ -125,6 +125,86 @@ except Exception:
 
 def _hash_pw(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+# ── achievements ───────────────────────────────────────────────────────────────
+
+def check_achievements(db_user: models.User, db: Session) -> list:
+    """Prüft alle Achievements und gibt neu freigeschaltete zurück."""
+    from datetime import timedelta
+    earned_ids = {a.achievement_id for a in db_user.achievements}
+    newly_earned = []
+
+    def unlock(aid: str):
+        if aid not in earned_ids:
+            a = ACHIEVEMENTS[aid]
+            db.add(models.UserAchievement(user_id=db_user.id, achievement_id=aid))
+            db_user.xp = (db_user.xp or 0) + a["xp"]
+            earned_ids.add(aid)
+            newly_earned.append(aid)
+
+    # Erste Investition
+    total_trades = len(db_user.transactions)
+    if total_trades >= 1:
+        unlock("first_buy")
+
+    # 10 Trades
+    if total_trades >= 10:
+        unlock("trader_10")
+
+    # Diversifiziert: 3+ aktive Positionen
+    active_holdings = [h for h in db_user.holdings if h.shares > 0.001]
+    if len(active_holdings) >= 3:
+        unlock("diversified")
+
+    # Wal: 50+ Anteile einer einzelnen Position
+    for h in active_holdings:
+        if h.shares >= 50:
+            unlock("whale")
+            break
+
+    # Ersten Gewinn
+    sell_txs = [t for t in db_user.transactions if t.transaction_type == "sell"]
+    for t in sell_txs:
+        buy_txs = [b for b in db_user.transactions
+                   if b.transaction_type == "buy" and b.video_id == t.video_id
+                   and b.executed_at < t.executed_at]
+        if buy_txs:
+            avg_buy = sum(b.price_per_share for b in buy_txs) / len(buy_txs)
+            if t.price_per_share > avg_buy:
+                unlock("first_profit")
+                break
+
+    # Diamond Hands: Position 7+ Tage gehalten
+    for h in active_holdings:
+        first_buy = db.query(models.Transaction).filter_by(
+            user_id=db_user.id, video_id=h.video_id, transaction_type="buy"
+        ).order_by(models.Transaction.executed_at).first()
+        if first_buy and (datetime.utcnow() - first_buy.executed_at).days >= 7:
+            unlock("diamond_hands")
+            break
+
+    # Streak Achievements
+    if (db_user.streak_days or 0) >= 3:
+        unlock("streak_3")
+    if (db_user.streak_days or 0) >= 7:
+        unlock("streak_7")
+
+    # Level 5
+    if get_level_info(db_user.xp or 0)["level"] >= 5:
+        unlock("level_5")
+
+    # Daily Drop gekauft
+    for t in db_user.transactions:
+        if t.transaction_type == "buy":
+            drop = db.query(models.DailyDrop).filter_by(video_id=t.video_id).first()
+            if drop:
+                unlock("daily_drop")
+                break
+
+    if newly_earned:
+        db.commit()
+    return newly_earned
 
 def _verify_pw(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode(), password_hash.encode())
@@ -451,6 +531,11 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
         "xp":  request.query_params.get("xp"),
+        "new_achievements": [
+            ACHIEVEMENTS[aid] for aid in
+            (request.query_params.get("ach") or "").split(",")
+            if aid in ACHIEVEMENTS
+        ],
     })
 
 
@@ -532,9 +617,11 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
 
     db_user.xp = (db_user.xp or 0) + XP_BUY
     db.commit()
+    new_achievements = check_achievements(db_user, db)
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
-    return RedirectResponse(f"/video/{youtube_id}?msg=bought&xp={XP_BUY}", status_code=302)
+    ach_param = ",".join(new_achievements) if new_achievements else ""
+    return RedirectResponse(f"/video/{youtube_id}?msg=bought&xp={XP_BUY}&ach={ach_param}", status_code=302)
 
 
 @app.post("/sell/{youtube_id}")
@@ -569,10 +656,11 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
     db_user.xp = (db_user.xp or 0) + xp_gained
     db.commit()
     db.refresh(db_user)
-
+    new_achievements = check_achievements(db_user, db)
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
-    return RedirectResponse(f"/video/{youtube_id}?msg=sold&xp={xp_gained}", status_code=302)
+    ach_param = ",".join(new_achievements) if new_achievements else ""
+    return RedirectResponse(f"/video/{youtube_id}?msg=sold&xp={xp_gained}&ach={ach_param}", status_code=302)
 
 
 # ── portfolio ─────────────────────────────────────────────────────────────────
@@ -651,6 +739,8 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "psort": psort,
         "net_pnl":     round(portfolio_value - 10000, 2),
         "net_pnl_pct": round((portfolio_value - 10000) / 10000 * 100, 2),
+        "all_achievements": ACHIEVEMENTS,
+        "user_achievements": {a.achievement_id for a in db_user.achievements},
     })
 
 
@@ -713,9 +803,10 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
     db_user.xp = (db_user.xp or 0) + XP_BUY + 5  # Bonus XP für Daily Drop
     db.commit()
     db.refresh(db_user)
-
+    new_achievements = check_achievements(db_user, db)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
-    return RedirectResponse(f"/video/{drop.video.youtube_id}?msg=bought&xp={XP_BUY + 5}", status_code=302)
+    ach_param = ",".join(new_achievements) if new_achievements else ""
+    return RedirectResponse(f"/video/{drop.video.youtube_id}?msg=bought&xp={XP_BUY + 5}&ach={ach_param}", status_code=302)
 
 
 # ── leaderboard ───────────────────────────────────────────────────────────────

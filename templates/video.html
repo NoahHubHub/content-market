@@ -24,6 +24,21 @@
 <div class="tr-alert tr-alert-error">Nicht genug Anteile</div>
 {% endif %}
 
+{% for ach in new_achievements %}
+<div style="background:linear-gradient(135deg,rgba(255,159,10,.15),rgba(255,107,0,.1));
+            border:1px solid rgba(255,159,10,.3);border-radius:14px;padding:14px 16px;
+            margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:1.8rem;">{{ ach.icon }}</span>
+  <div>
+    <div style="font-size:.65rem;color:#ff9f0a;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">
+      Achievement freigeschaltet
+    </div>
+    <div style="font-size:.95rem;font-weight:700;color:#fff;">{{ ach.name }}</div>
+    <div style="font-size:.78rem;color:#555;margin-top:1px;">{{ ach.desc }} · <span style="color:#ff9f0a;">+{{ ach.xp }} XP</span></div>
+  </div>
+</div>
+{% endfor %}
+
 <!-- Back + Watchlist toggle -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
   <a href="/" class="tr-sub">← Markt</a>
