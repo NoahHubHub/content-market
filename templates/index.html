@@ -103,20 +103,20 @@
 
 <!-- Hot Take -->
 {% if hot_take_video %}
-<div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+<div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
     <span class="tr-label">🔮 Hot Take — Video des Tages</span>
     {% if today_hot_take %}
     <span style="font-size:.72rem;color:#555;">Getippt ✓</span>
     {% else %}
-    <span style="font-size:.72rem;color:#ff9f0a;font-weight:700;">+25 XP wenn richtig</span>
+    <span style="font-size:.72rem;color:#FFB162;font-weight:700;">+25 XP wenn richtig</span>
     {% endif %}
   </div>
 
   {% if yesterday_take and yesterday_take.resolved %}
   <div style="margin-bottom:10px;padding:8px 12px;border-radius:10px;font-size:.8rem;font-weight:600;
-    {% if yesterday_take.correct %}background:rgba(48,209,88,.12);color:#30d158;
-    {% else %}background:rgba(255,69,58,.12);color:#ff453a;{% endif %}">
+    {% if yesterday_take.correct %}background:rgba(76,175,130,.15);color:#4CAF82;border:1px solid rgba(76,175,130,.2);
+    {% else %}background:rgba(163,81,57,.15);color:#E07055;border:1px solid rgba(163,81,57,.2);{% endif %}">
     {% if yesterday_take.correct %}✓ Gestern richtig getippt! +25 XP{% else %}✗ Gestern leider falsch. +5 XP{% endif %}
   </div>
   {% endif %}
@@ -126,8 +126,8 @@
     <img src="{{ hot_take_video.thumbnail_url }}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;" />
     {% endif %}
     <div>
-      <div style="font-size:.85rem;font-weight:600;color:#fff;">{{ hot_take_video.title[:45] }}{% if hot_take_video.title|length > 45 %}…{% endif %}</div>
-      <div style="font-size:.75rem;color:#555;">{{ hot_take_video.channel_name }}</div>
+      <div style="font-size:.85rem;font-weight:600;color:#EEE9DF;">{{ hot_take_video.title[:45] }}{% if hot_take_video.title|length > 45 %}…{% endif %}</div>
+      <div style="font-size:.75rem;color:#C9C1B1;">{{ hot_take_video.channel_name }}</div>
     </div>
   </a>
 
@@ -142,23 +142,23 @@
       </div>
     </div>
   </div>
-  <div style="font-size:.82rem;color:#555;margin-bottom:10px;text-align:center;">
+  <div style="font-size:.82rem;color:#C9C1B1;margin-bottom:10px;text-align:center;">
     Hat dieses Video morgen mehr Views als heute?
   </div>
   <form method="post" action="/hottake/{{ hot_take_video.id }}" style="display:flex;gap:8px;">
     <button type="submit" name="prediction" value="up"
-      style="flex:1;background:#0d2e1a;border:1px solid #30d158;border-radius:12px;
-             color:#30d158;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;">
+      style="flex:1;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.35);border-radius:12px;
+             color:#4CAF82;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;transition:background .15s;">
       📈 Steigt
     </button>
     <button type="submit" name="prediction" value="down"
-      style="flex:1;background:#2e0d0d;border:1px solid #ff453a;border-radius:12px;
-             color:#ff453a;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;">
+      style="flex:1;background:rgba(163,81,57,.15);border:1px solid rgba(163,81,57,.35);border-radius:12px;
+             color:#E07055;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;transition:background .15s;">
       📉 Fällt
     </button>
   </form>
   {% else %}
-  <div style="text-align:center;padding:10px;font-size:.85rem;color:#555;">
+  <div style="text-align:center;padding:10px;font-size:.85rem;color:#C9C1B1;">
     Dein Tipp: <strong style="color:#fff;">{% if today_hot_take.prediction == 'up' %}📈 Steigt{% else %}📉 Fällt{% endif %}</strong>
     · Ergebnis morgen früh
   </div>
@@ -168,10 +168,10 @@
 
 <!-- Aktuelle Aufgaben -->
 {% if current_tasks %}
-<div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+<div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
     <span class="tr-label">Aufgaben — Level {{ user.level }}</span>
-    <span style="font-size:.72rem;color:#555;">
+    <span style="font-size:.72rem;color:#C9C1B1;">
       {{ current_tasks | selectattr('completed') | list | length }} / {{ current_tasks | length }} erledigt
     </span>
   </div>
@@ -180,22 +180,22 @@
   <div style="margin-bottom:{% if not loop.last %}12px{% else %}0{% endif %};">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
       <span style="font-size:1rem;">{{ task.icon }}</span>
-      <span style="font-size:.85rem;font-weight:600;{% if task.completed %}color:#30d158;{% endif %}">
+      <span style="font-size:.85rem;font-weight:600;{% if task.completed %}color:#4CAF82;{% endif %}">
         {{ task.name }}
       </span>
       {% if task.completed %}
-      <span style="font-size:.72rem;color:#30d158;font-weight:700;margin-left:auto;">✓ Fertig</span>
+      <span style="font-size:.72rem;color:#4CAF82;font-weight:700;margin-left:auto;">✓ Fertig</span>
       {% else %}
-      <span style="font-size:.72rem;color:#555;margin-left:auto;">{{ task.progress }} / {{ task.target }}</span>
+      <span style="font-size:.72rem;color:#C9C1B1;margin-left:auto;">{{ task.progress }} / {{ task.target }}</span>
       {% endif %}
     </div>
-    <div style="background:#1a1a1a;border-radius:99px;height:3px;overflow:hidden;">
+    <div style="background:rgba(238,233,223,.12);border-radius:99px;height:3px;overflow:hidden;">
       <div style="height:100%;border-radius:99px;
-                  {% if task.completed %}background:#30d158{% else %}background:#fff{% endif %};
+                  {% if task.completed %}background:#4CAF82{% else %}background:linear-gradient(90deg,#FFB162,#A35139){% endif %};
                   width:{{ [pct, 100] | min }}%;transition:width .4s ease;"></div>
     </div>
     {% if not task.completed %}
-    <div style="font-size:.72rem;color:#333;margin-top:2px;">{{ task.desc }}</div>
+    <div style="font-size:.72rem;color:#8A9BAD;margin-top:2px;">{{ task.desc }}</div>
     {% endif %}
   </div>
   {% endfor %}
@@ -204,30 +204,34 @@
 
 <!-- User stats bar -->
 {% if user and user.holdings_count > 0 %}
-<div style="display:flex;gap:16px;padding:12px 16px;background:#0a0a0a;border-radius:14px;
-            margin-bottom:20px;flex-wrap:wrap;">
-  <div>
-    <div style="font-size:.65rem;color:#555;margin-bottom:1px;">CASH</div>
-    <div style="font-size:.9rem;font-weight:700;">${{ "%.0f"|format(user.balance) }}</div>
+<div style="display:flex;gap:0;background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.13);
+            border-radius:14px;margin-bottom:20px;overflow:hidden;">
+  <div style="flex:1;padding:12px 14px;">
+    <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Cash</div>
+    <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(user.balance) }}</div>
   </div>
-  <div style="width:1px;background:#111;flex-shrink:0;"></div>
-  <div>
-    <div style="font-size:.65rem;color:#555;margin-bottom:1px;">POSITIONEN</div>
-    <div style="font-size:.9rem;font-weight:700;">{{ user.holdings_count }}</div>
+  <div style="width:1px;background:rgba(238,233,223,.1);flex-shrink:0;"></div>
+  <div style="flex:1;padding:12px 14px;">
+    <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Positionen</div>
+    <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">{{ user.holdings_count }}</div>
   </div>
-  <div style="width:1px;background:#111;flex-shrink:0;"></div>
-  <div>
-    <div style="font-size:.65rem;color:#555;margin-bottom:1px;">INVESTIERT</div>
-    <div style="font-size:.9rem;font-weight:700;">${{ "%.0f"|format(user.cost_basis) }}</div>
+  <div style="width:1px;background:rgba(238,233,223,.1);flex-shrink:0;"></div>
+  <div style="flex:1;padding:12px 14px;">
+    <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Investiert</div>
+    <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(user.cost_basis) }}</div>
   </div>
-  <div style="margin-left:auto;">
-    <a href="/portfolio" style="font-size:.78rem;color:#555;font-weight:600;">Portfolio ›</a>
-  </div>
+  <a href="/portfolio" style="display:flex;align-items:center;padding:12px 14px;color:#FFB162;font-size:.9rem;font-weight:700;text-decoration:none;border-left:1px solid rgba(238,233,223,.1);">›</a>
 </div>
 {% endif %}
 
+<!-- Section divider -->
+<div style="height:1px;background:rgba(238,233,223,.08);margin:24px -20px 24px;"></div>
+
 <div class="tr-section" style="margin-top:0;">
-  <h2>Markt</h2>
+  <div>
+    <h2 style="margin-bottom:2px;">Markt</h2>
+    <div style="font-size:.75rem;color:#C9C1B1;">{{ video_data | length if video_data else 0 }} Videos</div>
+  </div>
   <a href="/search" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">+ Video</a>
 </div>
 
@@ -240,15 +244,15 @@
     {% set v = item.video %}
     {% set info = item.info %}
     <a href="/video/{{ v.youtube_id }}"
-       style="flex-shrink:0;width:140px;background:#0a0a0a;border-radius:14px;padding:12px;
+       style="flex-shrink:0;width:140px;background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.11);border-radius:14px;padding:12px;
               text-decoration:none;display:block;position:relative;
               animation:slide-up .4s cubic-bezier(.22,1,.36,1) {{ loop.index0 * 0.06 }}s both;
               transition:transform .18s,box-shadow .18s;"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.7)'"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 30px rgba(0,0,0,.5),0 0 0 1px rgba(238,233,223,.2)'"
        onmouseout="this.style.transform='';this.style.boxShadow=''">
       {% if v.youtube_id in portfolio_ids %}
       <div style="position:absolute;top:8px;right:8px;width:8px;height:8px;
-                  border-radius:50%;background:#30d158;border:2px solid #0a0a0a;"></div>
+                  border-radius:50%;background:#30d158;border:2px solid rgba(238,233,223,.1);"></div>
       {% endif %}
       {% if v.thumbnail_url %}
       <img src="{{ v.thumbnail_url }}"
@@ -269,6 +273,9 @@
 </div>
 {% endif %}
 
+<!-- section divider -->
+<div style="height:1px;background:rgba(238,233,223,.08);margin:4px -20px 24px;"></div>
+
 <!-- Daily Drop -->
 {% if daily_drops %}
 <div style="margin-bottom:28px;">
@@ -286,16 +293,16 @@
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
     <div style="display:flex;align-items:center;gap:8px;">
       <span class="tr-label">🎯 Daily Drop</span>
-      <span style="background:rgba(255,69,58,.15);color:#ff453a;font-size:.65rem;font-weight:700;
+      <span style="background:rgba(163,81,57,.2);color:#E07055;font-size:.65rem;font-weight:700;
                    padding:2px 7px;border-radius:20px;">Limitiert</span>
     </div>
-    <span style="font-size:.72rem;color:#555;">Heute verfügbar</span>
+    <span style="font-size:.72rem;color:#C9C1B1;">Heute verfügbar</span>
   </div>
   {% for item in daily_drops %}
   {% set drop = item.drop %}
   {% set v = item.video %}
   {% set info = item.info %}
-  <div style="background:#0a0a0a;border-radius:14px;padding:14px;margin-bottom:10px;">
+  <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:14px;margin-bottom:10px;">
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
       {% if v.thumbnail_url %}
       <img src="{{ v.thumbnail_url }}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0;" />
@@ -304,7 +311,7 @@
         <div style="font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           {{ v.title[:45] }}{% if v.title|length > 45 %}…{% endif %}
         </div>
-        <div style="font-size:.75rem;color:#555;margin-top:2px;">{{ v.channel_name }}</div>
+        <div style="font-size:.75rem;color:#C9C1B1;margin-top:2px;">{{ v.channel_name }}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
           <span style="font-size:.88rem;font-weight:700;">${{ "%.2f"|format(v.current_price) }}</span>
           <span class="{% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}" style="font-size:.78rem;">
@@ -317,13 +324,13 @@
     {% set pct_remaining = (drop.shares_remaining / drop.total_shares * 100) | round(0) %}
     <div style="margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-        <span style="font-size:.7rem;color:#555;">Noch verfügbar</span>
+        <span style="font-size:.7rem;color:#C9C1B1;">Noch verfügbar</span>
         <span style="font-size:.7rem;font-weight:700;
           {% if pct_remaining < 25 %}color:#ff453a{% elif pct_remaining < 60 %}color:#ff9f0a{% else %}color:#30d158{% endif %}">
           {{ drop.shares_remaining | round(1) }} / {{ drop.total_shares | round(0) | int }} Anteile
         </span>
       </div>
-      <div style="background:#1a1a1a;border-radius:99px;height:4px;">
+      <div style="background:rgba(238,233,223,.12);border-radius:99px;height:4px;">
         <div style="height:100%;border-radius:99px;
           {% if pct_remaining < 25 %}background:#ff453a{% elif pct_remaining < 60 %}background:#ff9f0a{% else %}background:#30d158{% endif %};
           width:{{ pct_remaining }}%;"></div>
@@ -338,7 +345,7 @@
       </button>
     </form>
     {% else %}
-    <div style="text-align:center;padding:10px;font-size:.82rem;color:#555;font-weight:600;">
+    <div style="text-align:center;padding:10px;font-size:.82rem;color:#C9C1B1;font-weight:600;">
       Ausverkauft
     </div>
     {% endif %}
@@ -346,6 +353,9 @@
   {% endfor %}
 </div>
 {% endif %}
+
+<!-- section divider -->
+<div style="height:1px;background:rgba(238,233,223,.08);margin:4px -20px 24px;"></div>
 
 <!-- Watchlist section -->
 {% if watchlist_data %}
@@ -388,8 +398,8 @@
   {% for s, label in [("new", "Neu"), ("momentum", "Momentum"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑")] %}
   <a href="/?sort={{ s }}"
      style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;
-            text-decoration:none;
-            {% if sort == s %}background:#fff;color:#000;{% else %}background:#111;color:#555;{% endif %}">
+            text-decoration:none;transition:all .15s;
+            {% if sort == s %}background:#EEE9DF;color:#1B2632;{% else %}background:rgba(238,233,223,.08);color:#C9C1B1;border:1px solid rgba(238,233,223,.12);{% endif %}">
     {{ label }}
   </a>
   {% endfor %}
@@ -410,7 +420,7 @@
       {% endif %}
       {% if v.youtube_id in portfolio_ids %}
       <div style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;
-                  border-radius:50%;background:#30d158;border:2px solid #000;"></div>
+                  border-radius:50%;background:#4CAF82;border:2px solid var(--bg);"></div>
       {% endif %}
     </div>
     <div class="tr-row-body">
@@ -419,7 +429,7 @@
         {{ v.channel_name }}
         &nbsp;·&nbsp;
         <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
-        {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,159,10,.2);color:#ff9f0a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
+        {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,177,98,.2);color:#FFB162;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
       </div>
     </div>
     <div class="tr-row-right">
@@ -435,9 +445,9 @@
 </div>
 
 {% else %}
-<div style="text-align:center;padding:80px 0;color:#333;">
+<div style="text-align:center;padding:80px 0;">
   <div style="font-size:3rem;margin-bottom:16px;">📺</div>
-  <div style="font-size:1.1rem;font-weight:600;color:#555;margin-bottom:8px;">Noch keine Videos</div>
+  <div style="font-size:1.1rem;font-weight:600;color:#EEE9DF;margin-bottom:8px;">Noch keine Videos</div>
   <div class="tr-sub" style="margin-bottom:24px;">Suche ein YouTube Video um zu starten.</div>
   <a href="/search" class="tr-btn-primary">Video suchen</a>
 </div>

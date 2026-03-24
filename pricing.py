@@ -59,20 +59,28 @@ def calculate_price(
         if len(other_v) >= 2:
             vol = stdev(other_v) / max(avg_v, 1)
         else:
-            vol = 1.0  # single video → uncertain
+            vol = 0.5  # single comparison → moderate uncertainty
 
-        # Risk rating
+        # Risk rating — thresholds tuned for YouTube reality
         n = len(channel_videos)
-        if n < 3 or vol > 1.2:
+        if n < 2 or vol > 2.5:
             risk_label, risk_color = "Extreme", "danger"
-        elif vol > 0.6:
+        elif vol > 1.0:
             risk_label, risk_color = "High", "warning"
-        elif vol > 0.25:
+        elif vol > 0.4:
             risk_label, risk_color = "Medium", "info"
         else:
             risk_label, risk_color = "Low", "success"
     else:
-        # No channel data → treat as unknown creator, extreme risk
+        # No channel data → use absolute velocity as proxy for risk
+        if v > 300_000:
+            risk_label, risk_color = "Low", "success"
+        elif v > 50_000:
+            risk_label, risk_color = "Medium", "info"
+        elif v > 5_000:
+            risk_label, risk_color = "High", "warning"
+        else:
+            risk_label, risk_color = "Extreme", "danger"
         rps = 1.0
 
     # ── 2. Base price — log scale of absolute velocity ───────────────────────
