@@ -22,6 +22,17 @@ from youtube import extract_video_id, get_video_by_id, get_video_details, search
 load_dotenv()
 Base.metadata.create_all(bind=engine)
 
+def _migrate():
+    """Fügt fehlende Spalten zu bestehenden Tabellen hinzu (safe für Prod)."""
+    from sqlalchemy import text, inspect
+    insp = inspect(engine)
+    cols = [c["name"] for c in insp.get_columns("users")]
+    with engine.begin() as conn:
+        if "tutorial_step" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN tutorial_step INTEGER DEFAULT 0"))
+
+_migrate()
+
 app = FastAPI(title="Content Market")
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
