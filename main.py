@@ -8,6 +8,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt
 from sqlalchemy.orm import Session
@@ -34,6 +35,7 @@ def _migrate():
 _migrate()
 
 app = FastAPI(title="Content Market")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 templates = Jinja2Templates(directory="templates")
