@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ league.name }} — Content Market{% endblock %}
+{% block content %}
+
+{% if msg == "joined" %}
+<div class="tr-alert tr-alert-success">✅ Du bist der Liga beigetreten!</div>
+{% elif msg == "already_member" %}
+<div class="tr-alert tr-alert-info">Du bist bereits Mitglied dieser Liga.</div>
+{% elif msg == "created" %}
+<div class="tr-alert tr-alert-success">🏆 Liga erstellt! Teile den Code mit deinen Freunden.</div>
+{% endif %}
+
+<!-- Header -->
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+  <div>
+    <a href="/leagues" style="font-size:.78rem;color:#8A9BAD;text-decoration:none;display:block;margin-bottom:6px;">
+      ← Alle Ligen
+    </a>
+    <div class="tr-title" style="margin-bottom:4px;">{{ league.name }}</div>
+    <div style="font-size:.78rem;color:#8A9BAD;">
+      {{ board|length }} Mitglied{{ "er" if board|length != 1 else "" }}
+      · Gestartet {{ league.created_at.strftime("%d.%m.%Y") }}
+    </div>
+  </div>
+  <!-- Invite Code Box -->
+  <div style="background:rgba(255,177,98,.1);border:1px solid rgba(255,177,98,.3);
+              border-radius:10px;padding:10px 14px;text-align:center;">
+    <div style="font-size:.65rem;color:#FFB162;font-weight:700;letter-spacing:.06em;margin-bottom:3px;">INVITE CODE</div>
+    <div style="font-family:monospace;font-size:1.1rem;font-weight:800;color:#FFB162;letter-spacing:.15em;">
+      {{ league.invite_code }}
+    </div>
+  </div>
+</div>
+
+<!-- Leaderboard -->
+<div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);
+            border-radius:14px;padding:16px;margin-bottom:20px;">
+  <div class="tr-label" style="margin-bottom:12px;">Leaderboard</div>
+
+  {% for entry in board %}
+  {% set is_me = entry.username == user.username %}
+  <div style="display:flex;align-items:center;gap:12px;padding:10px 0;
+              {% if not loop.last %}border-bottom:1px solid rgba(238,233,223,.07);{% endif %}">
+
+    <!-- Rang -->
+    <div style="width:28px;text-align:center;font-size:.8rem;font-weight:800;
+                color:{% if loop.index == 1 %}#FFB162{% elif loop.index == 2 %}#C9C1B1{% elif loop.index == 3 %}#A35139{% else %}#556070{% endif %};">
+      {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+    </div>
+
+    <!-- Name -->
+    <div style="flex:1;font-size:.88rem;font-weight:{% if is_me %}700{% else %}500{% endif %};
+                color:{% if is_me %}#FFB162{% else %}#EEE9DF{% endif %};">
+      {{ entry.username }}{% if is_me %} <span style="font-size:.7rem;color:#8A9BAD;">(du)</span>{% endif %}
+    </div>
+
+    <!-- Rendite + Wert -->
+    <div style="text-align:right;">
+      <div style="font-size:.9rem;font-weight:800;
+                  color:{% if entry.return_pct >= 0 %}#4CAF82{% else %}#A35139{% endif %};">
+        {% if entry.return_pct >= 0 %}+{% endif %}{{ entry.return_pct }}%
+      </div>
+      <div style="font-size:.7rem;color:#8A9BAD;">${{ "%.0f"|format(entry.current_value) }}</div>
+    </div>
+
+  </div>
+  {% endfor %}
+
+  {% if not board %}
+  <div style="text-align:center;color:#8A9BAD;font-size:.85rem;padding:20px 0;">Noch keine Mitglieder.</div>
+  {% endif %}
+</div>
+
+<!-- Activity Feed -->
+<div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;">
+  <div class="tr-label" style="margin-bottom:12px;">Activity Feed</div>
+
+  {% if activities %}
+  {% for a in activities %}
+  <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;
+              {% if not loop.last %}border-bottom:1px solid rgba(238,233,223,.07);{% endif %}">
+
+    <!-- Icon -->
+    <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                font-size:.85rem;flex-shrink:0;
+                background:{% if a.action == 'buy' %}rgba(76,175,130,.15){% else %}rgba(163,81,57,.15){% endif %};">
+      {% if a.action == "buy" %}📈{% else %}📉{% endif %}
+    </div>
+
+    <!-- Text -->
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:.82rem;color:#EEE9DF;line-height:1.4;">
+        <strong style="color:{% if a.username == user.username %}#FFB162{% else %}#C9C1B1{% endif %};">
+          {{ a.username }}
+        </strong>
+        hat <strong>{{ a.shares }}</strong> Anteil{{ "e" if a.shares != 1 else "" }} von
+        <a href="/video/{{ a.youtube_id }}" style="color:#EEE9DF;text-decoration:underline;text-underline-offset:2px;">
+          {{ a.video_title[:40] }}{% if a.video_title and a.video_title|length > 40 %}…{% endif %}
+        </a>
+        {% if a.action == "buy" %}
+        <span style="color:#4CAF82;">gekauft</span>
+        {% else %}
+        <span style="color:#A35139;">verkauft</span>
+        {% endif %}
+        · <span style="color:#8A9BAD;">${{ "%.2f"|format(a.price) }}/Anteil</span>
+      </div>
+      <div style="font-size:.7rem;color:#556070;margin-top:2px;">
+        {{ a.created_at.strftime("%d.%m. %H:%M") }}
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div style="text-align:center;color:#8A9BAD;font-size:.85rem;padding:24px 0;">
+    <div style="font-size:1.5rem;margin-bottom:8px;">📭</div>
+    Noch keine Aktivitäten. Fang an zu traden!
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

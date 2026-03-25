@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Ligen — Content Market{% endblock %}
+{% block content %}
+
+{% if msg == "created" %}
+<div class="tr-alert tr-alert-success">🏆 Liga erstellt! Teile den Code mit deinen Freunden.</div>
+{% elif err == "code_not_found" %}
+<div class="tr-alert tr-alert-error">❌ Ungültiger Code. Prüfe die Eingabe.</div>
+{% elif err == "not_member" %}
+<div class="tr-alert tr-alert-error">Du bist kein Mitglied dieser Liga.</div>
+{% endif %}
+
+<div style="margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:4px;">Fantasy Trading</div>
+  <div class="tr-title">Deine Ligen</div>
+  <div class="tr-sub" style="margin-top:4px;">Spiele mit Freunden — wer hat am Ende die beste Rendite?</div>
+</div>
+
+<!-- Aktionen: Erstellen + Beitreten -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;">
+
+  <!-- Liga erstellen -->
+  <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;">
+    <div class="tr-label" style="margin-bottom:10px;">Neue Liga</div>
+    <form method="post" action="/leagues/create">
+      <input type="text" name="league_name" class="tr-input" placeholder="Liga-Name…"
+             maxlength="40" required style="margin-bottom:10px;" />
+      <button type="submit" class="tr-btn-primary" style="width:100%;padding:12px;font-size:.88rem;">
+        🏆 Erstellen
+      </button>
+    </form>
+  </div>
+
+  <!-- Liga beitreten -->
+  <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;">
+    <div class="tr-label" style="margin-bottom:10px;">Beitreten</div>
+    <form method="post" action="/leagues/join">
+      <input type="text" name="invite_code" class="tr-input" placeholder="Invite-Code…"
+             maxlength="10" style="text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;" required />
+      <button type="submit" class="tr-btn-secondary" style="width:100%;padding:12px;font-size:.88rem;">
+        ➕ Beitreten
+      </button>
+    </form>
+  </div>
+
+</div>
+
+<!-- Meine Ligen -->
+{% if my_leagues %}
+<div class="tr-label" style="margin-bottom:12px;">Meine Ligen ({{ my_leagues|length }})</div>
+
+{% for item in my_leagues %}
+{% set lg = item.league %}
+<a href="/leagues/{{ lg.id }}" style="text-decoration:none;display:block;margin-bottom:12px;">
+  <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);
+              border-radius:14px;padding:14px 16px;transition:border-color .15s;"
+       onmouseover="this.style.borderColor='rgba(255,177,98,.4)'"
+       onmouseout="this.style.borderColor='rgba(238,233,223,.12)'">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <div>
+        <div style="font-size:.95rem;font-weight:700;color:#EEE9DF;">🏆 {{ lg.name }}</div>
+        <div style="font-size:.72rem;color:#8A9BAD;margin-top:2px;">
+          Code: <span style="font-family:monospace;letter-spacing:.1em;color:#FFB162;">{{ lg.invite_code }}</span>
+          · {{ item.member_count }} Mitglied{{ "er" if item.member_count != 1 else "" }}
+        </div>
+      </div>
+      <!-- Eigene Rendite -->
+      <div style="text-align:right;">
+        <div style="font-size:1rem;font-weight:800;
+                    color:{% if item.my_return >= 0 %}#4CAF82{% else %}#A35139{% endif %};">
+          {% if item.my_return >= 0 %}+{% endif %}{{ item.my_return }}%
+        </div>
+        {% if item.my_rank %}
+        <div style="font-size:.72rem;color:#8A9BAD;">Platz {{ item.my_rank }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Letzte Aktivität -->
+    {% if item.latest_activity %}
+    {% set a = item.latest_activity %}
+    <div style="font-size:.75rem;color:#8A9BAD;border-top:1px solid rgba(238,233,223,.08);padding-top:8px;">
+      {% if a.action == "buy" %}📈{% else %}📉{% endif %}
+      <strong style="color:#C9C1B1;">{{ a.username }}</strong>
+      hat {{ a.shares }} Anteile von
+      <em style="color:#C9C1B1;">{{ a.video_title[:35] }}{% if a.video_title|length > 35 %}…{% endif %}</em>
+      {{ "gekauft" if a.action == "buy" else "verkauft" }}
+    </div>
+    {% endif %}
+
+  </div>
+</a>
+{% endfor %}
+
+{% else %}
+<div style="text-align:center;padding:40px 20px;color:#8A9BAD;">
+  <div style="font-size:2rem;margin-bottom:10px;">🏆</div>
+  <div style="font-size:.9rem;">Noch in keiner Liga.</div>
+  <div style="font-size:.8rem;margin-top:6px;">Erstelle eine Liga oder tritt mit einem Code bei.</div>
+</div>
+{% endif %}
+
+{% endblock %}

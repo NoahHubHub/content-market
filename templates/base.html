@@ -533,9 +533,9 @@
     <span style="margin-top:2px;">Suche</span>
   </a>
 
-  <a href="/duels" class="tr-tab-item {% if path == '/duels' %}active{% endif %}">
-    <span class="tr-tab-icon">⚔️</span>
-    <span>Duelle</span>
+  <a href="/leagues" class="tr-tab-item {% if path.startswith('/leagues') %}active{% endif %}">
+    <span class="tr-tab-icon">🏆</span>
+    <span>Ligen</span>
   </a>
 
   <a href="/portfolio" class="tr-tab-item {% if path == '/portfolio' %}active{% endif %}">

@@ -110,6 +110,7 @@ class User(Base):
     hot_takes = relationship("HotTake", back_populates="user")
     duels_sent = relationship("Duel", foreign_keys="Duel.challenger_id", back_populates="challenger")
     duels_received = relationship("Duel", foreign_keys="Duel.opponent_id", back_populates="opponent")
+    league_memberships = relationship("LeagueMember", back_populates="user")
 
 
 class Video(Base):
@@ -284,3 +285,50 @@ class Duel(Base):
 
     challenger = relationship("User", foreign_keys=[challenger_id], back_populates="duels_sent")
     opponent   = relationship("User", foreign_keys=[opponent_id],   back_populates="duels_received")
+
+
+# ── Liga-System ────────────────────────────────────────────────────────────────
+
+class League(Base):
+    __tablename__ = "leagues"
+
+    id          = Column(Integer, primary_key=True)
+    name        = Column(String, nullable=False)
+    invite_code = Column(String, unique=True, nullable=False, index=True)
+    creator_id  = Column(Integer, ForeignKey("users.id"))
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    creator    = relationship("User", foreign_keys=[creator_id])
+    members    = relationship("LeagueMember",  back_populates="league", cascade="all, delete-orphan")
+    activities = relationship("LeagueActivity", back_populates="league", cascade="all, delete-orphan")
+
+
+class LeagueMember(Base):
+    __tablename__ = "league_members"
+
+    id          = Column(Integer, primary_key=True)
+    league_id   = Column(Integer, ForeignKey("leagues.id"), nullable=False)
+    user_id     = Column(Integer, ForeignKey("users.id"),   nullable=False)
+    username    = Column(String, nullable=False)
+    start_value = Column(Float,  nullable=False)
+    joined_at   = Column(DateTime, default=datetime.utcnow)
+
+    league = relationship("League",    back_populates="members")
+    user   = relationship("User",      back_populates="league_memberships")
+
+
+class LeagueActivity(Base):
+    __tablename__ = "league_activities"
+
+    id          = Column(Integer, primary_key=True)
+    league_id   = Column(Integer, ForeignKey("leagues.id"), nullable=False)
+    user_id     = Column(Integer, ForeignKey("users.id"),   nullable=False)
+    username    = Column(String,  nullable=False)
+    action      = Column(String,  nullable=False)   # "buy" | "sell"
+    video_title = Column(String)
+    youtube_id  = Column(String)
+    shares      = Column(Float)
+    price       = Column(Float)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    league = relationship("League", back_populates="activities")

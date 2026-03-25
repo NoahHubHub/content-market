@@ -282,6 +282,25 @@ async def debug_exception_handler(request: Request, exc: Exception):
     return PlainTextResponse(f"500 – {type(exc).__name__}: {exc}\n\n{tb}", status_code=500)
 
 
+# ── league helpers ────────────────────────────────────────────────────────────
+
+def log_league_activity(db: Session, db_user: models.User, action: str,
+                        video: models.Video, shares: float, price: float):
+    """Schreibt einen Kauf/Verkauf in alle Ligen, in denen der User Mitglied ist."""
+    memberships = db.query(models.LeagueMember).filter_by(user_id=db_user.id).all()
+    for m in memberships:
+        db.add(models.LeagueActivity(
+            league_id=m.league_id,
+            user_id=db_user.id,
+            username=db_user.username,
+            action=action,
+            video_title=video.title,
+            youtube_id=video.youtube_id,
+            shares=round(shares, 4),
+            price=round(price, 2),
+        ))
+
+
 # ── video helpers ─────────────────────────────────────────────────────────────
 
 def get_channel_videos(db: Session, channel_id: str, exclude_youtube_id: str) -> list:
@@ -791,6 +810,7 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
     # Tutorial: Schritt 2→3 nach erstem Kauf
     if (db_user.tutorial_step or 0) <= 2:
         db_user.tutorial_step = 3
+    log_league_activity(db, db_user, "buy", video, shares, video.current_price)
     db.commit()
     # Task-Updates
     active_holdings = len([h for h in db_user.holdings if h.shares > 0.001])
@@ -837,6 +857,7 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
     profit = video.current_price >= avg_cost
     xp_gained = XP_SELL_PROFIT if profit else XP_SELL_LOSS
     db_user.xp = (db_user.xp or 0) + xp_gained
+    log_league_activity(db, db_user, "sell", video, shares, video.current_price)
     db.commit()
     db.refresh(db_user)
     # Task-Updates
@@ -1000,6 +1021,7 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
         shares=shares, price_per_share=drop.video.current_price, total_amount=total_cost,
     ))
     db_user.xp = (db_user.xp or 0) + XP_BUY + 5  # Bonus XP für Daily Drop
+    log_league_activity(db, db_user, "buy", drop.video, shares, drop.video.current_price)
     db.commit()
     db.refresh(db_user)
     total_drops = sum(1 for t in db_user.transactions
@@ -1323,6 +1345,145 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
     })
+
+
+# ── ligen ─────────────────────────────────────────────────────────────────────
+
+@app.get("/leagues", response_class=HTMLResponse)
+async def leagues_page(request: Request, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    user = UserCtx(db_user)
+
+    memberships = db.query(models.LeagueMember).filter_by(user_id=db_user.id).all()
+    my_leagues = []
+    for m in memberships:
+        league = m.league
+        my_val = calc_total_portfolio_value(db_user)
+        ret = round((my_val - m.start_value) / max(m.start_value, 1) * 100, 2)
+        board = _build_league_board(league, db)
+        my_rank = next((i + 1 for i, e in enumerate(board) if e["username"] == db_user.username), None)
+        my_leagues.append({
+            "league": league,
+            "my_return": ret,
+            "my_rank": my_rank,
+            "member_count": len(league.members),
+            "latest_activity": league.activities[-1] if league.activities else None,
+        })
+
+    return templates.TemplateResponse(request, "leagues.html", {
+        "user": user,
+        "my_leagues": my_leagues,
+        "msg": request.query_params.get("msg"),
+        "err": request.query_params.get("err"),
+    })
+
+
+@app.post("/leagues/create")
+async def create_league(request: Request, league_name: str = Form(...),
+                        db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    # Eindeutigen Invite-Code generieren
+    for _ in range(10):
+        code = secrets.token_hex(3).upper()
+        if not db.query(models.League).filter_by(invite_code=code).first():
+            break
+
+    league = models.League(name=league_name.strip(), invite_code=code, creator_id=db_user.id)
+    db.add(league)
+    db.flush()
+
+    # Ersteller ist automatisch Mitglied
+    db.add(models.LeagueMember(
+        league_id=league.id,
+        user_id=db_user.id,
+        username=db_user.username,
+        start_value=calc_total_portfolio_value(db_user),
+    ))
+    db.commit()
+    return RedirectResponse(f"/leagues/{league.id}?msg=created", status_code=302)
+
+
+@app.post("/leagues/join")
+async def join_league(request: Request, invite_code: str = Form(...),
+                      db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    league = db.query(models.League).filter_by(invite_code=invite_code.strip().upper()).first()
+    if not league:
+        return RedirectResponse("/leagues?err=code_not_found", status_code=302)
+
+    already = db.query(models.LeagueMember).filter_by(
+        league_id=league.id, user_id=db_user.id
+    ).first()
+    if already:
+        return RedirectResponse(f"/leagues/{league.id}?msg=already_member", status_code=302)
+
+    db.add(models.LeagueMember(
+        league_id=league.id,
+        user_id=db_user.id,
+        username=db_user.username,
+        start_value=calc_total_portfolio_value(db_user),
+    ))
+    db.commit()
+    return RedirectResponse(f"/leagues/{league.id}?msg=joined", status_code=302)
+
+
+@app.get("/leagues/{league_id}", response_class=HTMLResponse)
+async def league_detail(request: Request, league_id: int, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    user = UserCtx(db_user)
+
+    league = db.query(models.League).filter_by(id=league_id).first()
+    if not league:
+        raise HTTPException(status_code=404, detail="Liga nicht gefunden")
+
+    # Nur Mitglieder dürfen rein
+    membership = db.query(models.LeagueMember).filter_by(
+        league_id=league_id, user_id=db_user.id
+    ).first()
+    if not membership:
+        return RedirectResponse("/leagues?err=not_member", status_code=302)
+
+    board = _build_league_board(league, db)
+    activities = sorted(league.activities, key=lambda a: a.created_at, reverse=True)[:30]
+
+    return templates.TemplateResponse(request, "league_detail.html", {
+        "user": user,
+        "league": league,
+        "board": board,
+        "activities": activities,
+        "is_creator": league.creator_id == db_user.id,
+        "msg": request.query_params.get("msg"),
+    })
+
+
+def _build_league_board(league: models.League, db: Session) -> list:
+    """Erstellt das sortierte Leaderboard einer Liga."""
+    board = []
+    for m in league.members:
+        u = db.query(models.User).filter_by(id=m.user_id).first()
+        if not u:
+            continue
+        current = calc_total_portfolio_value(u)
+        ret = round((current - m.start_value) / max(m.start_value, 1) * 100, 2)
+        board.append({
+            "username": m.username,
+            "start_value": m.start_value,
+            "current_value": round(current, 2),
+            "return_pct": ret,
+            "joined_at": m.joined_at,
+        })
+    board.sort(key=lambda x: x["return_pct"], reverse=True)
+    return board
 
 
 # ── leaderboard ───────────────────────────────────────────────────────────────
