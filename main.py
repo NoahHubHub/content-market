@@ -530,6 +530,25 @@ async def tutorial_next(request: Request, db: Session = Depends(get_db)):
     return RedirectResponse(request.headers.get("referer", "/"), status_code=302)
 
 
+def _get_user_leagues_preview(db_user: models.User, db: Session) -> list:
+    """Gibt die Top-1 Liga des Users mit Rang und letzter Aktivität zurück."""
+    memberships = db.query(models.LeagueMember).filter_by(user_id=db_user.id).limit(3).all()
+    result = []
+    for m in memberships:
+        league = m.league
+        my_val = calc_total_portfolio_value(db_user)
+        ret = round((my_val - m.start_value) / max(m.start_value, 1) * 100, 2)
+        board = _build_league_board(league, db)
+        my_rank = next((i + 1 for i, e in enumerate(board) if e["username"] == db_user.username), None)
+        activities = sorted(league.activities, key=lambda a: a.created_at, reverse=True)
+        latest = next((a for a in activities if a.user_id != db_user.id), None)
+        result.append({
+            "league": league, "my_return": ret, "my_rank": my_rank,
+            "latest_activity": latest,
+        })
+    return result
+
+
 # ── market ────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -666,6 +685,7 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "today_hot_take": today_hot_take,
         "yesterday_take": yesterday_take,
         "morning_brief": morning_brief,
+        "user_leagues": _get_user_leagues_preview(db_user, db),
     })
 
 
@@ -724,9 +744,10 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
                            video.published_at, channel_videos=channel_vids) if last \
         else {"risk": "Unknown", "risk_color": "secondary", "momentum_pct": 0, "views_per_day": 0, "rps": 1.0}
 
+    # Cap auf 90 Punkte — verhindert Chart-Performance-Probleme bei alten Videos
     price_history = [{"t": s.recorded_at.strftime("%d.%m %H:%M"), "p": s.price_at_time,
                       "ts": s.recorded_at.timestamp()}
-                     for s in video.stats]
+                     for s in video.stats[-90:]]
 
     # Holding from DB
     h = db.query(models.Holding).filter_by(user_id=db_user.id, video_id=video.id).first()

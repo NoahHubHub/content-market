@@ -247,6 +247,33 @@
 </div>
 {% endif %}
 
+<!-- Liga-Teaser (wenn User in Ligen ist) -->
+{% set my_league_memberships = [] %}
+{# Jinja kann keine DB-Queries — die Ligen werden vom Backend in context geliefert wenn vorhanden #}
+{% if user_leagues %}
+<a href="/leagues" style="text-decoration:none;display:block;margin-bottom:16px;">
+  <div style="background:rgba(255,177,98,.07);border:1px solid rgba(255,177,98,.2);
+              border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-size:.65rem;color:#FFB162;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px;">Deine Ligen</div>
+      <div style="font-size:.85rem;font-weight:600;color:#EEE9DF;">{{ user_leagues[0].league.name }}</div>
+      {% if user_leagues[0].latest_activity %}
+      <div style="font-size:.72rem;color:#8A9BAD;margin-top:1px;">
+        {% set a = user_leagues[0].latest_activity %}
+        {{ a.username }} hat {{ "gekauft" if a.action == "buy" else "verkauft" }}
+      </div>
+      {% endif %}
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:.9rem;font-weight:800;color:{% if user_leagues[0].my_return >= 0 %}#4CAF82{% else %}#A35139{% endif %};">
+        {% if user_leagues[0].my_return >= 0 %}+{% endif %}{{ user_leagues[0].my_return }}%
+      </div>
+      <div style="font-size:.7rem;color:#556070;">Platz {{ user_leagues[0].my_rank }}</div>
+    </div>
+  </div>
+</a>
+{% endif %}
+
 <!-- Section divider -->
 <div style="height:1px;background:rgba(238,233,223,.08);margin:24px -20px 24px;"></div>
 
