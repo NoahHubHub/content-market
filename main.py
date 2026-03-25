@@ -642,7 +642,7 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
 
     # Portfolio Morning Brief — beste Position für täglichen Kontext
     morning_brief = None
-    if db_user.holdings_count > 0:
+    if user.holdings_count > 0:
         best_holding, best_pct = None, -999.0
         for h in db_user.holdings:
             if h.shares > 0.001 and h.video and h.avg_cost_basis > 0:
