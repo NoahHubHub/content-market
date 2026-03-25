@@ -237,7 +237,8 @@ class UserCtx:
         self.balance         = db_user.balance
         self.holdings_count  = len(active)
         self.cost_basis      = round(sum(h.shares * h.avg_cost_basis for h in active), 2)
-        self.estimated_value = round(db_user.balance + self.cost_basis, 2)
+        market_value         = round(sum(h.shares * h.video.current_price for h in active if h.video), 2)
+        self.estimated_value = round(db_user.balance + market_value, 2)
         self.xp              = db_user.xp or 0
         self.level_info      = get_level_info(self.xp)
         self.level           = db_user.level or 1
@@ -1573,9 +1574,12 @@ async def league_detail(request: Request, league_id: int, db: Session = Depends(
 
 def _build_league_board(league: models.League, db: Session) -> list:
     """Erstellt das sortierte Leaderboard einer Liga."""
+    member_ids = [m.user_id for m in league.members]
+    users_by_id = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(member_ids)).all()} if member_ids else {}
+
     board = []
     for m in league.members:
-        u = db.query(models.User).filter_by(id=m.user_id).first()
+        u = users_by_id.get(m.user_id)
         if not u:
             continue
         current = calc_total_portfolio_value(u)
@@ -1602,10 +1606,15 @@ async def leaderboard(request: Request, db: Session = Depends(get_db)):
 
     all_entries = (db.query(models.LeaderboardEntry)
                    .order_by(models.LeaderboardEntry.portfolio_value.desc()).all())
+
+    # Bulk-load all users needed for the leaderboard in one query
+    usernames = [e.username for e in all_entries]
+    user_map = {u.username: u for u in db.query(models.User).filter(models.User.username.in_(usernames)).all()} if usernames else {}
+
     board = []
     my_rank = None
     for i, e in enumerate(all_entries, 1):
-        u = db.query(models.User).filter_by(username=e.username).first()
+        u = user_map.get(e.username)
         entry = {
             "username": e.username,
             "portfolio_value": e.portfolio_value,
