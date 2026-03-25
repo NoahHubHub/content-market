@@ -383,10 +383,10 @@ def upsert_leaderboard(username: str, portfolio_value: float, db: Session):
 
 def record_port_snap(request: Request, db_user: models.User):
     """Sparkline snapshots stay in session — lightweight display data only."""
-    active = [h for h in db_user.holdings if h.shares > 0.001]
-    total_cost = sum(h.shares * h.avg_cost_basis for h in active)
+    active = [h for h in db_user.holdings if h.shares > 0.001 and h.video]
+    market_value = sum(h.shares * h.video.current_price for h in active)
     snaps = request.session.get("port_snaps", [])
-    snaps.append({"ts": datetime.utcnow().strftime("%d.%m %H:%M"), "v": round(total_cost, 2)})
+    snaps.append({"ts": datetime.utcnow().strftime("%d.%m %H:%M"), "v": round(market_value, 2)})
     request.session["port_snaps"] = snaps[-50:]
 
 
