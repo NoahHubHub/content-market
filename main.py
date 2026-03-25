@@ -80,13 +80,28 @@ def _generate_daily_drop():
             return
 
         videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(50).all()
+
+        # Build channel map from already-loaded videos to avoid extra DB queries
+        from collections import defaultdict
+        channel_map: dict = defaultdict(list)
+        for v in videos:
+            if v.channel_id:
+                channel_map[v.channel_id].append(v)
+
         scored = []
         for v in videos:
             if not v.stats:
                 continue
             last = v.stats[-1]
+            prev = v.stats[-2].view_count if len(v.stats) >= 2 else None
+            channel_vids = [
+                (other.stats[-1].view_count, other.published_at)
+                for other in channel_map[v.channel_id]
+                if other.youtube_id != v.youtube_id and other.stats and other.stats[-1].view_count > 0
+            ]
             info = calculate_price(
-                last.view_count, last.like_count, last.comment_count, v.published_at
+                last.view_count, last.like_count, last.comment_count, v.published_at,
+                channel_videos=channel_vids, prev_view_count=prev,
             )
             scored.append((info["momentum_pct"], v))
 
@@ -275,7 +290,12 @@ def get_channel_videos(db: Session, channel_id: str, exclude_youtube_id: str) ->
         .filter(models.Video.channel_id == channel_id, models.Video.youtube_id != exclude_youtube_id)
         .limit(20).all()
     )
-    return [(v.stats[-1].view_count if v.stats else 0, v.published_at) for v in others]
+    # Filter out videos without stats or with 0 views — they skew the channel average down
+    return [
+        (v.stats[-1].view_count, v.published_at)
+        for v in others
+        if v.stats and v.stats[-1].view_count > 0
+    ]
 
 
 def upsert_video(db: Session, yt: dict) -> models.Video:
@@ -501,12 +521,29 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
     user = UserCtx(db_user)
 
     videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(48).all()
+
+    # Build channel map once — avoids N extra DB queries for channel_videos
+    from collections import defaultdict
+    channel_map: dict = defaultdict(list)
+    for v in videos:
+        if v.channel_id:
+            channel_map[v.channel_id].append(v)
+
     video_data = []
     for v in videos:
         if not v.stats:
             continue
         last = v.stats[-1]
-        info = calculate_price(last.view_count, last.like_count, last.comment_count, v.published_at)
+        prev = v.stats[-2].view_count if len(v.stats) >= 2 else None
+        channel_vids = [
+            (other.stats[-1].view_count, other.published_at)
+            for other in channel_map[v.channel_id]
+            if other.youtube_id != v.youtube_id and other.stats and other.stats[-1].view_count > 0
+        ]
+        info = calculate_price(
+            last.view_count, last.like_count, last.comment_count, v.published_at,
+            channel_videos=channel_vids, prev_view_count=prev,
+        )
         video_data.append({"video": v, "info": info, "last_stat": last})
 
     trending = sorted(video_data, key=lambda x: x["info"]["momentum_pct"], reverse=True)[:3]
@@ -525,7 +562,12 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         wv = db.query(models.Video).filter(models.Video.youtube_id == yt_id).first()
         if wv and wv.stats:
             wlast = wv.stats[-1]
-            winfo = calculate_price(wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at)
+            wchannel_vids = get_channel_videos(db, wv.channel_id or "", wv.youtube_id)
+            wprev = wv.stats[-2].view_count if len(wv.stats) >= 2 else None
+            winfo = calculate_price(
+                wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at,
+                channel_videos=wchannel_vids, prev_view_count=wprev,
+            )
             watchlist_data.append({"video": wv, "info": winfo})
 
     # Streak & Daily Login XP
@@ -593,7 +635,11 @@ async def search_page(request: Request, q: str = "", db: Session = Depends(get_d
             yt_list = get_video_by_id(vid) if (len(vid) == 11 and " " not in q) else search_videos(q)
             for yt in yt_list:
                 video = upsert_video(db, yt)
-                info = calculate_price(yt["view_count"], yt["like_count"], yt["comment_count"], yt["published_at"])
+                channel_vids = get_channel_videos(db, yt.get("channel_id", ""), yt["youtube_id"])
+                info = calculate_price(
+                    yt["view_count"], yt["like_count"], yt["comment_count"], yt["published_at"],
+                    channel_videos=channel_vids,
+                )
                 results.append({"video": video, "yt": yt, "info": info})
         except Exception as e:
             error = str(e)
@@ -904,8 +950,11 @@ def get_todays_drops(db: Session) -> list:
         if not drop.video or not drop.video.stats:
             continue
         last = drop.video.stats[-1]
+        prev = drop.video.stats[-2].view_count if len(drop.video.stats) >= 2 else None
+        channel_vids = get_channel_videos(db, drop.video.channel_id or "", drop.video.youtube_id)
         info = calculate_price(
-            last.view_count, last.like_count, last.comment_count, drop.video.published_at
+            last.view_count, last.like_count, last.comment_count, drop.video.published_at,
+            channel_videos=channel_vids, prev_view_count=prev,
         )
         result.append({"drop": drop, "video": drop.video, "info": info})
     return result

@@ -5,10 +5,10 @@ from statistics import mean, stdev
 
 def velocity(view_count: int, days_old: int) -> float:
     """
-    Views / sqrt(days) — the core normalization.
+    Views / sqrt(days) — cumulative velocity, age-adjusted.
 
-    A video follows roughly V(t) ≈ A * sqrt(t) in a healthy growth curve.
-    Dividing by sqrt(t) gives a constant 'A' (velocity) regardless of age.
+    Assumes V(t) ≈ A * sqrt(t) for a healthy growth curve, so dividing by
+    sqrt(t) gives a constant 'A' regardless of age.
 
     Examples at equal velocity (A = 100 000):
       100k views after  1 day  → velocity = 100 000
@@ -25,19 +25,31 @@ def calculate_price(
     comment_count: int,
     published_at: datetime,
     channel_videos: list = None,  # [(view_count, published_at), ...] of same creator
-    prev_view_count: int = None,
+    prev_view_count: int = None,  # views at the previous snapshot (for recent momentum)
 ) -> dict:
     """
     Price = Base × RPS-Factor × Engagement
 
-    Base        — absolute popularity (log scale of velocity)
+    Base        — absolute popularity (log scale of blended velocity)
     RPS-Factor  — how well this video performs vs. creator average
     Engagement  — like / comment multiplier
+
+    When prev_view_count is provided, velocity is a blend of cumulative
+    age-adjusted velocity (60%) and recent 1-day acceleration (40%). This
+    makes rising videos more expensive and declining videos cheaper.
     """
     now = datetime.utcnow()
     days_old = max((now - published_at).days, 1) if published_at else 30
 
-    v = velocity(view_count, days_old)
+    cumulative_v = velocity(view_count, days_old)
+
+    # ── Blend cumulative and recent velocity ──────────────────────────────────
+    if prev_view_count is not None and view_count > prev_view_count:
+        # Recent delta assumed over ~1 day between snapshots
+        recent_v = max(view_count - prev_view_count, 0)
+        v = 0.6 * cumulative_v + 0.4 * recent_v
+    else:
+        v = cumulative_v
 
     # ── 1. Channel baseline (other videos by the same creator) ───────────────
     rps = 1.0
@@ -84,8 +96,9 @@ def calculate_price(
         rps = 1.0
 
     # ── 2. Base price — log scale of absolute velocity ───────────────────────
-    # velocity of ~100 → $10, ~10 000 → $20, ~1 000 000 → $30, ~100 000 000 → $40
-    base_price = 10 * (1 + math.log10(max(v / 10, 0.01)))
+    # Uses a wider multiplier (15) for more price spread across videos:
+    # velocity ~100 → ~$15, ~10k → ~$30, ~1M → ~$45, ~100M → ~$60
+    base_price = 15 * (1 + math.log10(max(v / 10, 0.01)))
 
     # ── 3. RPS factor — sqrt-smoothed so outliers don't explode price ────────
     # RPS = 4 (4× creator avg) → factor = 2.0
