@@ -748,6 +748,9 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
     watchlist   = request.session.get("watchlist", [])
     is_watching = youtube_id in watchlist
 
+    leveled_up = request.query_params.get("lvl") == "1"
+    new_tasks  = get_current_tasks(db_user, db) if leveled_up else []
+
     return templates.TemplateResponse(request, "video.html", {
         "user": user, "video": video,
         "last_stat": last, "info": info, "price_history": price_history,
@@ -761,6 +764,7 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
             (request.query_params.get("ach") or "").split(",")
             if aid in ACHIEVEMENTS
         ],
+        "new_tasks": new_tasks,
     })
 
 
@@ -980,6 +984,36 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
 
     port_snaps = request.session.get("port_snaps", [])
 
+    # Stats für Achievement-Fortschritts-Hints
+    total_trades_count = len(db_user.transactions)
+    longest_held_days  = 0
+    for h in db_user.holdings:
+        if h.shares > 0.001:
+            first_buy = (db.query(models.Transaction)
+                         .filter_by(user_id=db_user.id, video_id=h.video_id, transaction_type="buy")
+                         .order_by(models.Transaction.executed_at).first())
+            if first_buy:
+                longest_held_days = max(longest_held_days,
+                                        (datetime.utcnow() - first_buy.executed_at).days)
+    sell_txs = [t for t in db_user.transactions if t.transaction_type == "sell"]
+    profitable_sells = 0
+    for t in sell_txs:
+        buy_txs = [b for b in db_user.transactions
+                   if b.transaction_type == "buy" and b.video_id == t.video_id
+                   and b.executed_at < t.executed_at]
+        if buy_txs:
+            avg_buy = sum(b.price_per_share for b in buy_txs) / len(buy_txs)
+            if t.price_per_share > avg_buy:
+                profitable_sells += 1
+    ach_stats = {
+        "total_trades":    total_trades_count,
+        "active_holdings": len([h for h in db_user.holdings if h.shares > 0.001]),
+        "streak":          db_user.streak_days or 0,
+        "level":           db_user.level or 1,
+        "longest_held":    longest_held_days,
+        "profitable_sells": profitable_sells,
+    }
+
     return templates.TemplateResponse(request, "portfolio.html", {
         "user": user,
         "holdings_data":  holdings_data,
@@ -994,6 +1028,7 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "net_pnl_pct": round((portfolio_value - 10000) / 10000 * 100, 2),
         "all_achievements": ACHIEVEMENTS,
         "user_achievements": {a.achievement_id for a in db_user.achievements},
+        "ach_stats": ach_stats,
     })
 
 
@@ -1544,23 +1579,46 @@ async def leaderboard(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/login", status_code=302)
     user = UserCtx(db_user)
 
-    entries = (db.query(models.LeaderboardEntry)
-               .order_by(models.LeaderboardEntry.portfolio_value.desc())
-               .limit(20).all())
+    all_entries = (db.query(models.LeaderboardEntry)
+                   .order_by(models.LeaderboardEntry.portfolio_value.desc()).all())
     board = []
-    for e in entries:
+    my_rank = None
+    for i, e in enumerate(all_entries, 1):
         u = db.query(models.User).filter_by(username=e.username).first()
-        board.append({
+        entry = {
             "username": e.username,
             "portfolio_value": e.portfolio_value,
             "return_pct": e.return_pct,
             "streak": u.streak_days if u else 0,
             "level": get_level_info(u.xp or 0)["level"] if u else 1,
-        })
+        }
+        if e.username == db_user.username:
+            my_rank = i
+        if i <= 20:
+            board.append(entry)
+
     if not board:
         board = [{"username": user.username, "portfolio_value": user.balance,
-                  "return_pct": round((user.balance - 10000) / 10000 * 100, 2)}]
+                  "return_pct": round((user.balance - 10000) / 10000 * 100, 2),
+                  "streak": db_user.streak_days or 0, "level": user.level_info["level"]}]
+        my_rank = 1
+
+    # Eigene Position anhängen falls außerhalb Top-20
+    me_in_top20 = any(e["username"] == db_user.username for e in board)
+    my_entry = None
+    if my_rank and not me_in_top20:
+        my_val = calc_total_portfolio_value(db_user)
+        my_entry = {
+            "rank": my_rank,
+            "username": db_user.username,
+            "portfolio_value": round(my_val, 2),
+            "return_pct": round((my_val - 10000) / 10000 * 100, 2),
+            "streak": db_user.streak_days or 0,
+            "level": user.level_info["level"],
+        }
 
     return templates.TemplateResponse(request, "leaderboard.html", {
         "user": user, "board": board,
+        "my_rank": my_rank, "total_players": len(all_entries),
+        "my_entry": my_entry,
     })

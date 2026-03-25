@@ -2,11 +2,30 @@
 {% block title %}Rangliste — Content Market{% endblock %}
 {% block content %}
 
-<div style="margin-bottom:28px;">
+<div style="margin-bottom:20px;">
   <div class="tr-label" style="margin-bottom:4px;">Wettbewerb</div>
   <div class="tr-title">Rangliste</div>
   <div class="tr-sub" style="margin-top:4px;">Wer macht aus $10.000 am meisten?</div>
 </div>
+
+<!-- Eigene Rank-Position -->
+{% if my_rank %}
+<div style="background:rgba(255,177,98,.08);border:1px solid rgba(255,177,98,.2);
+            border-radius:14px;padding:12px 16px;margin-bottom:20px;
+            display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <div style="font-size:.65rem;color:#FFB162;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Deine Position</div>
+    <div style="font-size:1.1rem;font-weight:800;color:#EEE9DF;">Platz {{ my_rank }} von {{ total_players }}</div>
+  </div>
+  {% if my_rank == 1 %}
+  <span style="font-size:1.5rem;">🥇</span>
+  {% elif my_rank <= 3 %}
+  <span style="font-size:1.5rem;">🏅</span>
+  {% elif my_rank <= 10 %}
+  <span style="font-size:.8rem;color:#FFB162;font-weight:700;padding:6px 12px;background:rgba(255,177,98,.1);border-radius:20px;">Top 10 🔥</span>
+  {% endif %}
+</div>
+{% endif %}
 
 <div>
   {% for item in board %}
@@ -43,6 +62,31 @@
   </div>
   {% endfor %}
 </div>
+
+<!-- Eigene Position außerhalb Top-20 -->
+{% if my_entry %}
+<div style="border-top:2px dashed rgba(238,233,223,.1);margin-top:8px;padding-top:12px;">
+  <div style="font-size:.7rem;color:#556070;text-align:center;margin-bottom:8px;">· · ·</div>
+  <div class="tr-row" style="background:rgba(255,177,98,.06);border:1px solid rgba(255,177,98,.15);border-radius:12px;padding:14px 12px;">
+    <div style="width:32px;text-align:center;flex-shrink:0;font-size:.9rem;color:#8A9BAD;font-weight:700;">
+      {{ my_entry.rank }}
+    </div>
+    <div class="tr-row-body">
+      <div class="tr-row-title" style="color:#FFB162;">{{ my_entry.username }} <span style="font-size:.7rem;color:#8A9BAD;">Du</span></div>
+      <div style="display:flex;gap:8px;margin-top:2px;">
+        <span style="font-size:.7rem;color:#FFB162;font-weight:600;">⚡ Lv.{{ my_entry.level }}</span>
+        {% if my_entry.streak >= 2 %}<span style="font-size:.7rem;color:#ff6b00;font-weight:600;">🔥 {{ my_entry.streak }}d</span>{% endif %}
+      </div>
+    </div>
+    <div class="tr-row-right">
+      <div class="tr-row-price">${{ "%.2f"|format(my_entry.portfolio_value) }}</div>
+      <div class="tr-row-pnl {% if my_entry.return_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+        {% if my_entry.return_pct >= 0 %}▲{% else %}▼{% endif %}{{ my_entry.return_pct | abs | round(2) }}%
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="tr-actions" style="margin-top:40px;">
   <a href="/portfolio" class="tr-btn-primary">

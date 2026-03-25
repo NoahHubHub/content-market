@@ -317,19 +317,52 @@
   <div style="display:grid;gap:10px;">
     {% for aid, ach in all_achievements.items() %}
     {% set earned = aid in user_achievements %}
-    <div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;
-                display:flex;align-items:center;gap:14px;
-                {% if not earned %}opacity:.4;{% endif %}">
-      <span style="font-size:1.8rem;flex-shrink:0;">{{ ach.icon }}</span>
-      <div style="flex:1;">
-        <div style="font-size:.9rem;font-weight:700;">{{ ach.name }}</div>
-        <div style="font-size:.78rem;color:#555;margin-top:2px;">{{ ach.desc }}</div>
+
+    {# Fortschritts-Berechnung je Achievement #}
+    {% if aid == "trader_10" %}
+      {% set prog = ach_stats.total_trades %}{% set tgt = 10 %}
+    {% elif aid == "diversified" %}
+      {% set prog = ach_stats.active_holdings %}{% set tgt = 3 %}
+    {% elif aid == "streak_3" %}
+      {% set prog = ach_stats.streak %}{% set tgt = 3 %}
+    {% elif aid == "streak_7" %}
+      {% set prog = ach_stats.streak %}{% set tgt = 7 %}
+    {% elif aid == "diamond_hands" %}
+      {% set prog = ach_stats.longest_held %}{% set tgt = 7 %}
+    {% elif aid == "level_5" %}
+      {% set prog = ach_stats.level %}{% set tgt = 5 %}
+    {% elif aid == "whale" %}
+      {% set prog = 0 %}{% set tgt = 0 %}
+    {% elif aid == "first_profit" %}
+      {% set prog = ach_stats.profitable_sells %}{% set tgt = 1 %}
+    {% else %}
+      {% set prog = 0 %}{% set tgt = 0 %}
+    {% endif %}
+
+    <div style="background:rgba(238,233,223,.05);border:1px solid rgba(238,233,223,{% if earned %}.14{% else %}.06{% endif %});
+                border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:1.8rem;flex-shrink:0;{% if not earned %}filter:grayscale(1);opacity:.5;{% endif %}">{{ ach.icon }}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.9rem;font-weight:700;{% if not earned %}color:#8A9BAD;{% endif %}">{{ ach.name }}</div>
+        <div style="font-size:.75rem;color:#556070;margin-top:2px;">{{ ach.desc }}</div>
+        {% if not earned and tgt > 0 %}
+        <div style="margin-top:6px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+            <span style="font-size:.65rem;color:#556070;">Fortschritt</span>
+            <span style="font-size:.65rem;color:#8A9BAD;">{{ [prog, tgt]|min }}/{{ tgt }}</span>
+          </div>
+          <div style="background:rgba(238,233,223,.1);border-radius:99px;height:3px;">
+            <div style="background:#FFB162;border-radius:99px;height:100%;
+                        width:{{ [(prog / tgt * 100), 100]|min | round(0) }}%;"></div>
+          </div>
+        </div>
+        {% endif %}
       </div>
       <div style="text-align:right;flex-shrink:0;">
         {% if earned %}
-        <div style="font-size:.7rem;color:#30d158;font-weight:700;">✓ Verdient</div>
+        <div style="font-size:.72rem;color:#4CAF82;font-weight:700;">✓ Verdient</div>
         {% else %}
-        <div style="font-size:.7rem;color:#555;">+{{ ach.xp }} XP</div>
+        <div style="font-size:.72rem;color:#556070;">+{{ ach.xp }} XP</div>
         {% endif %}
       </div>
     </div>
