@@ -174,8 +174,10 @@
     </div>
   </div>
   <div style="flex:1;padding:12px 0;text-align:center;">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">AUFN</div>
-    <div style="font-weight:700;font-size:.9rem;color:#555;">{{ video.stats | length }}</div>
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">INVESTOR</div>
+    <div style="font-weight:700;font-size:.9rem;{% if holders_count > 0 %}color:#EEE9DF{% else %}color:#555{% endif %};">
+      {{ holders_count }}
+    </div>
   </div>
 </div>
 {% endif %}
@@ -183,16 +185,25 @@
 <!-- Holding info -->
 {% if holding and holding.shares > 0 %}
 {% set pnl_pct = (video.current_price - holding.avg_cost) / holding.avg_cost * 100 %}
-<div style="background:#111;border-radius:14px;padding:16px;margin-bottom:20px;">
+{% set pnl_abs = (video.current_price - holding.avg_cost) * holding.shares %}
+<div style="background:rgba({% if pnl_pct >= 0 %}76,175,130{% else %}163,81,57{% endif %},.1);
+            border:1px solid rgba({% if pnl_pct >= 0 %}76,175,130{% else %}163,81,57{% endif %},.25);
+            border-radius:14px;padding:16px;margin-bottom:20px;">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <div>
-      <div class="tr-label" style="margin-bottom:2px;">Deine Position</div>
-      <div style="font-weight:600;">{{ "%.2f"|format(holding.shares) }} Anteile</div>
-      <div class="tr-sub">Ø ${{ "%.2f"|format(holding.avg_cost) }} · Wert ${{ "%.2f"|format(holding.shares * video.current_price) }}</div>
+      <div class="tr-label" style="margin-bottom:4px;">Deine Position</div>
+      <div style="font-weight:700;font-size:.95rem;">{{ "%.2f"|format(holding.shares) }} Anteile</div>
+      <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+        Ø Einstieg: <strong style="color:#C9C1B1;">${{ "%.2f"|format(holding.avg_cost) }}</strong>
+        · Wert: <strong style="color:#C9C1B1;">${{ "%.2f"|format(holding.shares * video.current_price) }}</strong>
+      </div>
     </div>
     <div style="text-align:right;">
-      <div style="font-size:1.1rem;font-weight:700;{% if pnl_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
-        {% if pnl_pct >= 0 %}+{% endif %}{{ "%.2f"|format(pnl_pct) }}%
+      <div style="font-size:1.3rem;font-weight:800;{% if pnl_pct >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+        {% if pnl_pct >= 0 %}+{% endif %}{{ "%.1f"|format(pnl_pct) }}%
+      </div>
+      <div style="font-size:.78rem;font-weight:600;{% if pnl_abs >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+        {% if pnl_abs >= 0 %}+{% endif %}${{ "%.2f"|format(pnl_abs) }}
       </div>
     </div>
   </div>

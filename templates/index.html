@@ -202,6 +202,29 @@
 </div>
 {% endif %}
 
+<!-- Portfolio Morning Brief -->
+{% if morning_brief and morning_brief.best %}
+<div style="background:rgba(238,233,223,.06);border:1px solid rgba(238,233,223,.11);
+            border-radius:14px;padding:12px 16px;margin-bottom:14px;
+            display:flex;justify-content:space-between;align-items:center;">
+  <div>
+    <div style="font-size:.62rem;color:#8A9BAD;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Dein Portfolio</div>
+    <div style="font-size:1rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(morning_brief.portfolio_value) }}</div>
+  </div>
+  {% if morning_brief.best %}
+  <div style="text-align:right;">
+    <div style="font-size:.62rem;color:#8A9BAD;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Beste Position</div>
+    <div style="font-size:.82rem;font-weight:600;color:#EEE9DF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">
+      {{ morning_brief.best.video.title[:28] }}{% if morning_brief.best.video.title|length > 28 %}…{% endif %}
+    </div>
+    <div style="font-size:.8rem;font-weight:700;{% if morning_brief.best_pct >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %};">
+      {% if morning_brief.best_pct >= 0 %}+{% endif %}{{ morning_brief.best_pct }}%
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- User stats bar -->
 {% if user and user.holdings_count > 0 %}
 <div style="display:flex;gap:0;background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.13);
@@ -296,7 +319,7 @@
       <span style="background:rgba(163,81,57,.2);color:#E07055;font-size:.65rem;font-weight:700;
                    padding:2px 7px;border-radius:20px;">Limitiert</span>
     </div>
-    <span style="font-size:.72rem;color:#C9C1B1;">Heute verfügbar</span>
+    <span id="dropCountdown" style="font-size:.72rem;color:#C9C1B1;">Heute verfügbar</span>
   </div>
   {% for item in daily_drops %}
   {% set drop = item.drop %}
@@ -330,11 +353,12 @@
           {{ drop.shares_remaining | round(1) }} / {{ drop.total_shares | round(0) | int }} Anteile
         </span>
       </div>
-      <div style="background:rgba(238,233,223,.12);border-radius:99px;height:4px;">
+      <div style="background:rgba(238,233,223,.12);border-radius:99px;height:4px;position:relative;">
         <div style="height:100%;border-radius:99px;
           {% if pct_remaining < 25 %}background:#ff453a{% elif pct_remaining < 60 %}background:#ff9f0a{% else %}background:#30d158{% endif %};
           width:{{ pct_remaining }}%;"></div>
       </div>
+      <div style="font-size:.65rem;color:#556070;margin-top:3px;text-align:right;">{{ pct_remaining | int }}% verbleibend</div>
     </div>
     {% if drop.shares_remaining > 0 %}
     <form method="post" action="/daily-drop/buy/{{ drop.id }}" style="display:flex;gap:8px;">
@@ -429,6 +453,7 @@
         {{ v.channel_name }}
         &nbsp;·&nbsp;
         <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+        {% if item.holders > 0 %}&nbsp;<span style="color:#556070;">· {{ item.holders }} Investor{{ "en" if item.holders != 1 else "" }}</span>{% endif %}
         {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,177,98,.2);color:#FFB162;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
       </div>
     </div>
@@ -462,4 +487,25 @@
   </a>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Daily Drop Countdown bis Mitternacht UTC
+(function() {
+  const el = document.getElementById('dropCountdown');
+  if (!el) return;
+  function update() {
+    const now = new Date();
+    const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+    const diff = midnight - now;
+    const h = String(Math.floor(diff / 3600000)).padStart(2,'0');
+    const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0');
+    const s = String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
+    el.textContent = `⏳ Noch ${h}:${m}:${s}`;
+  }
+  update();
+  setInterval(update, 1000);
+})();
+</script>
 {% endblock %}
