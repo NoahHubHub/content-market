@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Premium — Content Market{% endblock %}
+{% block content %}
+
+<style>
+  .pm-hero {
+    text-align: center;
+    padding: 48px 24px 32px;
+    position: relative;
+  }
+  .pm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #FFB162, #FF8C2A);
+    color: #1B2632;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  .pm-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #EEE9DF 0%, #FFB162 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .pm-sub {
+    font-size: .95rem;
+    color: var(--muted2);
+    max-width: 280px;
+    margin: 0 auto 32px;
+    line-height: 1.5;
+  }
+
+  .pm-price {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid rgba(255,177,98,.25);
+    border-radius: 20px;
+    padding: 20px 40px;
+    margin-bottom: 32px;
+  }
+  .pm-price-amount {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .pm-price-period {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .pm-price-year {
+    font-size: .78rem;
+    color: var(--gain);
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  .pm-features {
+    padding: 0 20px;
+    margin-bottom: 28px;
+  }
+  .pm-section-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .pm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .pm-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pm-row:last-child { border-bottom: none; }
+  .pm-row-icon {
+    font-size: 1.3rem;
+    width: 36px;
+    height: 36px;
+    background: var(--surface2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pm-row-text { flex: 1; }
+  .pm-row-name {
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .pm-row-desc {
+    font-size: .75rem;
+    color: var(--muted2);
+    line-height: 1.35;
+  }
+  .pm-row-free {
+    font-size: .72rem;
+    color: var(--muted);
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 44px;
+  }
+  .pm-row-prem {
+    font-size: .8rem;
+    color: var(--accent);
+    font-weight: 700;
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 44px;
+  }
+  .check { color: var(--gain); font-weight: 700; }
+  .cross { color: var(--muted); }
+
+  .pm-cta {
+    padding: 0 20px 40px;
+  }
+  .pm-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #FFB162, #FF8C2A);
+    color: #1B2632;
+    font-size: 1rem;
+    font-weight: 800;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: opacity .15s, transform .1s;
+    letter-spacing: .01em;
+  }
+  .pm-btn:active { transform: scale(.98); opacity: .9; }
+  .pm-note {
+    text-align: center;
+    font-size: .72rem;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.4;
+  }
+
+  {% if ref %}
+  .pm-ref-banner {
+    margin: 0 20px 20px;
+    padding: 12px 16px;
+    background: rgba(255,177,98,.1);
+    border: 1px solid rgba(255,177,98,.2);
+    border-radius: 12px;
+    font-size: .82rem;
+    color: var(--accent);
+    text-align: center;
+  }
+  {% endif %}
+</style>
+
+<div style="max-width:480px;margin:0 auto;padding-bottom:120px;">
+
+  <!-- Hero -->
+  <div class="pm-hero">
+    <div class="pm-badge">⚡ Premium</div>
+    <div class="pm-title">Trade ohne<br>Grenzen.</div>
+    <div class="pm-sub">Mehr Positionen, eigene Ligen, echte Rivalität — alles in einer Subscription.</div>
+
+    <div class="pm-price">
+      <div class="pm-price-amount">€2,99</div>
+      <div class="pm-price-period">pro Monat</div>
+      <div class="pm-price-year">oder €19,99/Jahr — 44% günstiger</div>
+    </div>
+  </div>
+
+  {% if ref == 'leagues_create' %}
+  <div class="pm-ref-banner">Liga erstellen ist ein Premium-Feature ⚡</div>
+  {% elif ref == 'leagues_join' %}
+  <div class="pm-ref-banner">Du bist bereits in einer Liga — mehr mit Premium ⚡</div>
+  {% elif ref == 'duels' %}
+  <div class="pm-ref-banner">Duels starten ist ein Premium-Feature ⚡</div>
+  {% elif ref == 'portfolio' %}
+  <div class="pm-ref-banner">Du hast dein Portfolio-Limit von {{ free_slots }} Positionen erreicht ⚡</div>
+  {% endif %}
+
+  <!-- Features -->
+  <div class="pm-features">
+
+    <div class="pm-section-label">Portfolio</div>
+    <div class="pm-card">
+      <div class="pm-row">
+        <div class="pm-row-icon">📊</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Portfolio-Positionen</div>
+          <div class="pm-row-desc">Wie viele verschiedene Videos du gleichzeitig halten kannst</div>
+        </div>
+        <div class="pm-row-free">{{ free_slots }} max</div>
+        <div class="pm-row-prem">∞</div>
+      </div>
+    </div>
+
+    <div class="pm-section-label" style="margin-top:16px;">Ligen & Duels</div>
+    <div class="pm-card">
+      <div class="pm-row">
+        <div class="pm-row-icon">⚔️</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Ligen erstellen</div>
+          <div class="pm-row-desc">Eigene private Ligen mit Einladungscode starten</div>
+        </div>
+        <div class="pm-row-free cross">✗</div>
+        <div class="pm-row-prem check">✓</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-row-icon">🏆</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Ligen beitreten</div>
+          <div class="pm-row-desc">Wie viele Ligen du gleichzeitig spielen kannst</div>
+        </div>
+        <div class="pm-row-free">1 Liga</div>
+        <div class="pm-row-prem">∞</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-row-icon">🥊</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Duels herausfordern</div>
+          <div class="pm-row-desc">1-vs-1 Performance-Duelle gegen andere Trader starten</div>
+        </div>
+        <div class="pm-row-free cross">✗</div>
+        <div class="pm-row-prem check">✓</div>
+      </div>
+    </div>
+
+    <div class="pm-section-label" style="margin-top:16px;">Profil</div>
+    <div class="pm-card">
+      <div class="pm-row">
+        <div class="pm-row-icon">🎨</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Volles Avatar-System</div>
+          <div class="pm-row-desc">Alle Emojis, freie Farbwahl, Display-Name und Bio</div>
+        </div>
+        <div class="pm-row-free cross">✗</div>
+        <div class="pm-row-prem check">✓</div>
+      </div>
+    </div>
+
+    <div class="pm-section-label" style="margin-top:16px;">Inklusive</div>
+    <div class="pm-card">
+      <div class="pm-row">
+        <div class="pm-row-icon">📈</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Markt & Trading</div>
+          <div class="pm-row-desc">Vollständiger Zugang zu Preisen, Daily Drop und Hot Takes</div>
+        </div>
+        <div class="pm-row-free check">✓</div>
+        <div class="pm-row-prem check">✓</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-row-icon">🏅</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Rangliste & Season</div>
+          <div class="pm-row-desc">Globales Leaderboard und Saison-Wertung</div>
+        </div>
+        <div class="pm-row-free check">✓</div>
+        <div class="pm-row-prem check">✓</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-row-icon">🚫</div>
+        <div class="pm-row-text">
+          <div class="pm-row-name">Keine Werbung</div>
+          <div class="pm-row-desc">Sauber für alle — jetzt und in Zukunft</div>
+        </div>
+        <div class="pm-row-free check">✓</div>
+        <div class="pm-row-prem check">✓</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CTA -->
+  <div class="pm-cta">
+    <form method="post" action="/premium/upgrade">
+      <button type="submit" class="pm-btn">
+        ⚡ Jetzt upgraden — €2,99/Monat
+      </button>
+    </form>
+    <div class="pm-note">
+      Dies ist ein Prototyp — kein echter Kauf.<br>
+      Du erhältst sofort Zugang zu allen Premium-Features.
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

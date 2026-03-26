@@ -74,6 +74,9 @@ async def challenge_duel(request: Request, opponent_username: str = Form(...),
     if not db_user:
         return RedirectResponse("/login", status_code=302)
 
+    if not db_user.is_premium:
+        return RedirectResponse("/premium?ref=duels", status_code=302)
+
     opponent = db.query(models.User).filter_by(username=opponent_username).first()
     if not opponent or opponent.id == db_user.id:
         return RedirectResponse("/duels?err=not_found", status_code=302)
@@ -176,6 +179,9 @@ async def create_league(request: Request, league_name: str = Form(...),
     if not db_user:
         return RedirectResponse("/login", status_code=302)
 
+    if not db_user.is_premium:
+        return RedirectResponse("/premium?ref=leagues_create", status_code=302)
+
     for _ in range(10):
         code = secrets.token_hex(3).upper()
         if not db.query(models.League).filter_by(invite_code=code).first():
@@ -205,6 +211,12 @@ async def join_league(request: Request, invite_code: str = Form(...),
 
     if db.query(models.LeagueMember).filter_by(league_id=league.id, user_id=db_user.id).first():
         return RedirectResponse(f"/leagues/{league.id}?msg=already_member", status_code=302)
+
+    # Free-tier: max 1 league
+    if not db_user.is_premium:
+        current_count = db.query(models.LeagueMember).filter_by(user_id=db_user.id).count()
+        if current_count >= 1:
+            return RedirectResponse("/premium?ref=leagues_join", status_code=302)
 
     db.add(models.LeagueMember(
         league_id=league.id, user_id=db_user.id, username=db_user.username,

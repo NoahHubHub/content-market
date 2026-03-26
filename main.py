@@ -12,7 +12,7 @@ from database import Base, engine
 from deps import limiter, templates
 
 import scheduler  # starts APScheduler and runs migrate() on import
-from routers import auth, market, trading, portfolio, social, pwa, push, account
+from routers import auth, market, trading, portfolio, social, pwa, push, account, premium
 
 Base.metadata.create_all(bind=engine)
 scheduler.migrate()
@@ -54,6 +54,7 @@ app.include_router(portfolio.router)
 app.include_router(social.router)
 app.include_router(push.router)
 app.include_router(account.router)
+app.include_router(premium.router)
 
 
 # ── startup seed ───────────────────────────────────────────────────────────────

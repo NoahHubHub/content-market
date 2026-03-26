@@ -517,6 +517,18 @@
         <span style="color:#ff6b00;margin-left:2px;">🔥{{ user.streak_days }}</span>
         {% endif %}
       </span>
+      {% if user.is_premium %}
+      <span style="font-size:.65rem;font-weight:800;letter-spacing:.04em;
+                   background:linear-gradient(135deg,#FFB162,#FF8C2A);color:#1B2632;
+                   padding:2px 7px;border-radius:8px;">PRO</span>
+      {% else %}
+      <a href="/premium" style="font-size:.65rem;font-weight:700;letter-spacing:.03em;
+                   border:1px solid rgba(255,177,98,.4);color:var(--accent);
+                   padding:2px 7px;border-radius:8px;text-decoration:none;transition:border-color .15s;"
+         onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,177,98,.4)'">
+        ⚡ Premium
+      </a>
+      {% endif %}
       <a href="/account"
          style="color:var(--muted);font-size:1rem;line-height:1;text-decoration:none;transition:color .15s;"
          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">⚙️</a>

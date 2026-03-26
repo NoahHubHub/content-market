@@ -39,15 +39,19 @@
 
     <!-- ── Emoji Picker ───────────────────────────────────── -->
     <div style="margin-bottom:20px;">
-      <div class="tr-label" style="margin-bottom:8px;">Emoji</div>
+      <div class="tr-label" style="margin-bottom:8px;">Emoji
+        {% if not user.is_premium %}<span style="font-size:.7rem;color:var(--muted);font-weight:400;"> — Alle mit <a href="/premium" style="color:var(--accent);">⚡ Premium</a></span>{% endif %}
+      </div>
       <input type="hidden" name="avatar_emoji" id="emoji-input" value="{{ db_user.avatar_emoji or '🐿️' }}" />
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
         {% for emoji in emojis %}
+        {% set locked = not user.is_premium and loop.index > 10 %}
         <button type="button"
-                onclick="selectEmoji('{{ emoji }}')"
+                onclick="{% if not locked %}selectEmoji('{{ emoji }}'){% else %}window.location='/premium'{% endif %}"
                 id="emoji-btn-{{ loop.index }}"
                 style="width:42px;height:42px;border-radius:10px;border:2px solid transparent;
                        background:var(--surface2);font-size:1.35rem;cursor:pointer;transition:.15s;
+                       {% if locked %}opacity:.35;{% endif %}
                        {% if (db_user.avatar_emoji or '🐿️') == emoji %}border-color:var(--accent);{% endif %}">
           {{ emoji }}
         </button>
@@ -57,7 +61,10 @@
 
     <!-- ── Color Picker ───────────────────────────────────── -->
     <div style="margin-bottom:20px;">
-      <div class="tr-label" style="margin-bottom:8px;">Farbe</div>
+      <div class="tr-label" style="margin-bottom:8px;">Farbe
+        {% if not user.is_premium %}<span style="font-size:.7rem;color:var(--muted);font-weight:400;"> — <a href="/premium" style="color:var(--accent);">⚡ Premium</a></span>{% endif %}
+      </div>
+      {% if user.is_premium %}
       <div style="display:flex;align-items:center;gap:12px;">
         <input type="color" name="avatar_color" id="color-input"
                value="{{ db_user.avatar_color or '#FFB162' }}"
@@ -73,6 +80,16 @@
           {% endfor %}
         </div>
       </div>
+      {% else %}
+      <a href="/premium" style="display:flex;align-items:center;gap:10px;padding:12px 14px;
+         background:var(--surface2);border:1px dashed rgba(255,177,98,.3);border-radius:12px;
+         text-decoration:none;">
+        <div style="width:36px;height:36px;border-radius:50%;background:{{ db_user.avatar_color or '#FFB162' }};opacity:.5;"></div>
+        <span style="font-size:.82rem;color:var(--muted);">Farbwahl freischalten mit</span>
+        <span style="font-size:.82rem;color:var(--accent);font-weight:700;">⚡ Premium</span>
+      </a>
+      <input type="hidden" name="avatar_color" value="{{ db_user.avatar_color or '#FFB162' }}" />
+      {% endif %}
     </div>
 
     <!-- ── Display Name ───────────────────────────────────── -->

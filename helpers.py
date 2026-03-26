@@ -51,6 +51,7 @@ class UserCtx:
         self.bio             = db_user.bio or ""
         self.avatar_emoji    = db_user.avatar_emoji or "🐿️"
         self.avatar_color    = db_user.avatar_color or "#FFB162"
+        self.is_premium      = bool(db_user.is_premium)
 
 
 def get_login(request: Request, db: Session) -> Optional[models.User]:

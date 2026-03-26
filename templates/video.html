@@ -18,6 +18,11 @@
 <div class="tr-alert tr-alert-info">★ Zur Beobachtungsliste hinzugefügt</div>
 {% elif msg == "unwatched" %}
 <div class="tr-alert tr-alert-info">Aus Beobachtungsliste entfernt</div>
+{% elif err == "slot_limit" %}
+<div class="tr-alert tr-alert-error" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+  <span>Portfolio voll — max. 7 Positionen im Free-Tarif</span>
+  <a href="/premium" style="color:#FFB162;font-weight:700;white-space:nowrap;font-size:.82rem;">⚡ Upgrade</a>
+</div>
 {% elif err == "insufficient_funds" %}
 <div class="tr-alert tr-alert-error">Nicht genug Guthaben</div>
 {% elif err == "insufficient_shares" %}

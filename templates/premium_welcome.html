@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Willkommen bei Premium — Content Market{% endblock %}
+{% block content %}
+
+<div style="max-width:400px;margin:0 auto;padding:60px 24px 140px;text-align:center;">
+
+  <!-- Animated icon -->
+  <div style="font-size:4rem;margin-bottom:24px;animation:pop .4s cubic-bezier(.34,1.56,.64,1);">⚡</div>
+
+  <div style="display:inline-flex;align-items:center;gap:6px;
+              background:linear-gradient(135deg,#FFB162,#FF8C2A);
+              color:#1B2632;font-size:.7rem;font-weight:800;letter-spacing:.08em;
+              text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:16px;">
+    Premium aktiv
+  </div>
+
+  <div style="font-size:1.9rem;font-weight:800;line-height:1.15;margin-bottom:12px;
+              background:linear-gradient(135deg,#EEE9DF,#FFB162);
+              -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+    Willkommen,<br>{{ user.display_name }}!
+  </div>
+
+  <div style="font-size:.9rem;color:var(--muted2);line-height:1.6;margin-bottom:36px;">
+    Du hast jetzt Zugang zu allen Premium-Features.<br>
+    Trade ohne Grenzen.
+  </div>
+
+  <!-- What's unlocked -->
+  <div style="background:var(--surface);border:1px solid rgba(255,177,98,.2);
+              border-radius:16px;padding:4px 0;margin-bottom:32px;text-align:left;">
+    {% for icon, text in [
+      ('📊', 'Unbegrenzte Portfolio-Positionen'),
+      ('⚔️', 'Eigene Ligen erstellen'),
+      ('🏆', 'Unbegrenzt Ligen beitreten'),
+      ('🥊', 'Duels herausfordern'),
+      ('🎨', 'Volles Avatar-System'),
+    ] %}
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+                border-bottom:1px solid var(--border);"
+         {% if loop.last %}style="display:flex;align-items:center;gap:12px;padding:12px 16px;"{% endif %}>
+      <span style="font-size:1.2rem;">{{ icon }}</span>
+      <span style="font-size:.86rem;color:var(--text);font-weight:500;">{{ text }}</span>
+      <span style="margin-left:auto;color:#4CAF82;font-weight:700;">✓</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <a href="/" class="tr-btn-primary" style="display:block;text-align:center;text-decoration:none;">
+    Los geht's 🚀
+  </a>
+
+</div>
+
+<style>
+@keyframes pop {
+  0%   { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+</style>
+
+{% endblock %}

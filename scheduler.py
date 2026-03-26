@@ -31,6 +31,8 @@ def migrate():
             conn.execute(text("ALTER TABLE users ADD COLUMN avatar_emoji VARCHAR(8) DEFAULT '🐿️'"))
         if "avatar_color" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN avatar_color VARCHAR(7) DEFAULT '#FFB162'"))
+        if "is_premium" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE"))
 
 
 # ── scheduled jobs ─────────────────────────────────────────────────────────────

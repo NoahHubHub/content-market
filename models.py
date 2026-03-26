@@ -107,6 +107,8 @@ class User(Base):
     bio           = Column(String(160), nullable=True)
     avatar_emoji  = Column(String(8), default="🐿️")
     avatar_color  = Column(String(7), default="#FFB162")
+    # Subscription
+    is_premium    = Column(Boolean, default=False)
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

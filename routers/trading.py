@@ -32,7 +32,16 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
     if db_user.balance < total_cost:
         return RedirectResponse(f"/video/{youtube_id}?err=insufficient_funds", status_code=302)
 
+    # Free-tier portfolio slot limit
     h = db.query(models.Holding).filter_by(user_id=db_user.id, video_id=video.id).first()
+    if not h and not db_user.is_premium:
+        active_count = db.query(models.Holding).filter(
+            models.Holding.user_id == db_user.id,
+            models.Holding.shares > 0.001,
+        ).count()
+        if active_count >= 7:
+            return RedirectResponse(f"/video/{youtube_id}?err=slot_limit", status_code=302)
+
     if h:
         new_total = h.shares + shares
         h.avg_cost_basis = round(
