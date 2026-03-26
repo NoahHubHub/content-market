@@ -268,7 +268,7 @@
       <div style="font-size:.9rem;font-weight:800;color:{% if user_leagues[0].my_return >= 0 %}#4CAF82{% else %}#A35139{% endif %};">
         {% if user_leagues[0].my_return >= 0 %}+{% endif %}{{ user_leagues[0].my_return }}%
       </div>
-      <div style="font-size:.7rem;color:#556070;">Platz {{ user_leagues[0].my_rank }}</div>
+      {% if user_leagues[0].my_rank %}<div style="font-size:.7rem;color:#556070;">Platz {{ user_leagues[0].my_rank }}</div>{% endif %}
     </div>
   </div>
 </a>
