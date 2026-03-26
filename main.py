@@ -192,11 +192,15 @@ def check_achievements(db_user: models.User, db: Session) -> list:
                 break
 
     # Diamond Hands: Position 7+ Tage gehalten
+    # Use in-memory transactions to avoid one DB query per holding
+    buy_by_video: dict = {}
+    for t in db_user.transactions:
+        if t.transaction_type == "buy":
+            if t.video_id not in buy_by_video or t.executed_at < buy_by_video[t.video_id]:
+                buy_by_video[t.video_id] = t.executed_at
     for h in active_holdings:
-        first_buy = db.query(models.Transaction).filter_by(
-            user_id=db_user.id, video_id=h.video_id, transaction_type="buy"
-        ).order_by(models.Transaction.executed_at).first()
-        if first_buy and (datetime.utcnow() - first_buy.executed_at).days >= 7:
+        first_buy_at = buy_by_video.get(h.video_id)
+        if first_buy_at and (datetime.utcnow() - first_buy_at).days >= 7:
             unlock("diamond_hands")
             break
 

@@ -109,11 +109,15 @@
 
 <!-- Thumbnail -->
 <div style="position:relative;overflow:hidden;border-radius:16px;margin-bottom:20px;animation:fade-in .4s ease both;">
+  {% if video.thumbnail_url %}
   <img
     src="{{ video.thumbnail_url }}"
     style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;
            animation:fade-in .5s ease both, slide-up .5s cubic-bezier(.22,1,.36,1) both;"
   />
+  {% else %}
+  <div style="width:100%;aspect-ratio:16/9;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:3rem;">📺</div>
+  {% endif %}
   <!-- Live-Indikator -->
   <div style="position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:5px;
               background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;">
