@@ -7,7 +7,7 @@ from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt
@@ -462,6 +462,18 @@ def get_current_tasks(db_user: models.User, db: Session) -> list:
     ensure_tasks(db_user, db)
     return [t for t in db_user.tasks
             if t.level_assigned == (db_user.level or 1)]
+
+
+# ── PWA routes ────────────────────────────────────────────────────────────────
+
+@app.get("/sw.js")
+async def service_worker():
+    return FileResponse("static/sw.js", media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/"})
+
+@app.get("/offline", response_class=HTMLResponse)
+async def offline(request: Request):
+    return templates.TemplateResponse("offline.html", {"request": request})
 
 
 # ── auth routes ───────────────────────────────────────────────────────────────
