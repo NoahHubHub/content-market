@@ -1172,7 +1172,22 @@ async def claim_bonus(request: Request, db: Session = Depends(get_db)):
                     user_id=db_user.id, video_id=video.id,
                     shares=1.0, avg_cost_basis=round(video.current_price, 4),
                 ))
+            # Log transaction so achievements, task-progress, and leaderboard stay accurate
+            db.add(models.Transaction(
+                user_id=db_user.id, video_id=video.id, transaction_type="buy",
+                shares=1.0, price_per_share=video.current_price, total_amount=video.current_price,
+            ))
             db.commit()
+            db.refresh(db_user)
+            active_holdings = len([ho for ho in db_user.holdings if ho.shares > 0.001])
+            total_invested  = sum(t.total_amount for t in db_user.transactions if t.transaction_type == "buy")
+            update_tasks(db_user, db, "buy",       value=1)
+            update_tasks(db_user, db, "trades",    value=len(db_user.transactions))
+            update_tasks(db_user, db, "portfolio", value=active_holdings)
+            update_tasks(db_user, db, "invest",    value=int(total_invested))
+            check_achievements(db_user, db)
+            record_port_snap(request, db_user)
+            upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
             return RedirectResponse(f"/?bonus=share&title={video.title[:30]}", status_code=302)
         db.commit()
         return RedirectResponse("/?bonus=xp&amount=20", status_code=302)
