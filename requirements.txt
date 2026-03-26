@@ -10,3 +10,4 @@ itsdangerous
 bcrypt
 apscheduler
 slowapi
+pywebpush
