@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+psycopg2-binary
 jinja2
 python-multipart
 python-dotenv
@@ -8,3 +9,4 @@ google-api-python-client
 itsdangerous
 bcrypt
 apscheduler
+slowapi

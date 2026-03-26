@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Datenschutz – Content Market</title>
+  <meta name="theme-color" content="#FFB162" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #1B2632; --surface: #243040; --surface2: #2C3B4D;
+      --text: #EEE9DF; --muted: #8A9BAD; --accent: #FFB162; --border: rgba(238,233,223,.1);
+    }
+    body { background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 40px 24px 80px; }
+    .back {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--muted); font-size: .85rem; text-decoration: none;
+      margin-bottom: 32px; transition: color .15s;
+    }
+    .back:hover { color: var(--accent); }
+    h1 { font-size: 1.8rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .updated { font-size: .8rem; color: var(--muted); margin-bottom: 36px; }
+    h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 32px 0 10px; }
+    p, li { font-size: .9rem; color: var(--muted); line-height: 1.65; }
+    ul { padding-left: 20px; margin-top: 8px; }
+    li { margin-bottom: 4px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 20px; margin-top: 32px;
+    }
+    .card p { margin: 0; }
+    a { color: var(--accent); }
+    hr { border-color: var(--border); margin: 32px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/" class="back">← Zurück</a>
+
+    <h1>Datenschutzerklärung</h1>
+    <p class="updated">Zuletzt aktualisiert: Januar 2025</p>
+
+    <p>Diese Datenschutzerklärung gilt für die Nutzung von <strong>Content Market</strong> (nachfolgend „App"), einer webbasierten Anwendung, die es Nutzern ermöglicht, virtuelle Anteile an YouTube-Videos zu handeln.</p>
+
+    <h2>1. Verantwortlicher</h2>
+    <p>Verantwortlich für die Verarbeitung personenbezogener Daten im Sinne der DSGVO ist der Betreiber der App. Kontakt: [DEINE E-MAIL-ADRESSE]</p>
+
+    <h2>2. Welche Daten wir erheben</h2>
+    <p>Bei der Registrierung und Nutzung der App werden folgende Daten gespeichert:</p>
+    <ul>
+      <li>Benutzername (von dir gewählt)</li>
+      <li>Passwort (verschlüsselt gespeichert mittels bcrypt)</li>
+      <li>Aktivitätsdaten innerhalb der App (Käufe, Verkäufe, Portfolio, XP, Achievements)</li>
+      <li>Login-Zeitstempel und Streak-Informationen</li>
+      <li>IP-Adresse (temporär für Rate Limiting)</li>
+    </ul>
+    <p>Wir erheben <strong>keine</strong> E-Mail-Adressen, Telefonnummern oder Zahlungsdaten.</p>
+
+    <h2>3. YouTube-Daten</h2>
+    <p>Die App nutzt die <strong>YouTube Data API v3</strong> von Google, um öffentliche Videodaten (Aufrufe, Likes, Kommentare, Titel) abzurufen. Diese Daten sind öffentlich zugänglich und werden von uns nicht dauerhaft mit deinem Profil verknüpft. Es gelten die <a href="https://policies.google.com/privacy" target="_blank">Datenschutzbestimmungen von Google</a>.</p>
+
+    <h2>4. Cookies und Sessions</h2>
+    <p>Die App verwendet <strong>Session-Cookies</strong>, um dich eingeloggt zu halten. Diese Cookies sind notwendig für den Betrieb der App und können nicht deaktiviert werden, solange du die App nutzt. Sie werden nach 30 Tagen automatisch gelöscht.</p>
+
+    <h2>5. Datenspeicherung</h2>
+    <p>Deine Daten werden auf Servern von <strong>Railway</strong> (railway.app) gespeichert, einem US-amerikanischen Cloud-Anbieter. Die Übertragung erfolgt verschlüsselt via HTTPS. Railway ist nach SOC 2 zertifiziert.</p>
+
+    <h2>6. Deine Rechte</h2>
+    <p>Du hast jederzeit das Recht auf:</p>
+    <ul>
+      <li>Auskunft über deine gespeicherten Daten</li>
+      <li>Berichtigung unrichtiger Daten</li>
+      <li>Löschung deines Accounts und aller zugehörigen Daten</li>
+      <li>Widerspruch gegen die Verarbeitung</li>
+    </ul>
+    <p>Zur Ausübung dieser Rechte wende dich an: [DEINE E-MAIL-ADRESSE]</p>
+
+    <h2>7. Datenlöschung</h2>
+    <p>Accounts und alle zugehörigen Daten werden auf Anfrage vollständig gelöscht. Es gibt keine automatische Löschfrist für aktive Accounts.</p>
+
+    <h2>8. Kinder</h2>
+    <p>Die App ist nicht für Kinder unter 13 Jahren bestimmt. Wir erheben wissentlich keine Daten von Minderjährigen unter 13 Jahren.</p>
+
+    <hr />
+
+    <div class="card">
+      <p>Fragen zur Datenschutzerklärung? Schreib uns an <a href="mailto:[DEINE E-MAIL-ADRESSE]">[DEINE E-MAIL-ADRESSE]</a></p>
+    </div>
+  </div>
+</body>
+</html>

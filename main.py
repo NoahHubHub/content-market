@@ -7,11 +7,14 @@ from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import bcrypt
 from sqlalchemy.orm import Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.middleware.sessions import SessionMiddleware
 
 from database import Base, engine, get_db, SessionLocal
@@ -34,11 +37,32 @@ def _migrate():
 
 _migrate()
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 app = FastAPI(title="Content Market")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 templates = Jinja2Templates(directory="templates")
+
+
+def _error(request: Request, code: int, title: str, message: str):
+    return templates.TemplateResponse("error.html",
+        {"request": request, "code": code, "title": title, "message": message},
+        status_code=code)
+
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    return _error(request, 404, "Seite nicht gefunden",
+                  "Das Video, die Liga oder die Seite, die du suchst, existiert nicht (mehr).")
+
+
+@app.exception_handler(500)
+async def server_error_handler(request: Request, exc):
+    return _error(request, 500, "Serverfehler",
+                  "Etwas ist schiefgelaufen. Versuche es in einem Moment erneut.")
 
 # ── XP rewards ────────────────────────────────────────────────────────────────
 XP_BUY         = 10
@@ -476,6 +500,29 @@ async def offline(request: Request):
     return templates.TemplateResponse("offline.html", {"request": request})
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+
+@app.get("/.well-known/assetlinks.json")
+async def assetlinks():
+    # Wird für den Play Store (TWA) benötigt.
+    # Nach `bubblewrap init` den generierten SHA-256-Fingerprint hier eintragen.
+    # Bubblewrap gibt ihn aus als: "sha256_cert_fingerprints": ["..."]
+    fingerprint = os.getenv("ASSET_LINK_FINGERPRINT", "")
+    if not fingerprint:
+        return JSONResponse([])
+    return JSONResponse([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": os.getenv("ANDROID_PACKAGE_NAME", "com.contentmarket.app"),
+            "sha256_cert_fingerprints": [fingerprint],
+        }
+    }])
+
+
 # ── auth routes ───────────────────────────────────────────────────────────────
 
 @app.get("/register", response_class=HTMLResponse)
@@ -485,6 +532,7 @@ async def register_page(request: Request):
 
 
 @app.post("/register", response_class=HTMLResponse)
+@limiter.limit("5/minute")
 async def register(request: Request, username: str = Form(...), password: str = Form(...),
                    db: Session = Depends(get_db)):
     if len(username) < 3:
@@ -513,6 +561,7 @@ async def login_page(request: Request):
 
 
 @app.post("/login", response_class=HTMLResponse)
+@limiter.limit("10/minute")
 async def login(request: Request, username: str = Form(...), password: str = Form(...),
                 db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == username).first()
@@ -707,6 +756,7 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
 
 
 @app.get("/search", response_class=HTMLResponse)
+@limiter.limit("20/minute")
 async def search_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     db_user = get_login(request, db)
     if not db_user:
