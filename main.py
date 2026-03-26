@@ -535,9 +535,9 @@ def _get_user_leagues_preview(db_user: models.User, db: Session) -> list:
     """Gibt die Top-1 Liga des Users mit Rang und letzter Aktivität zurück."""
     memberships = db.query(models.LeagueMember).filter_by(user_id=db_user.id).limit(3).all()
     result = []
+    my_val = calc_total_portfolio_value(db_user)  # compute once for all leagues
     for m in memberships:
         league = m.league
-        my_val = calc_total_portfolio_value(db_user)
         ret = round((my_val - m.start_value) / max(m.start_value, 1) * 100, 2)
         board = _build_league_board(league, db)
         my_rank = next((i + 1 for i, e in enumerate(board) if e["username"] == db_user.username), None)
@@ -924,16 +924,15 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
     db.refresh(db_user)
     # Task-Updates
     total_trades = len(db_user.transactions)
-    update_tasks(db_user, db, "sell",   value=1)
-    update_tasks(db_user, db, "trades", value=total_trades)
+    leveled_up  = update_tasks(db_user, db, "sell",   value=1)
+    leveled_up  = update_tasks(db_user, db, "trades", value=total_trades) or leveled_up
     if profit:
-        update_tasks(db_user, db, "profit", value=1)
-    leveled_up = False  # sell allein löst kein Level-Up aus (invest/portfolio fehlen)
+        leveled_up = update_tasks(db_user, db, "profit", value=1) or leveled_up
     new_achievements = check_achievements(db_user, db)
     record_port_snap(request, db_user)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
     ach_param = ",".join(new_achievements) if new_achievements else ""
-    return RedirectResponse(f"/video/{youtube_id}?msg=sold&xp={xp_gained}&ach={ach_param}", status_code=302)
+    return RedirectResponse(f"/video/{youtube_id}?msg=sold&xp={xp_gained}&ach={ach_param}&lvl={'1' if leveled_up else ''}", status_code=302)
 
 
 # ── portfolio ─────────────────────────────────────────────────────────────────
