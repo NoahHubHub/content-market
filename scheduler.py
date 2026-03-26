@@ -23,6 +23,14 @@ def migrate():
     with engine.begin() as conn:
         if "tutorial_step" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN tutorial_step INTEGER DEFAULT 0"))
+        if "display_name" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN display_name VARCHAR"))
+        if "bio" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN bio VARCHAR(160)"))
+        if "avatar_emoji" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN avatar_emoji VARCHAR(8) DEFAULT '🐿️'"))
+        if "avatar_color" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN avatar_color VARCHAR(7) DEFAULT '#FFB162'"))
 
 
 # ── scheduled jobs ─────────────────────────────────────────────────────────────

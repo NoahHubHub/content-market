@@ -517,6 +517,9 @@
         <span style="color:#ff6b00;margin-left:2px;">🔥{{ user.streak_days }}</span>
         {% endif %}
       </span>
+      <a href="/account"
+         style="color:var(--muted);font-size:1rem;line-height:1;text-decoration:none;transition:color .15s;"
+         onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">⚙️</a>
       <form method="post" action="/logout" style="margin:0;">
         <button type="submit"
           style="background:none;border:none;color:#333;font-size:.88rem;

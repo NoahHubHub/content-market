@@ -102,6 +102,11 @@ class User(Base):
     last_bonus_date = Column(String, nullable=True)
     tutorial_step = Column(Integer, default=0)  # 0-4 aktiv, 99=fertig
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Profile customization
+    display_name  = Column(String, nullable=True)
+    bio           = Column(String(160), nullable=True)
+    avatar_emoji  = Column(String(8), default="🐿️")
+    avatar_color  = Column(String(7), default="#FFB162")
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Profil — Content Market{% endblock %}
+{% block content %}
+
+<div style="max-width:480px;margin:28px auto 0;padding:0 16px 140px;">
+
+  <div style="margin-bottom:24px;">
+    <div class="tr-label" style="margin-bottom:4px;">Einstellungen</div>
+    <div class="tr-title">Mein Profil</div>
+  </div>
+
+  {% if saved %}
+  <div class="tr-alert" style="background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.3);
+       color:#4CAF82;border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:.9rem;">
+    ✓ Gespeichert
+  </div>
+  {% endif %}
+  {% if error == 'pw_wrong' %}
+  <div class="tr-alert tr-alert-error">Altes Passwort ist falsch.</div>
+  {% elif error == 'pw_short' %}
+  <div class="tr-alert tr-alert-error">Neues Passwort muss mindestens 6 Zeichen haben.</div>
+  {% endif %}
+
+  <form method="post" action="/account">
+
+    <!-- ── Avatar Preview ──────────────────────────────────── -->
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:28px;">
+      <div id="avatar-preview"
+           style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;
+                  justify-content:center;font-size:2rem;flex-shrink:0;transition:background .2s;
+                  background:{{ db_user.avatar_color or '#FFB162' }};">
+        {{ db_user.avatar_emoji or '🐿️' }}
+      </div>
+      <div>
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:4px;">Avatar</div>
+        <div style="font-size:.78rem;color:var(--muted2);">Wähle Emoji und Farbe unten</div>
+      </div>
+    </div>
+
+    <!-- ── Emoji Picker ───────────────────────────────────── -->
+    <div style="margin-bottom:20px;">
+      <div class="tr-label" style="margin-bottom:8px;">Emoji</div>
+      <input type="hidden" name="avatar_emoji" id="emoji-input" value="{{ db_user.avatar_emoji or '🐿️' }}" />
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        {% for emoji in emojis %}
+        <button type="button"
+                onclick="selectEmoji('{{ emoji }}')"
+                id="emoji-btn-{{ loop.index }}"
+                style="width:42px;height:42px;border-radius:10px;border:2px solid transparent;
+                       background:var(--surface2);font-size:1.35rem;cursor:pointer;transition:.15s;
+                       {% if (db_user.avatar_emoji or '🐿️') == emoji %}border-color:var(--accent);{% endif %}">
+          {{ emoji }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── Color Picker ───────────────────────────────────── -->
+    <div style="margin-bottom:20px;">
+      <div class="tr-label" style="margin-bottom:8px;">Farbe</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <input type="color" name="avatar_color" id="color-input"
+               value="{{ db_user.avatar_color or '#FFB162' }}"
+               style="width:48px;height:48px;border:none;border-radius:10px;cursor:pointer;
+                      background:none;padding:2px;" />
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for color in ['#FFB162','#FF8C2A','#4CAF82','#5B9CF6','#C97FF0','#FF6B6B','#F5C842','#A8C5DA'] %}
+          <button type="button" onclick="selectColor('{{ color }}')"
+                  style="width:32px;height:32px;border-radius:50%;background:{{ color }};
+                         border:3px solid {% if (db_user.avatar_color or '#FFB162') == color %}#fff{% else %}transparent{% endif %};
+                         cursor:pointer;transition:.15s;" id="color-swatch-{{ loop.index }}">
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Display Name ───────────────────────────────────── -->
+    <div style="margin-bottom:16px;">
+      <div class="tr-label" style="margin-bottom:6px;">Anzeigename</div>
+      <input name="display_name" type="text" class="tr-input"
+             placeholder="{{ user.username }}"
+             maxlength="50"
+             value="{{ db_user.display_name or '' }}" />
+      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">
+        Leer lassen → Username wird angezeigt
+      </div>
+    </div>
+
+    <!-- ── Bio ───────────────────────────────────────────── -->
+    <div style="margin-bottom:24px;">
+      <div class="tr-label" style="margin-bottom:6px;">Bio</div>
+      <textarea name="bio" class="tr-input" rows="3" maxlength="160"
+                placeholder="Ein kurzer Satz über dich…"
+                style="resize:none;">{{ db_user.bio or '' }}</textarea>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">max. 160 Zeichen</div>
+    </div>
+
+    <!-- ── Password Change ───────────────────────────────── -->
+    <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:24px;">
+      <div class="tr-label" style="margin-bottom:12px;">Passwort ändern</div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">Aktuelles Passwort</div>
+        <input name="old_password" type="password" class="tr-input"
+               placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px;">Neues Passwort</div>
+        <input name="new_password" type="password" class="tr-input"
+               placeholder="Min. 6 Zeichen" autocomplete="new-password" minlength="6" />
+      </div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:6px;">
+        Nur ausfüllen wenn du das Passwort ändern möchtest
+      </div>
+    </div>
+
+    <button type="submit" class="tr-btn-primary" style="width:100%;text-align:center;">
+      Speichern
+    </button>
+
+  </form>
+
+  <!-- ── Account Info ───────────────────────────────────── -->
+  <div style="margin-top:28px;padding:16px;background:var(--surface);border-radius:14px;
+              border:1px solid var(--border);">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:4px;">Username</div>
+    <div style="font-weight:600;">{{ user.username }}</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-top:12px;margin-bottom:4px;">Level</div>
+    <div style="font-weight:600;">{{ user.level }} — {{ user.xp }} XP</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-top:12px;margin-bottom:4px;">Streak</div>
+    <div style="font-weight:600;">🔥 {{ user.streak_days }} Tage</div>
+  </div>
+
+</div>
+
+<script>
+const SWATCHES = {{ ['#FFB162','#FF8C2A','#4CAF82','#5B9CF6','#C97FF0','#FF6B6B','#F5C842','#A8C5DA'] | tojson }};
+
+function selectEmoji(e) {
+  document.getElementById('emoji-input').value = e;
+  document.getElementById('avatar-preview').textContent = e;
+  document.querySelectorAll('[id^="emoji-btn-"]').forEach(btn => {
+    btn.style.borderColor = btn.textContent.trim() === e ? 'var(--accent)' : 'transparent';
+  });
+}
+
+function selectColor(c) {
+  document.getElementById('color-input').value = c;
+  document.getElementById('avatar-preview').style.background = c;
+  document.querySelectorAll('[id^="color-swatch-"]').forEach((btn, i) => {
+    btn.style.borderColor = SWATCHES[i] === c ? '#fff' : 'transparent';
+  });
+}
+
+document.getElementById('color-input').addEventListener('input', function() {
+  document.getElementById('avatar-preview').style.background = this.value;
+  document.querySelectorAll('[id^="color-swatch-"]').forEach(btn => {
+    btn.style.borderColor = 'transparent';
+  });
+});
+</script>
+
+{% endblock %}

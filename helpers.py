@@ -47,6 +47,10 @@ class UserCtx:
         self.level           = db_user.level or 1
         self.streak_days     = db_user.streak_days or 0
         self.tutorial_step   = db_user.tutorial_step if db_user.tutorial_step is not None else 0
+        self.display_name    = db_user.display_name or db_user.username
+        self.bio             = db_user.bio or ""
+        self.avatar_emoji    = db_user.avatar_emoji or "🐿️"
+        self.avatar_color    = db_user.avatar_color or "#FFB162"
 
 
 def get_login(request: Request, db: Session) -> Optional[models.User]:
