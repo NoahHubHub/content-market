@@ -15,12 +15,12 @@ async def service_worker():
 
 @router.get("/offline", response_class=HTMLResponse)
 async def offline(request: Request):
-    return templates.TemplateResponse("offline.html", {"request": request})
+    return templates.TemplateResponse(request, "offline.html")
 
 
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy(request: Request):
-    return templates.TemplateResponse("privacy.html", {"request": request})
+    return templates.TemplateResponse(request, "privacy.html")
 
 
 @router.get("/.well-known/assetlinks.json")

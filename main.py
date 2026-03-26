@@ -30,16 +30,16 @@ app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 3
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
-    return templates.TemplateResponse("error.html",
-        {"request": request, "code": 404, "title": "Seite nicht gefunden",
+    return templates.TemplateResponse(request, "error.html",
+        {"code": 404, "title": "Seite nicht gefunden",
          "message": "Das Video, die Liga oder die Seite, die du suchst, existiert nicht (mehr)."},
         status_code=404)
 
 
 @app.exception_handler(500)
 async def server_error_handler(request: Request, exc):
-    return templates.TemplateResponse("error.html",
-        {"request": request, "code": 500, "title": "Serverfehler",
+    return templates.TemplateResponse(request, "error.html",
+        {"code": 500, "title": "Serverfehler",
          "message": "Etwas ist schiefgelaufen. Versuche es in einem Moment erneut."},
         status_code=500)
 

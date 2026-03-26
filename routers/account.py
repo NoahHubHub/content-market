@@ -21,8 +21,7 @@ async def account_page(request: Request, db: Session = Depends(get_db)):
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse("account.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "account.html", {
         "user": UserCtx(db_user),
         "db_user": db_user,
         "emojis": ALLOWED_EMOJIS,
