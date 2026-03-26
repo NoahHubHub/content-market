@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from deps import templates
-from helpers import get_login, hash_pw, verify_pw
+from helpers import get_login, hash_pw, verify_pw, UserCtx
 
 router = APIRouter()
 
@@ -23,7 +23,7 @@ async def account_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/login", status_code=303)
     return templates.TemplateResponse("account.html", {
         "request": request,
-        "user": __import__("helpers").UserCtx(db_user),
+        "user": UserCtx(db_user),
         "db_user": db_user,
         "emojis": ALLOWED_EMOJIS,
         "saved": request.query_params.get("saved"),
