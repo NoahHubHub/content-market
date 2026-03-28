@@ -193,7 +193,7 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
                     send_push_to_user(
                         w.user_id,
                         title="⚡ Daily Drop fast ausverkauft!",
-                        body=f"Nur noch {drop.shares_remaining:.0f} Anteile von "{drop.video.title[:35]}" übrig!",
+                        body=f"Nur noch {drop.shares_remaining:.0f} Anteile von \"{drop.video.title[:35]}\" übrig!",
                         url=f"/video/{drop.video.youtube_id}",
                         db=db,
                     )
