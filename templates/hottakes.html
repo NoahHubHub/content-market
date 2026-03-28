@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Hot-Take Scoreboard — Content Market{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;">
+  <div class="tr-label" style="margin-bottom:4px;">Wer trifft's am öftesten?</div>
+  <div class="tr-title">Hot-Take Scoreboard</div>
+  <div class="tr-sub" style="margin-top:4px;">Tägliche Vorhersagen über View-Entwicklungen.</div>
+</div>
+
+<!-- Eigene Stats -->
+<div style="background:rgba(255,177,98,.08);border:1px solid rgba(255,177,98,.2);
+            border-radius:14px;padding:14px 16px;margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:8px;">Deine Trefferquote</div>
+  {% if my_total > 0 %}
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+    <div style="font-size:2rem;font-weight:800;
+      {% if my_hit_rate >= 60 %}color:#4CAF82{% elif my_hit_rate >= 40 %}color:#FFB162{% else %}color:#A35139{% endif %}">
+      {{ my_hit_rate }}%
+    </div>
+    <div style="font-size:.85rem;color:#8A9BAD;">
+      {{ my_correct }} von {{ my_total }} Tipps richtig
+    </div>
+  </div>
+  <div style="margin-top:8px;background:rgba(238,233,223,.1);border-radius:99px;height:5px;overflow:hidden;">
+    <div style="height:100%;border-radius:99px;
+      {% if my_hit_rate >= 60 %}background:#4CAF82{% elif my_hit_rate >= 40 %}background:#FFB162{% else %}background:#A35139{% endif %};
+      width:{{ my_hit_rate }}%;transition:width .8s cubic-bezier(.22,1,.36,1);"></div>
+  </div>
+  {% else %}
+  <div style="font-size:.88rem;color:#556070;">
+    Noch keine abgeschlossenen Tipps.
+    <a href="/" style="color:#FFB162;font-weight:600;">Jetzt tippen →</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Rangliste -->
+{% if board %}
+<div class="tr-label" style="margin-bottom:12px;">Rangliste (mind. 2 Tipps)</div>
+<div>
+  {% for item in board %}
+  <div style="border-bottom:1px solid rgba(238,233,223,.06);">
+    <a href="/u/{{ item.username }}" class="tr-row"
+       style="{% if item.is_me %}background:rgba(48,209,88,.05);border-radius:12px;padding:14px 12px;margin:0 -12px;border:1px solid rgba(48,209,88,.12);border-bottom:none;{% endif %}text-decoration:none;">
+      <div style="width:32px;text-align:center;flex-shrink:0;font-size:1.1rem;">
+        {% if loop.index == 1 %}🥇
+        {% elif loop.index == 2 %}🥈
+        {% elif loop.index == 3 %}🥉
+        {% else %}<span class="tr-sub">{{ loop.index }}</span>
+        {% endif %}
+      </div>
+      <div class="tr-row-body">
+        <div class="tr-row-title">
+          {{ item.username }}
+          {% if item.is_me %}<span style="font-size:.7rem;color:#555;font-weight:500;margin-left:6px;">Du</span>{% endif %}
+        </div>
+        <div style="font-size:.72rem;color:#8A9BAD;margin-top:2px;">
+          {{ item.correct }} / {{ item.total }} richtig
+        </div>
+      </div>
+      <div class="tr-row-right">
+        <div style="font-size:1rem;font-weight:800;
+          {% if item.hit_rate >= 60 %}color:#4CAF82{% elif item.hit_rate >= 40 %}color:#FFB162{% else %}color:#8A9BAD{% endif %}">
+          {{ item.hit_rate }}%
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:60px 0;color:#556070;">
+  <div style="font-size:2.5rem;margin-bottom:12px;">🔮</div>
+  <div style="font-size:.9rem;">Noch keine abgeschlossenen Tipps.</div>
+  <div style="font-size:.8rem;margin-top:6px;color:#445;">Hot Takes werden täglich ausgewertet.</div>
+</div>
+{% endif %}
+
+<div class="tr-actions" style="margin-top:40px;">
+  <a href="/" class="tr-btn-primary">
+    <span>Jetzt tippen</span><span>🔮</span>
+  </a>
+  <a href="/leaderboard" class="tr-btn-ghost">
+    <span>Rangliste</span><span>🏆</span>
+  </a>
+</div>
+
+{% endblock %}

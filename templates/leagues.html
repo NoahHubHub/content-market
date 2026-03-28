@@ -16,6 +16,24 @@
   <div class="tr-sub" style="margin-top:4px;">Spiele mit Freunden — wer hat am Ende die beste Rendite?</div>
 </div>
 
+<!-- Premium Pitch -->
+{% if not user.is_premium %}
+<a href="/premium?ref=leagues" style="text-decoration:none;display:block;margin-bottom:16px;">
+  <div style="background:linear-gradient(135deg,rgba(255,177,98,.1),rgba(163,81,57,.08));
+              border:1px solid rgba(255,177,98,.25);border-radius:14px;padding:14px 16px;
+              display:flex;align-items:center;gap:12px;">
+    <span style="font-size:1.4rem;flex-shrink:0;">⚡</span>
+    <div style="flex:1;">
+      <div style="font-size:.85rem;font-weight:700;color:#FFB162;">Premium: Unbegrenzte Ligen</div>
+      <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+        Free: max. 1 Liga · Premium: unbegrenzt + eigene Ligen erstellen
+      </div>
+    </div>
+    <span style="font-size:.8rem;color:#FFB162;font-weight:700;flex-shrink:0;">Upgrade →</span>
+  </div>
+</a>
+{% endif %}
+
 <!-- Aktionen: Erstellen + Beitreten -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;">
 

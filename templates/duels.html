@@ -15,7 +15,7 @@
 </div>
 
 <!-- Challenge Form -->
-<div style="background:#0a0a0a;border-radius:14px;padding:16px;margin-bottom:28px;">
+<div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;margin-bottom:16px;">
   <div class="tr-label" style="margin-bottom:10px;">Neues Duell starten</div>
   <form method="post" action="/duel/challenge" style="display:flex;gap:10px;">
     <input type="text" name="opponent_username" class="tr-input"
@@ -26,6 +26,24 @@
     </button>
   </form>
 </div>
+
+<!-- Premium Pitch -->
+{% if not user.is_premium %}
+<a href="/premium?ref=duels" style="text-decoration:none;display:block;margin-bottom:28px;">
+  <div style="background:linear-gradient(135deg,rgba(255,177,98,.1),rgba(163,81,57,.08));
+              border:1px solid rgba(255,177,98,.25);border-radius:14px;padding:14px 16px;
+              display:flex;align-items:center;gap:12px;">
+    <span style="font-size:1.4rem;flex-shrink:0;">⚡</span>
+    <div style="flex:1;">
+      <div style="font-size:.85rem;font-weight:700;color:#FFB162;">Premium: Mehr Duelle, mehr Kontrolle</div>
+      <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+        Unbegrenzte Duelle · Liga erstellen · Mehr Portfolio-Slots
+      </div>
+    </div>
+    <span style="font-size:.8rem;color:#FFB162;font-weight:700;flex-shrink:0;">Upgrade →</span>
+  </div>
+</a>
+{% endif %}
 
 <!-- Aktive & abgeschlossene Duelle -->
 {% if duel_data %}

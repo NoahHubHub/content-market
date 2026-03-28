@@ -274,6 +274,32 @@
 </div>
 {% endif %}
 
+<!-- Duell-Kontext -->
+{% if active_duels %}
+<div style="margin-bottom:16px;">
+  {% for d in active_duels %}
+  <a href="/duels" style="text-decoration:none;display:block;margin-bottom:8px;">
+    <div style="background:rgba(255,159,10,.06);border:1px solid rgba(255,159,10,.18);
+                border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1rem;flex-shrink:0;">⚔️</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.75rem;font-weight:700;color:#ff9f0a;">Duell läuft · vs. @{{ d.opponent_username }}</div>
+        <div style="font-size:.68rem;color:#8A9BAD;margin-top:1px;">
+          Du: {% if d.my_return >= 0 %}+{% endif %}{{ d.my_return }}%
+          &nbsp;·&nbsp; Gegner: {% if d.opp_return >= 0 %}+{% endif %}{{ d.opp_return }}%
+          &nbsp;·&nbsp; Endet {{ d.end_date }}
+        </div>
+      </div>
+      <span style="font-size:.75rem;font-weight:700;white-space:nowrap;
+        {% if d.leading %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+        {% if d.leading %}Führend{% else %}Zurück{% endif %}
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- Buy form -->
 <div style="margin-bottom:16px;">
   <div class="tr-label" style="margin-bottom:8px;">Kaufen</div>
@@ -344,7 +370,15 @@
 <!-- Related videos from same channel -->
 {% if related %}
 <div style="margin-top:32px;">
-  <div class="tr-label" style="margin-bottom:12px;">Weitere Videos von {{ video.channel_name }}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div class="tr-label">Weitere Videos von {{ video.channel_name }}</div>
+    {% if video.channel_id %}
+    <a href="/channel/{{ video.channel_id }}"
+       style="font-size:.75rem;color:#FFB162;font-weight:700;text-decoration:none;">
+      Alle ansehen →
+    </a>
+    {% endif %}
+  </div>
   {% for rv in related %}
   <a href="/video/{{ rv.youtube_id }}" class="tr-row">
     {% if rv.thumbnail_url %}

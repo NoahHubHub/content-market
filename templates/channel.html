@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ channel_name }} — Content Market{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:20px;animation:slide-up .4s cubic-bezier(.22,1,.36,1);">
+  <div class="tr-label" style="margin-bottom:4px;">Kanal</div>
+  <div class="tr-title" style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.5rem;">📺</span>
+    <span>{{ channel_name }}</span>
+  </div>
+  <div class="tr-sub" style="margin-top:4px;">{{ video_data | length }} Videos im Markt</div>
+</div>
+
+{% if video_data %}
+<div>
+  {% for item in video_data %}
+  {% set v = item.video %}
+  {% set info = item.info %}
+  <a href="/video/{{ v.youtube_id }}" class="tr-row" style="position:relative;">
+    <div style="position:relative;flex-shrink:0;">
+      {% if v.thumbnail_url %}
+      <img src="{{ v.thumbnail_url }}" class="tr-row-icon" />
+      {% else %}
+      <div class="tr-row-icon-placeholder">📺</div>
+      {% endif %}
+      {% if v.youtube_id in portfolio_ids %}
+      <div style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;
+                  border-radius:50%;background:#4CAF82;border:2px solid var(--bg);"></div>
+      {% endif %}
+    </div>
+    <div class="tr-row-body">
+      <div class="tr-row-title">{{ v.title[:52] }}{% if v.title|length > 52 %}…{% endif %}</div>
+      <div class="tr-row-sub">
+        <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+        {% if info.momentum_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
+      </div>
+    </div>
+    <div class="tr-row-right">
+      <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
+      <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+        {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ info.momentum_pct | abs | round(1) }}%
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:60px 0;color:#556070;">
+  <div style="font-size:2.5rem;margin-bottom:12px;">📭</div>
+  <div style="font-size:.9rem;">Keine Videos gefunden.</div>
+</div>
+{% endif %}
+
+<div class="tr-actions" style="margin-top:40px;">
+  <a href="/" class="tr-btn-ghost">
+    <span>Zurück zum Markt</span><span>↩</span>
+  </a>
+</div>
+
+{% endblock %}

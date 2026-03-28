@@ -405,8 +405,26 @@
   </div>
 </div>
 
+<!-- Premium Pitch im Portfolio -->
+{% if not user.is_premium %}
+<a href="/premium?ref=portfolio" style="text-decoration:none;display:block;margin-top:28px;">
+  <div style="background:linear-gradient(135deg,rgba(255,177,98,.1),rgba(163,81,57,.08));
+              border:1px solid rgba(255,177,98,.25);border-radius:14px;padding:14px 16px;
+              display:flex;align-items:center;gap:12px;">
+    <span style="font-size:1.4rem;flex-shrink:0;">⚡</span>
+    <div style="flex:1;">
+      <div style="font-size:.85rem;font-weight:700;color:#FFB162;">Premium freischalten</div>
+      <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+        Unbegrenzte Slots · Ligen erstellen · Mehr Duelle
+      </div>
+    </div>
+    <span style="font-size:.8rem;color:#FFB162;font-weight:700;flex-shrink:0;">Upgrade →</span>
+  </div>
+</a>
+{% endif %}
+
 <!-- Bottom actions -->
-<div class="tr-actions" style="margin-top:36px;">
+<div class="tr-actions" style="margin-top:16px;">
   <a href="/search" class="tr-btn-primary">
     <span>Suche</span><span>🔍</span>
   </a>

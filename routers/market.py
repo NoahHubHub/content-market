@@ -13,7 +13,7 @@ from helpers import (
     get_todays_drops, get_hot_take_video, ensure_season_entry, get_current_tasks,
     ensure_tasks, update_tasks, calc_total_portfolio_value, get_user_leagues_preview,
     get_market_feed, get_hidden_gems, sync_watchlist_to_db,
-    get_user_active_duels, get_max_portfolio_slots,
+    get_user_active_duels, get_max_portfolio_slots, get_or_create_season,
     XP_DAILY_LOGIN, STREAK_BONUS,
 )
 from models import ACHIEVEMENTS
@@ -145,6 +145,27 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
 
     ensure_season_entry(db_user, db)
 
+    # Season teaser data
+    season = get_or_create_season(db)
+    season_entry = db.query(models.SeasonEntry).filter_by(
+        season_id=season.id, username=db_user.username
+    ).first()
+    my_season_return = None
+    if season_entry:
+        my_val = calc_total_portfolio_value(db_user)
+        my_season_return = round((my_val - season_entry.start_value) / max(season_entry.start_value, 1) * 100, 2)
+
+    # Starter picks for new players: low price + positive momentum + few investors
+    starter_picks = []
+    if user.holdings_count == 0:
+        candidates = [
+            item for item in video_data
+            if item["video"].current_price <= 60
+            and item["info"].get("momentum_pct", 0) > 3
+        ]
+        candidates.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
+        starter_picks = candidates[:3]
+
     return templates.TemplateResponse(request, "index.html", {
         "user": user,
         "video_data": video_data, "trending": trending, "sort": sort,
@@ -165,6 +186,9 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "active_duels": get_user_active_duels(db_user, db),
         "watchlist_takes": watchlist_takes,
         "max_slots": get_max_portfolio_slots(db_user),
+        "season": season,
+        "my_season_return": my_season_return,
+        "starter_picks": starter_picks,
     })
 
 
@@ -267,6 +291,8 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
                 "pnl_pct": round(worst_pct, 1),
             }
 
+    active_duels = get_user_active_duels(db_user, db)
+
     return templates.TemplateResponse(request, "video.html", {
         "user": user, "video": video,
         "last_stat": last, "info": info, "price_history": price_history,
@@ -274,6 +300,7 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         "related": related, "is_watching": is_watching,
         "worst_holding": worst_holding,
         "max_slots": max_slots,
+        "active_duels": active_duels,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
         "xp":  request.query_params.get("xp"),
@@ -334,6 +361,46 @@ async def suggest_video(request: Request, youtube_id: str, db: Session = Depends
         db.commit()
 
     return RedirectResponse(f"/video/{youtube_id}?msg=suggested", status_code=302)
+
+
+@router.get("/channel/{channel_id}", response_class=HTMLResponse)
+async def channel_page(request: Request, channel_id: str, db: Session = Depends(get_db)):
+    """Alle Videos eines Kanals auf einer Seite."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    user = UserCtx(db_user)
+
+    videos = (db.query(models.Video)
+              .filter(models.Video.channel_id == channel_id)
+              .order_by(models.Video.current_price.desc())
+              .limit(50).all())
+
+    if not videos:
+        raise HTTPException(status_code=404, detail="Kanal nicht gefunden")
+
+    channel_name = videos[0].channel_name if videos else channel_id
+    portfolio_ids = set(get_portfolio(db_user).keys())
+
+    video_data = []
+    for v in videos:
+        if not v.stats:
+            continue
+        last = v.stats[-1]
+        prev = v.stats[-2].view_count if len(v.stats) >= 2 else None
+        info = calculate_price(
+            last.view_count, last.like_count, last.comment_count, v.published_at,
+            prev_view_count=prev,
+        )
+        video_data.append({"video": v, "info": info})
+
+    return templates.TemplateResponse(request, "channel.html", {
+        "user": user,
+        "channel_id": channel_id,
+        "channel_name": channel_name,
+        "video_data": video_data,
+        "portfolio_ids": portfolio_ids,
+    })
 
 
 @router.post("/refresh-portfolio")

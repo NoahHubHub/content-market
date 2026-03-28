@@ -249,6 +249,57 @@ async def league_detail(request: Request, league_id: int, db: Session = Depends(
     })
 
 
+@router.get("/hottakes", response_class=HTMLResponse)
+async def hottakes_page(request: Request, db: Session = Depends(get_db)):
+    """Globales Hot-Take-Scoreboard: beste Predictor + eigene Hit-Rate."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    user = UserCtx(db_user)
+
+    resolved = db.query(models.HotTake).filter_by(resolved=True).all()
+
+    # Aggregate per user
+    stats: dict = {}
+    for ht in resolved:
+        if not ht.user:
+            continue
+        uname = ht.user.username
+        if uname not in stats:
+            stats[uname] = {"correct": 0, "total": 0}
+        stats[uname]["total"] += 1
+        if ht.correct:
+            stats[uname]["correct"] += 1
+
+    board = []
+    for uname, s in stats.items():
+        if s["total"] < 2:
+            continue
+        hit_rate = round(s["correct"] / s["total"] * 100, 1)
+        board.append({
+            "username": uname,
+            "correct": s["correct"],
+            "total": s["total"],
+            "hit_rate": hit_rate,
+            "is_me": uname == db_user.username,
+        })
+    board.sort(key=lambda x: (x["hit_rate"], x["total"]), reverse=True)
+
+    my_stats = stats.get(db_user.username)
+    my_hit_rate = None
+    if my_stats and my_stats["total"] > 0:
+        my_hit_rate = round(my_stats["correct"] / my_stats["total"] * 100, 1)
+    my_total = my_stats["total"] if my_stats else 0
+    my_correct = my_stats["correct"] if my_stats else 0
+
+    return templates.TemplateResponse(request, "hottakes.html", {
+        "user": user, "board": board[:20],
+        "my_hit_rate": my_hit_rate,
+        "my_total": my_total,
+        "my_correct": my_correct,
+    })
+
+
 @router.get("/leaderboard", response_class=HTMLResponse)
 async def leaderboard(request: Request, db: Session = Depends(get_db)):
     db_user = get_login(request, db)
