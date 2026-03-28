@@ -228,7 +228,7 @@
 <!-- User stats bar -->
 {% if user and user.holdings_count > 0 %}
 <div style="display:flex;gap:0;background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.13);
-            border-radius:14px;margin-bottom:20px;overflow:hidden;">
+            border-radius:14px;margin-bottom:12px;overflow:hidden;">
   <div style="flex:1;padding:12px 14px;">
     <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Cash</div>
     <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(user.balance) }}</div>
@@ -236,7 +236,7 @@
   <div style="width:1px;background:rgba(238,233,223,.1);flex-shrink:0;"></div>
   <div style="flex:1;padding:12px 14px;">
     <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Positionen</div>
-    <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">{{ user.holdings_count }}</div>
+    <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">{{ user.holdings_count }}{% if max_slots < 9999 %}<span style="font-size:.65rem;color:#556070;">/{{ max_slots }}</span>{% endif %}</div>
   </div>
   <div style="width:1px;background:rgba(238,233,223,.1);flex-shrink:0;"></div>
   <div style="flex:1;padding:12px 14px;">
@@ -244,6 +244,41 @@
     <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(user.cost_basis) }}</div>
   </div>
   <a href="/portfolio" style="display:flex;align-items:center;padding:12px 14px;color:#FFB162;font-size:.9rem;font-weight:700;text-decoration:none;border-left:1px solid rgba(238,233,223,.1);">›</a>
+</div>
+{% if max_slots and max_slots < 9999 and max_slots > 7 %}
+<div style="font-size:.72rem;color:#4CAF82;text-align:center;margin-bottom:12px;">
+  🔥 Streak-Bonus: +{{ max_slots - 7 }} extra Slot{{ "s" if max_slots - 7 > 1 else "" }}
+</div>
+{% elif not user.is_premium %}
+<div style="font-size:.72rem;color:#556070;text-align:center;margin-bottom:12px;">
+  Streak halten → mehr Slots: 3d=+1 · 7d=+2 · 14d=+3
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Aktive Duelle Teaser -->
+{% if active_duels %}
+<div style="margin-bottom:16px;">
+  {% for d in active_duels %}
+  <a href="/duels" style="text-decoration:none;display:block;margin-bottom:8px;">
+    <div style="background:rgba(255,159,10,.07);border:1px solid rgba(255,159,10,.2);
+                border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:.65rem;color:#ff9f0a;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px;">⚔️ Duell läuft</div>
+        <div style="font-size:.88rem;font-weight:600;color:#EEE9DF;">vs. @{{ d.opponent_username }}</div>
+        <div style="font-size:.72rem;color:#8A9BAD;margin-top:1px;">Endet {{ d.end_date }}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:1rem;font-weight:800;{% if d.leading %}color:#4CAF82{% else %}color:#A35139{% endif %};">
+          {% if d.leading %}Du führst{% else %}Du liegst zurück{% endif %}
+        </div>
+        <div style="font-size:.75rem;color:#8A9BAD;">
+          Du: {% if d.my_return >= 0 %}+{% endif %}{{ d.my_return }}% · {{ d.opponent_username }}: {% if d.opp_return >= 0 %}+{% endif %}{{ d.opp_return }}%
+        </div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
 </div>
 {% endif %}
 
@@ -303,7 +338,7 @@
             {{ "Gekauft" if entry.action == "buy" else "Verkauft" }}
           </span>
           &nbsp;·&nbsp;{{ entry.shares }} Anteile
-          &nbsp;·&nbsp;<span style="color:#8A9BAD;">@{{ entry.username }}</span>
+          &nbsp;·&nbsp;<a href="/u/{{ entry.username }}" style="color:#8A9BAD;text-decoration:none;" onclick="event.stopPropagation()">@{{ entry.username }}</a>
         </div>
       </div>
       <div style="font-size:.78rem;font-weight:600;flex-shrink:0;color:#8A9BAD;">
@@ -485,33 +520,57 @@
 <!-- Watchlist section -->
 {% if watchlist_data %}
 <div style="margin-bottom:28px;">
-  <div class="tr-label" style="margin-bottom:10px;">★ Beobachtungsliste</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+    <span class="tr-label">★ Beobachtungsliste</span>
+    <span style="font-size:.72rem;color:#8A9BAD;">Tippe auf Views-Entwicklung → +25 XP</span>
+  </div>
   <div>
     {% for item in watchlist_data %}
     {% set v = item.video %}
     {% set info = item.info %}
-    <a href="/video/{{ v.youtube_id }}" class="tr-row">
-      {% if v.thumbnail_url %}
-      <img src="{{ v.thumbnail_url }}" class="tr-row-icon" />
+    {% set take_item = watchlist_takes | selectattr("video.youtube_id", "equalto", v.youtube_id) | first %}
+    {% set already_tipped = take_item.already_tipped if take_item else false %}
+    <div style="border-bottom:1px solid rgba(238,233,223,.06);">
+      <a href="/video/{{ v.youtube_id }}" class="tr-row" style="border-bottom:none;">
+        {% if v.thumbnail_url %}
+        <img src="{{ v.thumbnail_url }}" class="tr-row-icon" />
+        {% else %}
+        <div class="tr-row-icon-placeholder">📺</div>
+        {% endif %}
+        <div class="tr-row-body">
+          <div class="tr-row-title">{{ v.title[:52] }}{% if v.title|length > 52 %}…{% endif %}</div>
+          <div class="tr-row-sub">
+            {{ v.channel_name }}
+            &nbsp;·&nbsp;
+            <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+          </div>
+        </div>
+        <div class="tr-row-right">
+          <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
+          <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+            {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
+            {{ info.momentum_pct | abs | round(1) }}%
+          </div>
+        </div>
+      </a>
+      <!-- Hot Take Buttons für Watchlist-Videos -->
+      {% if not already_tipped %}
+      <form method="post" action="/hottake/{{ v.id }}" style="display:flex;gap:6px;padding:0 0 10px;">
+        <button type="submit" name="prediction" value="up"
+          style="flex:1;background:rgba(76,175,130,.1);border:1px solid rgba(76,175,130,.25);
+                 border-radius:10px;color:#4CAF82;font-size:.78rem;font-weight:700;padding:8px 0;cursor:pointer;">
+          📈 Steigt
+        </button>
+        <button type="submit" name="prediction" value="down"
+          style="flex:1;background:rgba(163,81,57,.1);border:1px solid rgba(163,81,57,.25);
+                 border-radius:10px;color:#E07055;font-size:.78rem;font-weight:700;padding:8px 0;cursor:pointer;">
+          📉 Fällt
+        </button>
+      </form>
       {% else %}
-      <div class="tr-row-icon-placeholder">📺</div>
+      <div style="font-size:.72rem;color:#556070;text-align:center;padding:0 0 10px;">Tipp für heute abgegeben ✓</div>
       {% endif %}
-      <div class="tr-row-body">
-        <div class="tr-row-title">{{ v.title[:52] }}{% if v.title|length > 52 %}…{% endif %}</div>
-        <div class="tr-row-sub">
-          {{ v.channel_name }}
-          &nbsp;·&nbsp;
-          <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
-        </div>
-      </div>
-      <div class="tr-row-right">
-        <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
-        <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
-          {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
-          {{ info.momentum_pct | abs | round(1) }}%
-        </div>
-      </div>
-    </a>
+    </div>
     {% endfor %}
   </div>
 </div>
@@ -556,6 +615,7 @@
         <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
         {% if item.holders > 0 %}&nbsp;<span style="color:#556070;">· {{ item.holders }} Investor{{ "en" if item.holders != 1 else "" }}</span>{% endif %}
         {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,177,98,.2);color:#FFB162;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
+        {% if info.momentum_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
       </div>
     </div>
     <div class="tr-row-right">

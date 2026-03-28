@@ -10,7 +10,7 @@ from deps import templates
 from helpers import (
     get_login, UserCtx, calc_total_portfolio_value, _build_league_board,
     get_or_create_season, ensure_season_entry, get_hot_take_video,
-    upsert_leaderboard,
+    upsert_leaderboard, get_max_portfolio_slots,
 )
 from models import get_level_info
 
@@ -25,7 +25,8 @@ async def submit_hot_take(request: Request, video_id: int,
         return RedirectResponse("/login", status_code=302)
 
     today = datetime.utcnow().strftime("%Y-%m-%d")
-    if db.query(models.HotTake).filter_by(user_id=db_user.id, date=today).first():
+    # Erlaube einen Tipp pro Video pro Tag (nicht mehr nur einen insgesamt)
+    if db.query(models.HotTake).filter_by(user_id=db_user.id, video_id=video_id, date=today).first():
         return RedirectResponse("/?hottake=already", status_code=302)
 
     video = db.query(models.Video).filter_by(id=video_id).first()
@@ -73,9 +74,6 @@ async def challenge_duel(request: Request, opponent_username: str = Form(...),
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=302)
-
-    if not db_user.is_premium:
-        return RedirectResponse("/premium?ref=duels", status_code=302)
 
     opponent = db.query(models.User).filter_by(username=opponent_username).first()
     if not opponent or opponent.id == db_user.id:
@@ -303,4 +301,62 @@ async def leaderboard(request: Request, db: Session = Depends(get_db)):
         "user": user, "board": board,
         "my_rank": my_rank, "total_players": len(all_entries),
         "my_entry": my_entry,
+    })
+
+
+@router.get("/u/{username}", response_class=HTMLResponse)
+async def player_profile(request: Request, username: str, db: Session = Depends(get_db)):
+    """Öffentliches Spielerprofil."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    viewer = UserCtx(db_user)
+
+    profile_user = db.query(models.User).filter_by(username=username).first()
+    if not profile_user:
+        raise HTTPException(status_code=404, detail="Spieler nicht gefunden")
+
+    profile = UserCtx(profile_user)
+    portfolio_val = calc_total_portfolio_value(profile_user)
+    return_pct = round((portfolio_val - 10000) / 10000 * 100, 2)
+
+    # Top 3 öffentliche Holdings (nur Videotitel + P&L, keine Anteile/Preise)
+    top_holdings = []
+    for h in profile_user.holdings:
+        if h.shares > 0.001 and h.video and h.avg_cost_basis > 0:
+            pct = (h.video.current_price - h.avg_cost_basis) / h.avg_cost_basis * 100
+            top_holdings.append({
+                "youtube_id": h.video.youtube_id,
+                "title": h.video.title,
+                "thumbnail_url": h.video.thumbnail_url,
+                "pnl_pct": round(pct, 1),
+            })
+    top_holdings.sort(key=lambda x: x["pnl_pct"], reverse=True)
+
+    earned_achievements = [
+        {**models.ACHIEVEMENTS[a.achievement_id], "id": a.achievement_id}
+        for a in profile_user.achievements
+        if a.achievement_id in models.ACHIEVEMENTS
+    ]
+
+    trade_count = len(profile_user.transactions)
+    is_own_profile = profile_user.id == db_user.id
+
+    # Laufendes Duell zwischen Viewer und Profil?
+    active_duel = None
+    for d in db_user.duels_sent + db_user.duels_received:
+        opp_id = d.opponent_id if d.challenger_id == db_user.id else d.challenger_id
+        if opp_id == profile_user.id and d.status == "active":
+            active_duel = d
+            break
+
+    return templates.TemplateResponse(request, "user_profile.html", {
+        "user": viewer, "profile": profile,
+        "portfolio_val": portfolio_val, "return_pct": return_pct,
+        "top_holdings": top_holdings[:3],
+        "earned_achievements": earned_achievements,
+        "trade_count": trade_count,
+        "is_own_profile": is_own_profile,
+        "active_duel": active_duel,
+        "max_slots": get_max_portfolio_slots(profile_user),
     })

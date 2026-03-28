@@ -29,36 +29,62 @@
 
 <div>
   {% for item in board %}
-  <div class="tr-row" style="{% if item.username == user.username %}background:rgba(48,209,88,.05);border-radius:12px;padding:14px 12px;margin:0 -12px;border:1px solid rgba(48,209,88,.12);{% endif %}"
+  <div style="border-bottom:1px solid rgba(238,233,223,.06);">
+    <a href="/u/{{ item.username }}"
+       class="tr-row"
+       style="{% if item.username == user.username %}background:rgba(48,209,88,.05);border-radius:12px 12px 0 0;padding:14px 12px;margin:0 -12px;border:1px solid rgba(48,209,88,.12);border-bottom:none;{% endif %}text-decoration:none;"
        id="{% if item.username == user.username %}my-rank{% endif %}">
-    <div style="width:32px;text-align:center;flex-shrink:0;font-size:1.1rem;">
-      {% if loop.index == 1 %}🥇
-      {% elif loop.index == 2 %}🥈
-      {% elif loop.index == 3 %}🥉
-      {% else %}<span class="tr-sub">{{ loop.index }}</span>
-      {% endif %}
-    </div>
-    <div class="tr-row-body">
-      <div class="tr-row-title">
-        {{ item.username if item.username is defined else item.user.username }}
-        {% if item.username is defined and item.username == user.username %}
-        <span style="font-size:.7rem;color:#555;font-weight:500;margin-left:6px;">Du</span>
+      <div style="width:32px;text-align:center;flex-shrink:0;font-size:1.1rem;">
+        {% if loop.index == 1 %}🥇
+        {% elif loop.index == 2 %}🥈
+        {% elif loop.index == 3 %}🥉
+        {% else %}<span class="tr-sub">{{ loop.index }}</span>
         {% endif %}
       </div>
-      <div style="display:flex;gap:8px;margin-top:2px;">
-        <span style="font-size:.7rem;color:#ff9f0a;font-weight:600;">⚡ Lv.{{ item.level }}</span>
-        {% if item.streak >= 2 %}
-        <span style="font-size:.7rem;color:#ff6b00;font-weight:600;">🔥 {{ item.streak }}d</span>
-        {% endif %}
+      <div class="tr-row-body">
+        <div class="tr-row-title">
+          {{ item.username }}
+          {% if item.username == user.username %}
+          <span style="font-size:.7rem;color:#555;font-weight:500;margin-left:6px;">Du</span>
+          {% endif %}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:2px;">
+          <span style="font-size:.7rem;color:#ff9f0a;font-weight:600;">⚡ Lv.{{ item.level }}</span>
+          {% if item.streak >= 2 %}
+          <span style="font-size:.7rem;color:#ff6b00;font-weight:600;">🔥 {{ item.streak }}d</span>
+          {% endif %}
+        </div>
       </div>
-    </div>
-    <div class="tr-row-right">
-      <div class="tr-row-price">${{ "%.2f"|format(item.portfolio_value) }}</div>
-      <div class="tr-row-pnl {% if item.return_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
-        {% if item.return_pct >= 0 %}▲{% else %}▼{% endif %}
-        {{ item.return_pct | abs | round(2) }}%
+      <div class="tr-row-right">
+        <div class="tr-row-price">${{ "%.2f"|format(item.portfolio_value) }}</div>
+        <div class="tr-row-pnl {% if item.return_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+          {% if item.return_pct >= 0 %}▲{% else %}▼{% endif %}
+          {{ item.return_pct | abs | round(2) }}%
+        </div>
       </div>
+    </a>
+    {% if item.username != user.username %}
+    <div style="padding:0 0 10px;display:flex;gap:8px;">
+      <a href="/u/{{ item.username }}"
+         style="flex:1;text-align:center;padding:8px 0;font-size:.75rem;font-weight:600;
+                color:#8A9BAD;background:rgba(238,233,223,.05);border-radius:8px;text-decoration:none;
+                transition:color .15s;"
+         onmouseover="this.style.color='#EEE9DF'" onmouseout="this.style.color='#8A9BAD'">
+        Profil ansehen
+      </a>
+      <form method="post" action="/duel/challenge" style="flex:1;margin:0;">
+        <input type="hidden" name="opponent_username" value="{{ item.username }}" />
+        <button type="submit"
+          style="width:100%;padding:8px 0;font-size:.75rem;font-weight:700;color:#FFB162;
+                 background:rgba(255,177,98,.08);border:1px solid rgba(255,177,98,.2);
+                 border-radius:8px;cursor:pointer;transition:all .15s;"
+          onmouseover="this.style.background='rgba(255,177,98,.15)'"
+          onmouseout="this.style.background='rgba(255,177,98,.08)'">
+          ⚔️ Herausfordern
+        </button>
+      </form>
     </div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>

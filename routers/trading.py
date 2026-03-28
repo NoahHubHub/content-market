@@ -9,6 +9,7 @@ from database import get_db
 from helpers import (
     get_login, upsert_leaderboard, calc_total_portfolio_value, record_port_snap,
     log_league_activity, check_achievements, update_tasks, get_todays_drops,
+    get_max_portfolio_slots,
     XP_BUY, XP_SELL_PROFIT, XP_SELL_LOSS,
 )
 
@@ -32,14 +33,15 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
     if db_user.balance < total_cost:
         return RedirectResponse(f"/video/{youtube_id}?err=insufficient_funds", status_code=302)
 
-    # Free-tier portfolio slot limit
+    # Portfolio-Slot-Limit (Free = 7 Basis + Streak-Bonus)
     h = db.query(models.Holding).filter_by(user_id=db_user.id, video_id=video.id).first()
     if not h and not db_user.is_premium:
         active_count = db.query(models.Holding).filter(
             models.Holding.user_id == db_user.id,
             models.Holding.shares > 0.001,
         ).count()
-        if active_count >= 7:
+        max_slots = get_max_portfolio_slots(db_user)
+        if active_count >= max_slots:
             return RedirectResponse(f"/video/{youtube_id}?err=slot_limit", status_code=302)
 
     if h:
@@ -177,6 +179,26 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
     log_league_activity(db, db_user, "buy", drop.video, shares, drop.video.current_price)
     db.commit()
     db.refresh(db_user)
+
+    # Push: "Fast ausverkauft" wenn < 20% verbleibend
+    try:
+        remaining_pct = drop.shares_remaining / max(drop.total_shares, 1) * 100
+        if remaining_pct < 20:
+            from routers.push import send_push_to_user
+            watchers = db.query(models.UserWatchlist).filter(
+                models.UserWatchlist.youtube_id == drop.video.youtube_id
+            ).all()
+            for w in watchers:
+                if w.user_id != db_user.id:
+                    send_push_to_user(
+                        w.user_id,
+                        title="⚡ Daily Drop fast ausverkauft!",
+                        body=f"Nur noch {drop.shares_remaining:.0f} Anteile von "{drop.video.title[:35]}" übrig!",
+                        url=f"/video/{drop.video.youtube_id}",
+                        db=db,
+                    )
+    except Exception:
+        pass
 
     total_drops = sum(1 for t in db_user.transactions
                       if t.transaction_type == "buy" and

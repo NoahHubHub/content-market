@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.display_name }} — Content Market{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;animation:slide-up .4s cubic-bezier(.22,1,.36,1);">
+  <div style="width:64px;height:64px;border-radius:50%;background:{{ profile.avatar_color }};
+              display:flex;align-items:center;justify-content:center;font-size:1.8rem;
+              flex-shrink:0;border:2px solid rgba(238,233,223,.15);">
+    {{ profile.avatar_emoji }}
+  </div>
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:1.3rem;font-weight:800;color:#EEE9DF;">{{ profile.display_name }}</div>
+    <div style="font-size:.8rem;color:#8A9BAD;">@{{ profile.username }}</div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+      <span style="font-size:.75rem;font-weight:700;color:#FFB162;">⚡ Lv. {{ profile.level }} — {{ profile.level_info.name }}</span>
+      {% if profile.streak_days >= 2 %}
+      <span style="font-size:.75rem;font-weight:700;color:#ff9f0a;">🔥 {{ profile.streak_days }}d Streak</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div style="display:flex;gap:0;background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);
+            border-radius:14px;margin-bottom:20px;overflow:hidden;">
+  <div style="flex:1;padding:14px 12px;text-align:center;">
+    <div style="font-size:.6rem;color:#8A9BAD;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">Portfolio</div>
+    <div style="font-size:1rem;font-weight:700;">${{ "%.0f"|format(portfolio_val) }}</div>
+    <div style="font-size:.72rem;font-weight:600;{% if return_pct >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+      {% if return_pct >= 0 %}+{% endif %}{{ "%.1f"|format(return_pct) }}%
+    </div>
+  </div>
+  <div style="width:1px;background:rgba(238,233,223,.1);"></div>
+  <div style="flex:1;padding:14px 12px;text-align:center;">
+    <div style="font-size:.6rem;color:#8A9BAD;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">Trades</div>
+    <div style="font-size:1rem;font-weight:700;">{{ trade_count }}</div>
+  </div>
+  <div style="width:1px;background:rgba(238,233,223,.1);"></div>
+  <div style="flex:1;padding:14px 12px;text-align:center;">
+    <div style="font-size:.6rem;color:#8A9BAD;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">XP</div>
+    <div style="font-size:1rem;font-weight:700;">{{ profile.xp }}</div>
+  </div>
+</div>
+
+<!-- Duel CTA -->
+{% if not is_own_profile %}
+<div style="margin-bottom:20px;">
+  {% if active_duel %}
+  <a href="/duels" style="display:flex;align-items:center;justify-content:center;gap:8px;
+     background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);border-radius:14px;
+     padding:14px;text-decoration:none;color:#ff9f0a;font-weight:700;">
+    ⚔️ Duell läuft — Ergebnisse ansehen
+  </a>
+  {% else %}
+  <form method="post" action="/duel/challenge" style="margin:0;">
+    <input type="hidden" name="opponent_username" value="{{ profile.username }}" />
+    <button type="submit"
+      style="width:100%;background:rgba(238,233,223,.08);border:1px solid rgba(238,233,223,.2);
+             border-radius:14px;padding:14px;color:#EEE9DF;font-size:.95rem;font-weight:700;
+             cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+             transition:all .15s;"
+      onmouseover="this.style.borderColor='rgba(255,177,98,.4)';this.style.color='#FFB162'"
+      onmouseout="this.style.borderColor='rgba(238,233,223,.2)';this.style.color='#EEE9DF'">
+      ⚔️ Duell starten &nbsp;<span style="font-size:.75rem;opacity:.6;">7 Tage · beste Rendite gewinnt</span>
+    </button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Top Holdings (öffentlich) -->
+{% if top_holdings %}
+<div style="margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:10px;">Top Investments</div>
+  {% for h in top_holdings %}
+  <a href="/video/{{ h.youtube_id }}" class="tr-row">
+    {% if h.thumbnail_url %}
+    <img src="{{ h.thumbnail_url }}" class="tr-row-icon" />
+    {% else %}
+    <div class="tr-row-icon-placeholder">📺</div>
+    {% endif %}
+    <div class="tr-row-body">
+      <div class="tr-row-title">{{ h.title[:52] }}{% if h.title|length > 52 %}…{% endif %}</div>
+    </div>
+    <div class="tr-row-right">
+      <div class="tr-row-pnl {% if h.pnl_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+        {% if h.pnl_pct >= 0 %}+{% endif %}{{ h.pnl_pct }}%
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Achievements -->
+{% if earned_achievements %}
+<div style="margin-bottom:24px;">
+  <div class="tr-label" style="margin-bottom:10px;">Achievements ({{ earned_achievements|length }})</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    {% for ach in earned_achievements %}
+    <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);
+                border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:1.2rem;">{{ ach.icon }}</span>
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:#EEE9DF;">{{ ach.name }}</div>
+        <div style="font-size:.68rem;color:#8A9BAD;">+{{ ach.xp }} XP</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div style="text-align:center;padding:40px 0;color:#556070;">
+  <div style="font-size:2rem;margin-bottom:8px;">🏆</div>
+  <div style="font-size:.85rem;">Noch keine Achievements</div>
+</div>
+{% endif %}
+
+<!-- Bio -->
+{% if profile.bio %}
+<div style="margin-bottom:24px;padding:14px 16px;background:rgba(238,233,223,.05);
+            border:1px solid rgba(238,233,223,.1);border-radius:14px;">
+  <div class="tr-label" style="margin-bottom:6px;">Über mich</div>
+  <div style="font-size:.88rem;color:#C9C1B1;line-height:1.5;">{{ profile.bio }}</div>
+</div>
+{% endif %}
+
+{% if is_own_profile %}
+<a href="/account" class="tr-btn-ghost" style="display:block;text-align:center;">Profil bearbeiten</a>
+{% endif %}
+
+{% endblock %}

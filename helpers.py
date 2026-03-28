@@ -18,6 +18,23 @@ XP_BUY         = 10
 XP_SELL_PROFIT = 30
 XP_SELL_LOSS   = 5
 XP_DAILY_LOGIN = 5
+
+# ── Portfolio-Slots ─────────────────────────────────────────────────────────────
+BASE_FREE_SLOTS = 7
+
+def get_max_portfolio_slots(db_user: models.User) -> int:
+    """Berechnet max. Portfolio-Slots: Basis + Streak-Bonus für Free-Nutzer."""
+    if db_user.is_premium:
+        return 9999
+    streak = db_user.streak_days or 0
+    bonus = 0
+    if streak >= 14:
+        bonus = 3
+    elif streak >= 7:
+        bonus = 2
+    elif streak >= 3:
+        bonus = 1
+    return BASE_FREE_SLOTS + bonus
 STREAK_BONUS   = {3: 15, 7: 50, 14: 100, 30: 250}
 
 
@@ -453,3 +470,29 @@ def sync_watchlist_to_db(user_id: int, youtube_id: str, add: bool, db: Session):
     elif not add and existing:
         db.delete(existing)
         db.commit()
+
+
+def get_user_active_duels(db_user: models.User, db: Session) -> list:
+    """Aktive Duelle des Nutzers für den Home-Screen-Teaser."""
+    from datetime import datetime as _dt
+    today = _dt.utcnow().strftime("%Y-%m-%d")
+    active = []
+    for d in db_user.duels_sent + db_user.duels_received:
+        if d.status != "active":
+            continue
+        opponent = d.opponent if d.challenger_id == db_user.id else d.challenger
+        is_challenger = d.challenger_id == db_user.id
+        my_start  = d.challenger_start if is_challenger else d.opponent_start
+        opp_start = d.opponent_start   if is_challenger else d.challenger_start
+        my_val    = calc_total_portfolio_value(db_user)
+        opp_val   = calc_total_portfolio_value(opponent)
+        my_ret    = (my_val  - my_start)  / max(my_start, 1)  * 100
+        opp_ret   = (opp_val - opp_start) / max(opp_start, 1) * 100
+        active.append({
+            "opponent_username": opponent.username,
+            "my_return":  round(my_ret, 1),
+            "opp_return": round(opp_ret, 1),
+            "leading": my_ret >= opp_ret,
+            "end_date": d.end_date,
+        })
+    return active[:2]  # max 2 im Teaser

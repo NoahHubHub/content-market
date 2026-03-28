@@ -34,6 +34,11 @@
     <span style="color:#A35139;font-weight:600;">({{ "%.1f"|format(worst_holding.pnl_pct) }}%)</span>
   </div>
   {% endif %}
+  {% if max_slots and max_slots < 9999 %}
+  <div style="font-size:.75rem;color:#8A9BAD;margin-top:4px;">
+    🔥 Streak halten: 3d=+1 Slot · 7d=+2 · 14d=+3 (aktuell {{ max_slots }} Slots)
+  </div>
+  {% endif %}
 </div>
 {% elif err == "insufficient_funds" %}
 <div class="tr-alert tr-alert-error">Nicht genug Guthaben</div>

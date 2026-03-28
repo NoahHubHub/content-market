@@ -13,6 +13,7 @@ from helpers import (
     get_todays_drops, get_hot_take_video, ensure_season_entry, get_current_tasks,
     ensure_tasks, update_tasks, calc_total_portfolio_value, get_user_leagues_preview,
     get_market_feed, get_hidden_gems, sync_watchlist_to_db,
+    get_user_active_duels, get_max_portfolio_slots,
     XP_DAILY_LOGIN, STREAK_BONUS,
 )
 from models import ACHIEVEMENTS
@@ -131,6 +132,17 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         user_id=db_user.id, date=yesterday, resolved=True
     ).first()
 
+    # Watchlist Hot Takes: welche Videos hat der Spieler noch NICHT getippt heute?
+    watchlist_takes = []
+    for yt_id in watchlist:
+        wv = db.query(models.Video).filter(models.Video.youtube_id == yt_id).first()
+        if not wv:
+            continue
+        already = db.query(models.HotTake).filter_by(
+            user_id=db_user.id, video_id=wv.id, date=today
+        ).first()
+        watchlist_takes.append({"video": wv, "already_tipped": bool(already)})
+
     ensure_season_entry(db_user, db)
 
     return templates.TemplateResponse(request, "index.html", {
@@ -150,6 +162,9 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "user_leagues": get_user_leagues_preview(db_user, db),
         "market_feed": get_market_feed(db),
         "hidden_gems": get_hidden_gems(video_data),
+        "active_duels": get_user_active_duels(db_user, db),
+        "watchlist_takes": watchlist_takes,
+        "max_slots": get_max_portfolio_slots(db_user),
     })
 
 
@@ -234,8 +249,9 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
     leveled_up  = request.query_params.get("lvl") == "1"
     new_tasks   = get_current_tasks(db_user, db) if leveled_up else []
 
-    # Schlechteste Position fürs slot_limit-Messaging
+    # Schlechteste Position + Slot-Info fürs slot_limit-Messaging
     worst_holding = None
+    max_slots = get_max_portfolio_slots(db_user)
     if request.query_params.get("err") == "slot_limit":
         worst, worst_pct = None, 999.0
         for h in db_user.holdings:
@@ -257,6 +273,7 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         "holding": holding, "holders_count": holders_count,
         "related": related, "is_watching": is_watching,
         "worst_holding": worst_holding,
+        "max_slots": max_slots,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
         "xp":  request.query_params.get("xp"),
