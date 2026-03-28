@@ -19,14 +19,32 @@
 {% elif msg == "unwatched" %}
 <div class="tr-alert tr-alert-info">Aus Beobachtungsliste entfernt</div>
 {% elif err == "slot_limit" %}
-<div class="tr-alert tr-alert-error" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-  <span>Portfolio voll — max. 7 Positionen im Free-Tarif</span>
-  <a href="/premium" style="color:#FFB162;font-weight:700;white-space:nowrap;font-size:.82rem;">⚡ Upgrade</a>
+<div class="tr-alert tr-alert-error" style="flex-direction:column;align-items:flex-start;gap:8px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+    <span style="font-weight:700;">Portfolio voll — max. 7 Positionen (Free)</span>
+    <a href="/premium" style="color:#FFB162;font-weight:700;white-space:nowrap;font-size:.82rem;flex-shrink:0;">⚡ Upgrade</a>
+  </div>
+  {% if worst_holding %}
+  <div style="font-size:.8rem;color:#C9C1B1;">
+    Tipp: Verkaufe zuerst
+    <a href="/video/{{ worst_holding.youtube_id }}"
+       style="color:#FFB162;font-weight:700;text-decoration:none;">
+      {{ worst_holding.title[:30] }}{% if worst_holding.title|length > 30 %}…{% endif %}
+    </a>
+    <span style="color:#A35139;font-weight:600;">({{ "%.1f"|format(worst_holding.pnl_pct) }}%)</span>
+  </div>
+  {% endif %}
 </div>
 {% elif err == "insufficient_funds" %}
 <div class="tr-alert tr-alert-error">Nicht genug Guthaben</div>
 {% elif err == "insufficient_shares" %}
 <div class="tr-alert tr-alert-error">Nicht genug Anteile</div>
+{% endif %}
+
+{% if msg == "suggested" %}
+<div class="tr-alert tr-alert-success">
+  ✓ Video zum Markt hinzugefügt &nbsp;·&nbsp; <span style="color:#ff9f0a;font-weight:700;">+5 XP ⚡</span>
+</div>
 {% endif %}
 
 {% if request.query_params.get('lvl') %}
@@ -174,6 +192,22 @@
   <canvas id="priceChart" style="width:100%;height:140px;"></canvas>
 </div>
 
+<!-- Metrik-Tooltip Overlay -->
+<div id="metricTooltip" onclick="closeMetricTooltip()"
+     style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);
+            backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;">
+  <div onclick="event.stopPropagation()"
+       style="background:#1e2b38;border:1px solid rgba(238,233,223,.15);border-radius:20px 20px 0 0;
+              padding:24px 20px 40px;width:100%;max-width:540px;animation:slide-up .3s cubic-bezier(.22,1,.36,1);">
+    <div id="tooltipContent"></div>
+    <button onclick="closeMetricTooltip()"
+            style="margin-top:16px;width:100%;background:rgba(238,233,223,.1);border:none;
+                   color:#EEE9DF;padding:14px;border-radius:12px;font-size:.9rem;cursor:pointer;">
+      Verstanden
+    </button>
+  </div>
+</div>
+
 <!-- Stats row -->
 {% if last_stat %}
 <div style="display:flex;gap:0;margin:20px 0 28px;border-top:1px solid #111;border-bottom:1px solid #111;">
@@ -185,20 +219,23 @@
     <div style="font-size:.65rem;color:#555;margin-bottom:2px;">LIKES</div>
     <div style="font-weight:700;font-size:.9rem;">{{ last_stat.like_count | fmt }}</div>
   </div>
-  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">VIEWS/TAG</div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;cursor:pointer;"
+       onclick="showMetricTooltip('vpd')">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">VIEWS/TAG <span style="color:#FFB162;">?</span></div>
     <div style="font-weight:700;font-size:.9rem;">{{ info.views_per_day | int | fmt }}</div>
   </div>
-  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">RPS</div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;cursor:pointer;"
+       onclick="showMetricTooltip('rps')">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">RPS <span style="color:#FFB162;">?</span></div>
     <div style="font-weight:700;font-size:.9rem;{% if info.rps >= 1 %}color:#30d158{% else %}color:#ff453a{% endif %}">
       {{ "%.2f"|format(info.rps) }}×
     </div>
   </div>
-  <div style="flex:1;padding:12px 0;text-align:center;">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">INVESTOR</div>
-    <div style="font-weight:700;font-size:.9rem;{% if holders_count > 0 %}color:#EEE9DF{% else %}color:#555{% endif %};">
-      {{ holders_count }}
+  <div style="flex:1;padding:12px 0;text-align:center;cursor:pointer;"
+       onclick="showMetricTooltip('momentum')">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">TREND <span style="color:#FFB162;">?</span></div>
+    <div style="font-weight:700;font-size:.9rem;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %};">
+      {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}{{ info.momentum_pct | abs }}%
     </div>
   </div>
 </div>
@@ -482,5 +519,46 @@
     }
     requestAnimationFrame(tick);
   })();
+
+  // ── Metrik-Tooltips ────────────────────────────────────────
+  const METRIC_INFO = {
+    rps: {
+      title: "RPS — Relative Performance Score",
+      body: `<p style="margin:0 0 10px;line-height:1.5;">Vergleicht dieses Video mit dem Kanal-Durchschnitt.</p>
+             <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.83rem;">
+               <span style="color:#30d158;font-weight:700;">≥ 2.0×</span><span>Bullish — übertrifft stark</span>
+               <span style="color:#56d364;font-weight:700;">1.2–2.0×</span><span>Leicht bullish</span>
+               <span style="color:#555;font-weight:700;">0.8–1.2×</span><span>Neutral — wie erwartet</span>
+               <span style="color:#ff9f0a;font-weight:700;">0.5–0.8×</span><span>Schwächelnd</span>
+               <span style="color:#ff453a;font-weight:700;">&lt; 0.5×</span><span>Bearish — deutlich schwächer</span>
+             </div>`,
+    },
+    vpd: {
+      title: "Views pro Tag",
+      body: `<p style="margin:0;line-height:1.5;">Durchschnittliche tägliche Aufrufe seit Veröffentlichung.<br>
+             Ein steigender Wert bedeutet: das Video gewinnt gerade Momentum.<br>
+             <span style="color:#FFB162;">Hohe Views/Tag → Hoher Kurs.</span></p>`,
+    },
+    momentum: {
+      title: "Momentum / Trend",
+      body: `<p style="margin:0;line-height:1.5;">Misst ob das Video gerade <strong>schneller oder langsamer</strong> wächst als bisher.<br><br>
+             Berechnung: 40% Recent Velocity + 60% kumulativer Durchschnitt.<br><br>
+             <span style="color:#30d158;">▲ Positiv</span> = Video gewinnt gerade Views schneller als üblich.<br>
+             <span style="color:#ff453a;">▼ Negativ</span> = Verlangsamung — Kurs könnte fallen.</p>`,
+    },
+  };
+
+  function showMetricTooltip(key) {
+    const info = METRIC_INFO[key];
+    if (!info) return;
+    document.getElementById('tooltipContent').innerHTML =
+      `<div style="font-size:1rem;font-weight:700;margin-bottom:12px;color:#EEE9DF;">${info.title}</div>
+       <div style="font-size:.85rem;color:#C9C1B1;">${info.body}</div>`;
+    const overlay = document.getElementById('metricTooltip');
+    overlay.style.display = 'flex';
+  }
+  function closeMetricTooltip() {
+    document.getElementById('metricTooltip').style.display = 'none';
+  }
 </script>
 {% endblock %}

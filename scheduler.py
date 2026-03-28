@@ -34,16 +34,29 @@ def migrate():
         if "is_premium" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE"))
 
+    # Neue Tabellen anlegen falls sie noch nicht existieren
+    tables = insp.get_table_names()
+    if "user_watchlists" not in tables:
+        conn_create = engine.connect()
+        conn_create.close()
+        # SQLAlchemy erstellt die Tabelle via create_all (bereits in main.py)
+
 
 # ── scheduled jobs ─────────────────────────────────────────────────────────────
 
 def auto_refresh_prices():
+    """Refresh all market videos every 3h; also notify watchlist holders of big moves."""
     db = SessionLocal()
     try:
-        active = db.query(models.Holding).filter(models.Holding.shares > 0.001).all()
-        yt_ids = list({h.video.youtube_id for h in active if h.video})
+        # Collect all market videos (not just held ones) so the market feels alive
+        all_videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(100).all()
+        yt_ids = [v.youtube_id for v in all_videos]
         if not yt_ids:
             return
+
+        # Snapshot prices before refresh for movement detection
+        price_before = {v.youtube_id: v.current_price for v in all_videos}
+
         for i in range(0, len(yt_ids), 50):
             batch = yt_ids[i:i+50]
             try:
@@ -52,8 +65,50 @@ def auto_refresh_prices():
                     upsert_video(db, yt)
             except Exception:
                 pass
+
+        # Send push notifications for watchlist videos that moved ±15%
+        notify_watchlist_movers(db, price_before)
     finally:
         db.close()
+
+
+def notify_watchlist_movers(db, price_before: dict):
+    """Push-benachrichtige Nutzer wenn ein Video auf ihrer Watchlist ±15% bewegt hat."""
+    try:
+        from routers.push import send_push_to_user, PushSubscription
+        from sqlalchemy import distinct
+
+        # Find videos that moved significantly
+        moved_videos = []
+        for youtube_id, old_price in price_before.items():
+            if old_price <= 0:
+                continue
+            video = db.query(models.Video).filter(models.Video.youtube_id == youtube_id).first()
+            if not video:
+                continue
+            change_pct = (video.current_price - old_price) / old_price * 100
+            if abs(change_pct) >= 15:
+                moved_videos.append((video, change_pct))
+
+        if not moved_videos:
+            return
+
+        for video, change_pct in moved_videos:
+            # Find all users watching this video
+            watchers = db.query(models.UserWatchlist).filter(
+                models.UserWatchlist.youtube_id == video.youtube_id
+            ).all()
+            for watcher in watchers:
+                direction = "▲" if change_pct > 0 else "▼"
+                send_push_to_user(
+                    watcher.user_id,
+                    title=f"Kurs-Alarm {direction} {abs(change_pct):.0f}%",
+                    body=f"{video.title[:50]} hat sich stark bewegt — jetzt handeln!",
+                    url=f"/video/{video.youtube_id}",
+                    db=db,
+                )
+    except Exception:
+        pass
 
 
 def generate_daily_drop():
@@ -188,7 +243,7 @@ def refresh_leaderboard():
 # ── start ──────────────────────────────────────────────────────────────────────
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(auto_refresh_prices, "cron", hour=6,  minute=0)
+scheduler.add_job(auto_refresh_prices, "cron", hour="*/3", minute=0)
 scheduler.add_job(generate_daily_drop, "cron", hour=0,  minute=5)
 scheduler.add_job(seed_market,         "cron", hour=3,  minute=0)
 scheduler.add_job(resolve_hot_takes,   "cron", hour=7,  minute=0)

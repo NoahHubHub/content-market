@@ -12,6 +12,7 @@ from helpers import (
     get_login, UserCtx, get_portfolio, get_channel_videos, upsert_video,
     get_todays_drops, get_hot_take_video, ensure_season_entry, get_current_tasks,
     ensure_tasks, update_tasks, calc_total_portfolio_value, get_user_leagues_preview,
+    get_market_feed, get_hidden_gems, sync_watchlist_to_db,
     XP_DAILY_LOGIN, STREAK_BONUS,
 )
 from models import ACHIEVEMENTS
@@ -147,6 +148,8 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "yesterday_take": yesterday_take,
         "morning_brief": morning_brief,
         "user_leagues": get_user_leagues_preview(db_user, db),
+        "market_feed": get_market_feed(db),
+        "hidden_gems": get_hidden_gems(video_data),
     })
 
 
@@ -231,11 +234,29 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
     leveled_up  = request.query_params.get("lvl") == "1"
     new_tasks   = get_current_tasks(db_user, db) if leveled_up else []
 
+    # Schlechteste Position fürs slot_limit-Messaging
+    worst_holding = None
+    if request.query_params.get("err") == "slot_limit":
+        worst, worst_pct = None, 999.0
+        for h in db_user.holdings:
+            if h.shares > 0.001 and h.video and h.avg_cost_basis > 0:
+                pct = (h.video.current_price - h.avg_cost_basis) / h.avg_cost_basis * 100
+                if pct < worst_pct:
+                    worst_pct = pct
+                    worst = h
+        if worst:
+            worst_holding = {
+                "youtube_id": worst.video.youtube_id,
+                "title": worst.video.title,
+                "pnl_pct": round(worst_pct, 1),
+            }
+
     return templates.TemplateResponse(request, "video.html", {
         "user": user, "video": video,
         "last_stat": last, "info": info, "price_history": price_history,
         "holding": holding, "holders_count": holders_count,
         "related": related, "is_watching": is_watching,
+        "worst_holding": worst_holding,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
         "xp":  request.query_params.get("xp"),
@@ -257,10 +278,12 @@ async def toggle_watchlist(request: Request, youtube_id: str, db: Session = Depe
     if youtube_id in watchlist:
         watchlist.remove(youtube_id)
         msg = "unwatched"
+        sync_watchlist_to_db(db_user.id, youtube_id, add=False, db=db)
     else:
         watchlist.append(youtube_id)
         msg = "watched"
         update_tasks(db_user, db, "watchlist", value=len(watchlist))
+        sync_watchlist_to_db(db_user.id, youtube_id, add=True, db=db)
     request.session["watchlist"] = watchlist
     return RedirectResponse(f"/video/{youtube_id}?msg={msg}", status_code=302)
 
@@ -271,6 +294,29 @@ async def refresh_video(youtube_id: str, db: Session = Depends(get_db)):
     if yt_list:
         upsert_video(db, yt_list[0])
     return RedirectResponse(f"/video/{youtube_id}?msg=refreshed", status_code=302)
+
+
+@router.post("/suggest/{youtube_id}")
+async def suggest_video(request: Request, youtube_id: str, db: Session = Depends(get_db)):
+    """Spieler schlägt ein Video für den Markt vor → +5 XP Bonus."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    video = db.query(models.Video).filter(models.Video.youtube_id == youtube_id).first()
+    if not video:
+        # Video noch nicht im Markt — über YouTube-API holen und hinzufügen
+        from youtube import get_video_by_id
+        yt_list = get_video_by_id(youtube_id)
+        if yt_list:
+            video = upsert_video(db, yt_list[0])
+
+    if video:
+        # Kleiner XP-Bonus fürs Vorschlagen
+        db_user.xp = (db_user.xp or 0) + 5
+        db.commit()
+
+    return RedirectResponse(f"/video/{youtube_id}?msg=suggested", status_code=302)
 
 
 @router.post("/refresh-portfolio")

@@ -154,11 +154,46 @@
     {% endfor %}
   </div>
   {% else %}
-  <div style="text-align:center;padding:60px 0;color:#333;">
-    <div style="font-size:2.5rem;margin-bottom:12px;">📺</div>
-    <div style="color:#555;font-weight:600;margin-bottom:8px;">Noch keine Investments</div>
-    <a href="/search" class="tr-btn-primary" style="font-size:.9rem;padding:12px 20px;">Video suchen</a>
+  <!-- Vy Strategie-Tipps beim leeren Portfolio -->
+  <div class="vy-wrap" style="margin:24px 0 20px;">
+    <div class="vy-avatar">⚡</div>
+    <div class="vy-bubble">
+      <div class="vy-name">Vy</div>
+      <div class="vy-text">
+        Noch nix hier. Zeit das zu ändern.<br><br>
+        <strong>Mein 3-Punkte-Plan für dich:</strong>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="font-size:1.1rem;flex-shrink:0;">🔥</span>
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#EEE9DF;">Momentum-Videos kaufen</div>
+            <div style="font-size:.75rem;color:#8A9BAD;margin-top:1px;">Sortier nach "Momentum" — Videos die gerade viral gehen haben den stärksten Kursanstieg.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="font-size:1.1rem;flex-shrink:0;">💎</span>
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#EEE9DF;">Hidden Gems checken</div>
+            <div style="font-size:.75rem;color:#8A9BAD;margin-top:1px;">Videos mit hohem RPS und wenig Investoren — kaufen bevor andere es merken.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span style="font-size:1.1rem;flex-shrink:0;">📊</span>
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#EEE9DF;">Diversifizieren</div>
+            <div style="font-size:.75rem;color:#8A9BAD;margin-top:1px;">Nie alles auf ein Video. 3–5 verschiedene Positionen senken dein Risiko stark.</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+  <a href="/" class="tr-btn-primary" style="display:block;text-align:center;margin-bottom:12px;">
+    Zum Markt →
+  </a>
+  <a href="/search" class="tr-btn-ghost" style="display:block;text-align:center;">
+    Video suchen
+  </a>
   {% endif %}
 
   <!-- Transaction history -->

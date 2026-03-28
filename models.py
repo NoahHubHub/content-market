@@ -339,3 +339,15 @@ class LeagueActivity(Base):
     created_at  = Column(DateTime, default=datetime.utcnow)
 
     league = relationship("League", back_populates="activities")
+
+
+class UserWatchlist(Base):
+    """DB-backed watchlist so the scheduler can send push notifications."""
+    __tablename__ = "user_watchlists"
+
+    id         = Column(Integer, primary_key=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    youtube_id = Column(String, nullable=False, index=True)
+    added_at   = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")

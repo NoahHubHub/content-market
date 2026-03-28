@@ -400,3 +400,56 @@ def ensure_season_entry(db_user: models.User, db: Session):
             start_value=portfolio_val,
         ))
         db.commit()
+
+
+# ── Market Feed & Hidden Gems ──────────────────────────────────────────────────
+
+def get_market_feed(db: Session, limit: int = 10) -> list:
+    """Letzte globale Transaktionen für den Market-Activity-Feed."""
+    txs = (
+        db.query(models.Transaction)
+        .filter(models.Transaction.transaction_type.in_(["buy", "sell"]))
+        .order_by(models.Transaction.executed_at.desc())
+        .limit(limit)
+        .all()
+    )
+    result = []
+    for tx in txs:
+        if not tx.user or not tx.video:
+            continue
+        result.append({
+            "username": tx.user.username,
+            "action": tx.transaction_type,
+            "video_title": tx.video.title,
+            "youtube_id": tx.video.youtube_id,
+            "thumbnail_url": tx.video.thumbnail_url,
+            "shares": round(tx.shares, 1),
+            "price": round(tx.price_per_share, 2),
+            "ts": tx.executed_at,
+        })
+    return result
+
+
+def get_hidden_gems(video_data: list) -> list:
+    """Videos mit hohem Momentum aber wenigen Investoren — Hidden Gems."""
+    gems = [
+        item for item in video_data
+        if item["info"].get("momentum_pct", 0) >= 8 and item.get("holders", 0) <= 2
+    ]
+    gems.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
+    return gems[:3]
+
+
+# ── Watchlist DB-Sync ──────────────────────────────────────────────────────────
+
+def sync_watchlist_to_db(user_id: int, youtube_id: str, add: bool, db: Session):
+    """Watchlist-Änderung in der DB persistieren (für Push-Notifications)."""
+    existing = db.query(models.UserWatchlist).filter_by(
+        user_id=user_id, youtube_id=youtube_id
+    ).first()
+    if add and not existing:
+        db.add(models.UserWatchlist(user_id=user_id, youtube_id=youtube_id))
+        db.commit()
+    elif not add and existing:
+        db.delete(existing)
+        db.commit()
