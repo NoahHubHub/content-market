@@ -39,14 +39,27 @@
 
   <!-- Liga erstellen -->
   <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;">
-    <div class="tr-label" style="margin-bottom:10px;">Neue Liga</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span class="tr-label">Neue Liga</span>
+      {% if not user.is_premium %}
+      <span style="font-size:.65rem;color:{% if leagues_created >= 1 %}#A35139{% else %}#8A9BAD{% endif %};font-weight:700;">
+        {{ leagues_created }}/1 erstellt
+      </span>
+      {% endif %}
+    </div>
     <form method="post" action="/leagues/create">
       <input type="text" name="league_name" class="tr-input" placeholder="Liga-Name…"
              maxlength="40" required style="margin-bottom:10px;" />
-      <button type="submit" class="tr-btn-primary" style="width:100%;padding:12px;font-size:.88rem;">
+      <button type="submit" class="tr-btn-primary" style="width:100%;padding:12px;font-size:.88rem;"
+              {% if not user.is_premium and leagues_created >= 1 %}disabled title="Upgrade für weitere Ligen"{% endif %}>
         🏆 Erstellen
       </button>
     </form>
+    {% if not user.is_premium and leagues_created >= 1 %}
+    <div style="font-size:.65rem;color:#A35139;margin-top:6px;text-align:center;">
+      Limit erreicht · <a href="/premium?ref=leagues_create" style="color:#FFB162;">Upgrade für unbegrenzte Ligen</a>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Liga beitreten -->

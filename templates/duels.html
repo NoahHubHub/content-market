@@ -18,13 +18,28 @@
 <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;margin-bottom:16px;">
   <div class="tr-label" style="margin-bottom:10px;">Neues Duell starten</div>
   <form method="post" action="/duel/challenge" style="display:flex;gap:10px;">
-    <input type="text" name="opponent_username" class="tr-input"
+    <input type="text" name="opponent_username" id="opponentInput" class="tr-input"
            placeholder="Username eingeben…" style="flex:1;" required />
     <button type="submit" class="tr-btn-primary"
             style="flex-shrink:0;padding:14px 20px;font-size:.9rem;">
       ⚔️ Herausfordern
     </button>
   </form>
+  {% if suggested_opponents %}
+  <div style="margin-top:10px;">
+    <div style="font-size:.65rem;color:#556070;margin-bottom:6px;font-weight:700;letter-spacing:.04em;">AUS DEINEN LIGEN</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      {% for s in suggested_opponents %}
+      <button type="button" onclick="document.getElementById('opponentInput').value='{{ s.username }}'"
+              style="background:rgba(238,233,223,.08);border:1px solid rgba(238,233,223,.14);
+                     border-radius:20px;padding:5px 12px;color:#C9C1B1;font-size:.75rem;
+                     font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">
+        {{ s.avatar }} {{ s.username }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Premium Pitch -->

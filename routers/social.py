@@ -178,10 +178,24 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
             "days_left": days_left,
         })
 
+    # Suggest opponents: league members not already in an active duel with user
+    already_dueling = {
+        (d.duel.challenger_id if d.duel.challenger_id != db_user.id else d.duel.opponent_id)
+        for d in duel_data if d.duel.status == "active"
+    }
+    suggested_opponents = []
+    for m in db_user.league_memberships:
+        for lm in m.league.members:
+            if lm.user_id != db_user.id and lm.user_id not in already_dueling:
+                if lm.user and lm.user.username not in [s["username"] for s in suggested_opponents]:
+                    suggested_opponents.append({"username": lm.user.username, "avatar": lm.user.avatar_emoji or "🐿️"})
+    suggested_opponents = suggested_opponents[:5]
+
     return templates.TemplateResponse(request, "duels.html", {
         "user": user, "duel_data": duel_data,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
+        "suggested_opponents": suggested_opponents,
     })
 
 
@@ -208,10 +222,14 @@ async def leagues_page(request: Request, db: Session = Depends(get_db)):
             "latest_activity": league.activities[-1] if league.activities else None,
         })
 
+    leagues_created = db.query(models.League).filter_by(creator_id=db_user.id).count()
+
     return templates.TemplateResponse(request, "leagues.html", {
         "user": user, "my_leagues": my_leagues,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
+        "leagues_created": leagues_created,
+        "leagues_joined": len(memberships),
     })
 
 

@@ -423,7 +423,7 @@
     {% elif aid == "level_5" %}
       {% set prog = ach_stats.level %}{% set tgt = 5 %}
     {% elif aid == "whale" %}
-      {% set prog = 0 %}{% set tgt = 0 %}
+      {% set prog = ach_stats.max_single_holding %}{% set tgt = 50 %}
     {% elif aid == "first_profit" %}
       {% set prog = ach_stats.profitable_sells %}{% set tgt = 1 %}
     {% else %}

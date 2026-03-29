@@ -127,6 +127,9 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
             avg_buy = sum(b.price_per_share for b in buy_txs) / len(buy_txs)
             if t.price_per_share > avg_buy:
                 profitable_sells += 1
+    max_single_holding = max(
+        (int(h.shares) for h in db_user.holdings if h.shares > 0.001), default=0
+    )
     ach_stats = {
         "total_trades":    total_trades_count,
         "active_holdings": len([h for h in db_user.holdings if h.shares > 0.001]),
@@ -134,6 +137,7 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "level":           db_user.level or 1,
         "longest_held":    longest_held_days,
         "profitable_sells": profitable_sells,
+        "max_single_holding": max_single_holding,
     }
 
     # Best completed trade (for share card)
