@@ -315,6 +315,38 @@
 </a>
 {% endif %}
 
+<!-- Vy Social Onboarding (nach Trading-Tutorial abgeschlossen, noch keine Duelle/Ligen) -->
+{% if user and user.tutorial_step == 99 and not active_duels and not user_leagues %}
+<div class="vy-wrap" style="margin-bottom:16px;">
+  <div class="vy-avatar" style="width:38px;height:38px;font-size:1.1rem;">⚡</div>
+  <div class="vy-bubble">
+    <div class="vy-name">Vy · Nächste Stufe</div>
+    <div class="vy-text">
+      Du weißt jetzt wie der Markt läuft. Zeit für das echte Spiel:<br>
+      <strong>Ligen &amp; Duelle.</strong><br><br>
+      In einer <strong>Liga</strong> trittst du gegen Freunde an — wer hat die beste Rendite?<br>
+      In einem <strong>Duell</strong> challengest du einzelne Spieler direkt. 7 Tage, bester Return gewinnt.
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <a href="/leagues" class="tr-btn-primary" style="padding:9px 16px;font-size:.82rem;text-decoration:none;">
+        🏆 Liga beitreten
+      </a>
+      <a href="/duels" style="padding:9px 16px;font-size:.82rem;text-decoration:none;
+                              background:rgba(238,233,223,.1);border:1px solid rgba(238,233,223,.2);
+                              border-radius:10px;color:#EEE9DF;font-weight:600;">
+        ⚔️ Duell starten
+      </a>
+      <form method="post" action="/tutorial/next" style="margin:0;">
+        <button type="submit"
+          style="background:none;border:none;color:#556070;font-size:.75rem;cursor:pointer;padding:9px 4px;">
+          Später
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Season Teaser -->
 {% if season and my_season_return is not none %}
 <a href="/season" style="text-decoration:none;display:block;margin-bottom:16px;">

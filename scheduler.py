@@ -45,6 +45,33 @@ def migrate():
         # SQLAlchemy erstellt fehlende Tabellen via create_all (bereits in main.py)
         pass
 
+    # Backfill category for existing videos that have none
+    _backfill_categories()
+
+
+def _backfill_categories():
+    """One-time: fetch categoryId for existing videos that have no category set."""
+    db = SessionLocal()
+    try:
+        missing = db.query(models.Video).filter(models.Video.category == None).all()  # noqa: E711
+        if not missing:
+            return
+        ids = [v.youtube_id for v in missing[:50]]  # max 1 batch at startup
+        try:
+            yt_items = get_video_details(ids)
+        except Exception:
+            return
+        yt_map = {item["youtube_id"]: item.get("category") for item in yt_items}
+        for v in missing[:50]:
+            cat = yt_map.get(v.youtube_id)
+            if cat:
+                v.category = cat
+        db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
+
 
 # ── scheduled jobs ─────────────────────────────────────────────────────────────
 

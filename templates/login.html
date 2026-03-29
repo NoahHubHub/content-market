@@ -13,6 +13,7 @@
   {% endif %}
 
   <form method="post" action="/login">
+    {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
     <div style="margin-bottom:14px;">
       <div class="tr-label" style="margin-bottom:6px;">Username</div>
       <input name="username" type="text" class="tr-input" required autofocus

@@ -706,7 +706,7 @@
   // Best trade share
   {% if best_trade %}
   function shareBestTrade() {
-    const text = `Mein bester Trade auf Content Market:\n📈 {{ best_trade.title[:40] }}\n+{{ best_trade.pnl_pct }}% · +${{ "%.2f"|format(best_trade.pnl_abs) }}\ncontent-market.up.railway.app`;
+    const text = `Mein bester Trade auf Content Market:\n📈 {{ best_trade.title[:40] }}\n+{{ best_trade.pnl_pct }}% · +${{ "%.2f"|format(best_trade.pnl_abs) }}\n{{ APP_URL }}`;
     if (navigator.share) {
       navigator.share({ title: "Content Market Trade", text }).catch(() => {});
     } else {

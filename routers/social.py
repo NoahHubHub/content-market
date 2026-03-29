@@ -126,12 +126,32 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
             d.status = "completed"
             if c_ret >= o_ret:
                 d.winner_id = d.challenger_id
-                winner = d.challenger
+                winner, loser = d.challenger, d.opponent
             else:
                 d.winner_id = d.opponent_id
-                winner = d.opponent
+                winner, loser = d.opponent, d.challenger
             winner.xp = (winner.xp or 0) + 100
             db.commit()
+
+            # Notify both players
+            try:
+                from routers.push import send_push_to_user
+                send_push_to_user(
+                    winner.id,
+                    title="🏆 Duell gewonnen!",
+                    body=f"Du hast das Duell gegen {loser.username} gewonnen! +100 XP",
+                    url="/duels",
+                    db=db,
+                )
+                send_push_to_user(
+                    loser.id,
+                    title="⚔️ Duell beendet",
+                    body=f"{winner.username} hat das Duell gewonnen. Nächstes Mal!",
+                    url="/duels",
+                    db=db,
+                )
+            except Exception:
+                pass
 
         opponent     = d.opponent if d.challenger_id == db_user.id else d.challenger
         is_challenger = d.challenger_id == db_user.id

@@ -99,9 +99,11 @@ async def comeback_reset(request: Request, db: Session = Depends(get_db)):
             return RedirectResponse(f"/portfolio?err=reset_cooldown&days={days_left}", status_code=303)
         db.delete(last_reset)
 
+    from models import get_level_info
     db_user.balance = 5000.0
-    # XP penalty: lose 200 XP (min 0)
+    # XP penalty: lose 200 XP (min 0), recalculate level accordingly
     db_user.xp = max(0, (db_user.xp or 0) - 200)
+    db_user.level = get_level_info(db_user.xp)["level"]
     db_user.streak_days = 0
     db.add(models.UserAchievement(user_id=db_user.id, achievement_id=RESET_FLAG))
     db.commit()

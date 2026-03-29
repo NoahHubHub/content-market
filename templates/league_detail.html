@@ -143,7 +143,7 @@
 {% block scripts %}
 <script>
 const INVITE_CODE = "{{ league.invite_code }}";
-const INVITE_URL  = window.location.origin + "/leagues?code=" + INVITE_CODE;
+const INVITE_URL  = "{{ APP_URL }}/leagues?code=" + INVITE_CODE;
 
 function copyInvite() {
   navigator.clipboard.writeText(INVITE_CODE).then(() => {
