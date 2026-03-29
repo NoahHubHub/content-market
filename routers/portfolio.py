@@ -65,15 +65,36 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
            .filter(models.Transaction.user_id == db_user.id)
            .order_by(models.Transaction.executed_at.desc())
            .limit(50).all())
-    transactions = [{
-        "type":  t.transaction_type,
-        "youtube_id": t.video.youtube_id if t.video else "",
-        "title": (t.video.title[:40] if t.video else "?"),
-        "shares": t.shares,
-        "price":  t.price_per_share,
-        "total":  t.total_amount,
-        "ts":     t.executed_at.strftime("%d.%m %H:%M"),
-    } for t in txs]
+
+    # Build avg-buy-price per video for realized P&L on sells
+    buy_history: dict = {}
+    for t in reversed(db_user.transactions):
+        if t.transaction_type == "buy" and t.video_id:
+            vid_id = t.video_id
+            if vid_id not in buy_history:
+                buy_history[vid_id] = []
+            buy_history[vid_id].append(t.price_per_share)
+
+    transactions = []
+    for t in txs:
+        row = {
+            "type":  t.transaction_type,
+            "youtube_id": t.video.youtube_id if t.video else "",
+            "title": (t.video.title[:40] if t.video else "?"),
+            "shares": t.shares,
+            "price":  t.price_per_share,
+            "total":  t.total_amount,
+            "ts":     t.executed_at.strftime("%d.%m %H:%M"),
+            "pnl": None, "pnl_pct": None,
+        }
+        if t.transaction_type == "sell" and t.video_id and t.video_id in buy_history:
+            buys = buy_history[t.video_id]
+            if buys:
+                avg_buy = sum(buys) / len(buys)
+                pnl_per_share = t.price_per_share - avg_buy
+                row["pnl"] = round(pnl_per_share * t.shares, 2)
+                row["pnl_pct"] = round(pnl_per_share / avg_buy * 100, 1) if avg_buy else None
+        transactions.append(row)
 
     # Prefer DB snapshots (persistent); fall back to session for legacy data
     db_snaps = (db.query(models.PortfolioSnapshot)

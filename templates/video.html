@@ -219,9 +219,10 @@
     ⏱ Nächste Kurs-Aktualisierung …
   </span>
   {% if price_is_stale %}
-  <span style="font-size:.68rem;color:#ff9f0a;background:rgba(255,159,10,.08);
-               border:1px solid rgba(255,159,10,.2);border-radius:20px;padding:3px 10px;">
-    ⚠️ Kurs unverändert seit mehreren Updates
+  <span title="Das ist kein Bug — YouTube-Daten werden manchmal langsamer aktualisiert. Trades sind trotzdem gültig."
+        style="font-size:.68rem;color:#ff9f0a;background:rgba(255,159,10,.08);
+               border:1px solid rgba(255,159,10,.2);border-radius:20px;padding:3px 10px;cursor:help;">
+    ⚠️ Kurs unverändert — Daten-Lag, kein Bug
   </span>
   {% endif %}
 </div>

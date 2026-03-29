@@ -105,8 +105,23 @@
       </div>
     </div>
   </div>
-  {% if d.status == "completed" and item.i_won %}
-  <div style="margin-top:8px;font-size:.75rem;color:#ff9f0a;text-align:center;">+100 XP für den Sieg 🏆</div>
+  {% if d.status == "completed" %}
+  <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+    {% if item.i_won %}
+    <div style="flex:1;font-size:.75rem;color:#ff9f0a;">+100 XP für den Sieg 🏆</div>
+    {% else %}
+    <div style="flex:1;font-size:.75rem;color:#556070;">Beim nächsten Mal klappt's!</div>
+    {% endif %}
+    <form method="post" action="/duel/challenge" style="margin:0;">
+      <input type="hidden" name="opponent_username" value="{{ item.opponent.username }}" />
+      <button type="submit"
+              style="background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.25);
+                     border-radius:8px;color:#ff9f0a;font-size:.72rem;font-weight:700;
+                     padding:6px 12px;cursor:pointer;">
+        ⚔️ Revanche
+      </button>
+    </form>
+  </div>
   {% endif %}
 </div>
 {% endfor %}

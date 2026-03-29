@@ -264,9 +264,17 @@
           {{ tx.shares }} Anteile · ${{ "%.2f"|format(tx.price) }} · {{ tx.ts }}
         </div>
       </div>
-      <div style="font-size:.88rem;font-weight:600;flex-shrink:0;
-                  {% if tx.type == 'buy' %}color:#ff453a;{% else %}color:#30d158;{% endif %}">
-        {% if tx.type == "buy" %}-{% else %}+{% endif %}${{ "%.2f"|format(tx.total) }}
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:.88rem;font-weight:600;
+                    {% if tx.type == 'buy' %}color:#ff453a;{% else %}color:#30d158;{% endif %}">
+          {% if tx.type == "buy" %}-{% else %}+{% endif %}${{ "%.2f"|format(tx.total) }}
+        </div>
+        {% if tx.type == "sell" and tx.pnl is not none %}
+        <div style="font-size:.68rem;font-weight:600;
+                    {% if tx.pnl >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+          {% if tx.pnl >= 0 %}▲{% else %}▼{% endif %} {{ tx.pnl_pct }}%
+        </div>
+        {% endif %}
       </div>
     </a>
     {% endfor %}

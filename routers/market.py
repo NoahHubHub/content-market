@@ -169,6 +169,12 @@ async def home(request: Request, sort: str = "new", cat: str = "", db: Session =
 
     ensure_season_entry(db_user, db)
 
+    # Personal hot-take stats (all-time hit rate)
+    my_ht_resolved = db.query(models.HotTake).filter_by(user_id=db_user.id, resolved=True).all()
+    my_ht_total   = len(my_ht_resolved)
+    my_ht_correct = sum(1 for h in my_ht_resolved if h.correct)
+    my_ht_rate    = round(my_ht_correct / my_ht_total * 100) if my_ht_total >= 3 else None
+
     # Season teaser data
     season = get_or_create_season(db)
     season_entry = db.query(models.SeasonEntry).filter_by(
@@ -215,6 +221,9 @@ async def home(request: Request, sort: str = "new", cat: str = "", db: Session =
         "starter_picks": starter_picks,
         "all_categories": all_categories,
         "active_cat": cat,
+        "my_ht_total": my_ht_total,
+        "my_ht_correct": my_ht_correct,
+        "my_ht_rate": my_ht_rate,
     })
 
 
