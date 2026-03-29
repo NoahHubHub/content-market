@@ -49,6 +49,10 @@
 <div class="tr-alert tr-alert-error">Nicht genug Guthaben</div>
 {% elif err == "insufficient_shares" %}
 <div class="tr-alert tr-alert-error">Nicht genug Anteile</div>
+{% elif err == "invalid_amount" %}
+<div class="tr-alert tr-alert-error">Ungültige Anzahl — mindestens 0.1 Anteile eingeben</div>
+{% elif err == "drop_sold_out" %}
+<div class="tr-alert tr-alert-error">🚨 Daily Drop ausverkauft — alle Anteile wurden bereits vergeben</div>
 {% endif %}
 
 {% if msg == "suggested" %}
