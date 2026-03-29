@@ -55,7 +55,19 @@
     <div>
       <div style="font-size:.88rem;font-weight:700;">⚔️ vs. {{ item.opponent.username }}</div>
       <div style="font-size:.72rem;color:#555;">
-        {% if d.status == "active" %}Endet am {{ d.end_date }}{% else %}Beendet{% endif %}
+        {% if d.status == "active" %}
+          {% if item.days_left is not none %}
+            {% if item.days_left == 0 %}
+              <span style="color:#ff453a;font-weight:700;">Endet heute</span>
+            {% elif item.days_left == 1 %}
+              <span style="color:#ff9f0a;font-weight:700;">Noch 1 Tag</span>
+            {% else %}
+              Noch {{ item.days_left }} Tage
+            {% endif %}
+          {% else %}
+            Endet am {{ d.end_date }}
+          {% endif %}
+        {% else %}Beendet{% endif %}
       </div>
     </div>
     {% if d.status == "completed" %}

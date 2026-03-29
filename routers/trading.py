@@ -78,7 +78,7 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
     update_tasks(db_user, db, "portfolio", value=active_holdings)
     leveled_up = update_tasks(db_user, db, "invest", value=int(total_invested))
     new_achievements = check_achievements(db_user, db)
-    record_port_snap(request, db_user)
+    record_port_snap(request, db_user, db)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
     ach_param = ",".join(new_achievements) if new_achievements else ""
     return RedirectResponse(
@@ -127,7 +127,7 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
     if profit:
         leveled_up = update_tasks(db_user, db, "profit", value=1) or leveled_up
     new_achievements = check_achievements(db_user, db)
-    record_port_snap(request, db_user)
+    record_port_snap(request, db_user, db)
     upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
     ach_param = ",".join(new_achievements) if new_achievements else ""
     return RedirectResponse(
@@ -265,7 +265,7 @@ async def claim_bonus(request: Request, db: Session = Depends(get_db)):
             update_tasks(db_user, db, "portfolio", value=active_holdings)
             update_tasks(db_user, db, "invest",    value=int(total_invested))
             check_achievements(db_user, db)
-            record_port_snap(request, db_user)
+            record_port_snap(request, db_user, db)
             upsert_leaderboard(db_user.username, calc_total_portfolio_value(db_user), db)
             return RedirectResponse(f"/?bonus=share&title={video.title[:30]}", status_code=302)
         db.commit()

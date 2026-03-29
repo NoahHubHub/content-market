@@ -266,7 +266,13 @@
       <div>
         <div style="font-size:.65rem;color:#ff9f0a;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px;">⚔️ Duell läuft</div>
         <div style="font-size:.88rem;font-weight:600;color:#EEE9DF;">vs. @{{ d.opponent_username }}</div>
-        <div style="font-size:.72rem;color:#8A9BAD;margin-top:1px;">Endet {{ d.end_date }}</div>
+        <div style="font-size:.72rem;color:#8A9BAD;margin-top:1px;">
+        {% if d.days_left is defined and d.days_left is not none %}
+          {% if d.days_left == 0 %}<span style="color:#ff453a;font-weight:700;">Endet heute</span>
+          {% elif d.days_left == 1 %}<span style="color:#ff9f0a;font-weight:700;">Noch 1 Tag</span>
+          {% else %}Noch {{ d.days_left }} Tage{% endif %}
+        {% else %}Endet {{ d.end_date }}{% endif %}
+      </div>
       </div>
       <div style="text-align:right;">
         <div style="font-size:1rem;font-weight:800;{% if d.leading %}color:#4CAF82{% else %}color:#A35139{% endif %};">
@@ -420,7 +426,10 @@
 <div class="tr-section" style="margin-top:0;">
   <div>
     <h2 style="margin-bottom:2px;">Markt</h2>
-    <div style="font-size:.75rem;color:#C9C1B1;">{{ video_data | length if video_data else 0 }} Videos</div>
+    <div style="font-size:.75rem;color:#C9C1B1;">
+      {{ video_data | length if video_data else 0 }} Videos
+      &nbsp;·&nbsp;<span id="marketUpdateCountdown" style="color:#556070;">⏱ …</span>
+    </div>
   </div>
   <a href="/search" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">+ Video</a>
 </div>
@@ -650,7 +659,7 @@
 <!-- Sort controls -->
 {% if video_data %}
 <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;">
-  {% for s, label in [("new", "Neu"), ("momentum", "Momentum"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑")] %}
+  {% for s, label in [("new", "Neu"), ("momentum", "Momentum"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑"), ("risk_low", "🟢 Low Risk"), ("risk_high", "🔴 High Risk")] %}
   <a href="/?sort={{ s }}"
      style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;
             text-decoration:none;transition:all .15s;
@@ -735,6 +744,29 @@
     const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0');
     const s = String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
     el.textContent = `⏳ Noch ${h}:${m}:${s}`;
+  }
+  update();
+  setInterval(update, 1000);
+})();
+
+// Markt Kurs-Update Countdown (Scheduler: alle 3h zur vollen Stunde UTC)
+(function() {
+  const el = document.getElementById('marketUpdateCountdown');
+  if (!el) return;
+  function update() {
+    const now = new Date();
+    const utcH = now.getUTCHours();
+    const nextH = (Math.floor(utcH / 3) + 1) * 3;
+    const nextUpdate = new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
+      nextH >= 24 ? 0 : nextH, 0, 0
+    ));
+    if (nextH >= 24) nextUpdate.setUTCDate(nextUpdate.getUTCDate() + 1);
+    const diff = nextUpdate - now;
+    const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
+    const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+    const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+    el.textContent = `⏱ Update in ${hh}:${mm}:${ss}`;
   }
   update();
   setInterval(update, 1000);

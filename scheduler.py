@@ -36,10 +36,9 @@ def migrate():
 
     # Neue Tabellen anlegen falls sie noch nicht existieren
     tables = insp.get_table_names()
-    if "user_watchlists" not in tables:
-        conn_create = engine.connect()
-        conn_create.close()
-        # SQLAlchemy erstellt die Tabelle via create_all (bereits in main.py)
+    if "user_watchlists" not in tables or "portfolio_snapshots" not in tables:
+        # SQLAlchemy erstellt fehlende Tabellen via create_all (bereits in main.py)
+        pass
 
 
 # ── scheduled jobs ─────────────────────────────────────────────────────────────
@@ -68,8 +67,34 @@ def auto_refresh_prices():
 
         # Send push notifications for watchlist videos that moved ±15%
         notify_watchlist_movers(db, price_before)
+
+        # Record portfolio snapshots for all active users (persistent chart history)
+        snapshot_portfolio_values(db)
     finally:
         db.close()
+
+
+def snapshot_portfolio_values(db):
+    """Schreibt alle 3h einen Portfolio-Snapshot für alle aktiven Nutzer.
+
+    Nutzer gelten als aktiv wenn sie sich in den letzten 30 Tagen eingeloggt haben.
+    Includes cash-only players so their chart isn't empty.
+    """
+    from helpers import calc_total_portfolio_value
+    from datetime import timedelta
+    try:
+        cutoff = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+        active_users = (
+            db.query(models.User)
+            .filter(models.User.last_login_date >= cutoff)
+            .all()
+        )
+        for u in active_users:
+            val = round(calc_total_portfolio_value(u), 2)
+            db.add(models.PortfolioSnapshot(user_id=u.id, value=val))
+        db.commit()
+    except Exception:
+        pass
 
 
 def notify_watchlist_movers(db, price_before: dict):

@@ -75,7 +75,16 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "ts":     t.executed_at.strftime("%d.%m %H:%M"),
     } for t in txs]
 
-    port_snaps = request.session.get("port_snaps", [])
+    # Prefer DB snapshots (persistent); fall back to session for legacy data
+    db_snaps = (db.query(models.PortfolioSnapshot)
+                .filter_by(user_id=db_user.id)
+                .order_by(models.PortfolioSnapshot.recorded_at)
+                .limit(90).all())
+    if db_snaps:
+        port_snaps = [{"ts": s.recorded_at.strftime("%d.%m %H:%M"), "v": s.value}
+                      for s in db_snaps]
+    else:
+        port_snaps = request.session.get("port_snaps", [])
 
     total_trades_count = len(db_user.transactions)
     longest_held_days  = 0

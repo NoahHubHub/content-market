@@ -163,11 +163,16 @@ def upsert_leaderboard(username: str, portfolio_value: float, db: Session):
     db.commit()
 
 
-def record_port_snap(request: Request, db_user: models.User):
+def record_port_snap(request: Request, db_user: models.User, db: Session = None):
     active = [h for h in db_user.holdings if h.shares > 0.001 and h.video]
-    market_value = sum(h.shares * h.video.current_price for h in active)
+    market_value = round(sum(h.shares * h.video.current_price for h in active), 2)
+    # Persist to DB so history survives session expiry
+    if db is not None:
+        db.add(models.PortfolioSnapshot(user_id=db_user.id, value=market_value))
+        db.commit()
+    # Keep session fallback for backwards compat
     snaps = request.session.get("port_snaps", [])
-    snaps.append({"ts": datetime.utcnow().strftime("%d.%m %H:%M"), "v": round(market_value, 2)})
+    snaps.append({"ts": datetime.utcnow().strftime("%d.%m %H:%M"), "v": market_value})
     request.session["port_snaps"] = snaps[-50:]
 
 
@@ -488,11 +493,18 @@ def get_user_active_duels(db_user: models.User, db: Session) -> list:
         opp_val   = calc_total_portfolio_value(opponent)
         my_ret    = (my_val  - my_start)  / max(my_start, 1)  * 100
         opp_ret   = (opp_val - opp_start) / max(opp_start, 1) * 100
+        days_left = None
+        try:
+            end_dt = _dt.strptime(d.end_date, "%Y-%m-%d")
+            days_left = max(0, (end_dt - _dt.utcnow()).days)
+        except Exception:
+            pass
         active.append({
             "opponent_username": opponent.username,
             "my_return":  round(my_ret, 1),
             "opp_return": round(opp_ret, 1),
             "leading": my_ret >= opp_ret,
             "end_date": d.end_date,
+            "days_left": days_left,
         })
     return active[:2]  # max 2 im Teaser

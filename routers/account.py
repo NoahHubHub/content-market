@@ -70,3 +70,39 @@ async def account_save(request: Request, db: Session = Depends(get_db)):
 
     db.commit()
     return RedirectResponse("/account?saved=1", status_code=303)
+
+
+@router.post("/comeback-reset")
+async def comeback_reset(request: Request, db: Session = Depends(get_db)):
+    """Gibt einem Spieler der fast pleite ist $5 000 zurück — einmal pro 30 Tage."""
+    import models
+    from datetime import datetime, timedelta
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=303)
+
+    active_holdings = [h for h in db_user.holdings if h.shares > 0.001]
+    if active_holdings:
+        return RedirectResponse("/portfolio?err=reset_has_holdings", status_code=303)
+    if db_user.balance >= 2000:
+        return RedirectResponse("/portfolio?err=reset_too_rich", status_code=303)
+
+    # Enforce 30-day cooldown via a dedicated achievement flag
+    RESET_FLAG = "comeback_reset"
+    last_reset = db.query(models.UserAchievement).filter_by(
+        user_id=db_user.id, achievement_id=RESET_FLAG
+    ).first()
+    if last_reset:
+        cooldown_end = last_reset.earned_at + timedelta(days=30)
+        if datetime.utcnow() < cooldown_end:
+            days_left = (cooldown_end - datetime.utcnow()).days + 1
+            return RedirectResponse(f"/portfolio?err=reset_cooldown&days={days_left}", status_code=303)
+        db.delete(last_reset)
+
+    db_user.balance = 5000.0
+    # XP penalty: lose 200 XP (min 0)
+    db_user.xp = max(0, (db_user.xp or 0) - 200)
+    db_user.streak_days = 0
+    db.add(models.UserAchievement(user_id=db_user.id, achievement_id=RESET_FLAG))
+    db.commit()
+    return RedirectResponse("/portfolio?msg=comeback", status_code=303)

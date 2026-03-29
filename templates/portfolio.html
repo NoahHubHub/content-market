@@ -31,6 +31,46 @@
   .tab-panel.active { display: block; }
 </style>
 
+<!-- Comeback Reset Messages -->
+{% if request.query_params.get('msg') == 'comeback' %}
+<div class="tr-alert tr-alert-success" style="margin-bottom:12px;">
+  Neustart! <strong>$5 000</strong> auf dein Konto — -200 XP & Streak zurückgesetzt.
+</div>
+{% elif request.query_params.get('err') == 'reset_cooldown' %}
+<div class="tr-alert tr-alert-error" style="margin-bottom:12px;">
+  Comeback-Reset erst in {{ request.query_params.get('days', '?') }} Tagen wieder verfügbar.
+</div>
+{% elif request.query_params.get('err') == 'reset_has_holdings' %}
+<div class="tr-alert tr-alert-error" style="margin-bottom:12px;">
+  Verkaufe zuerst alle deine Positionen, bevor du einen Neustart startest.
+</div>
+{% endif %}
+
+<!-- Comeback Reset Banner — zeigt nur wenn Guthaben < $2 000 und keine offenen Positionen -->
+{% if user.balance < 2000 and user.holdings_count == 0 %}
+<div style="background:linear-gradient(135deg,rgba(255,69,58,.12),rgba(163,81,57,.08));
+            border:1px solid rgba(255,69,58,.3);border-radius:14px;padding:14px 16px;
+            margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:1.4rem;flex-shrink:0;">🚨</span>
+    <div style="flex:1;">
+      <div style="font-size:.88rem;font-weight:700;color:#ff453a;">Fast pleite — Neustart verfügbar</div>
+      <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+        $5 000 zurück · -200 XP · Streak-Reset · 1× alle 30 Tage
+      </div>
+    </div>
+  </div>
+  <form method="post" action="/comeback-reset" style="margin-top:10px;">
+    <button type="submit"
+            style="width:100%;background:rgba(255,69,58,.2);border:1px solid rgba(255,69,58,.4);
+                   border-radius:10px;color:#ff453a;font-size:.85rem;font-weight:700;
+                   padding:11px;cursor:pointer;">
+      Comeback starten
+    </button>
+  </form>
+</div>
+{% endif %}
+
 <!-- Vy Tutorial Step 3: Portfolio erklären -->
 {% if user and user.tutorial_step == 3 %}
 <div class="vy-wrap" style="margin-bottom:20px;">
@@ -112,6 +152,14 @@
   </div>
   <div style="position:relative;height:150px;margin:0 -20px;">
     <canvas id="sparkChart" style="width:100%;height:150px;"></canvas>
+    {% if port_snaps | length < 2 %}
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+      <span style="font-size:.72rem;color:#556070;background:rgba(0,0,0,.7);
+                   padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px);">
+        📊 Verlauf wird nach deinem ersten Trade sichtbar
+      </span>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Investments list + sort -->

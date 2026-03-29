@@ -195,6 +195,24 @@
 <!-- Price chart -->
 <div style="position:relative;height:140px;margin:0 -20px;">
   <canvas id="priceChart" style="width:100%;height:140px;"></canvas>
+  {% if price_history | length < 3 %}
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+              justify-content:center;pointer-events:none;">
+    <span style="font-size:.72rem;color:#556070;background:rgba(0,0,0,.6);
+                 padding:4px 10px;border-radius:20px;backdrop-filter:blur(4px);">
+      📈 Verlauf wächst mit jedem Kurs-Update
+    </span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Next price update countdown -->
+<div style="display:flex;justify-content:center;margin:8px 0 0;">
+  <span id="nextUpdateBadge"
+        style="font-size:.68rem;color:#556070;background:rgba(238,233,223,.06);
+               border:1px solid rgba(238,233,223,.1);border-radius:20px;padding:3px 10px;">
+    ⏱ Nächste Kurs-Aktualisierung …
+  </span>
 </div>
 
 <!-- Metrik-Tooltip Overlay -->
@@ -241,6 +259,21 @@
     <div style="font-size:.65rem;color:#555;margin-bottom:2px;">TREND <span style="color:#FFB162;">?</span></div>
     <div style="font-weight:700;font-size:.9rem;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %};">
       {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}{{ info.momentum_pct | abs }}%
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Sell signal: strong negative momentum while holding -->
+{% if holding and holding.shares > 0 and info.momentum_pct <= -20 %}
+<div style="background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.3);
+            border-radius:12px;padding:12px 14px;margin-bottom:14px;
+            display:flex;align-items:center;gap:10px;">
+  <span style="font-size:1.2rem;flex-shrink:0;">⚠️</span>
+  <div>
+    <div style="font-size:.82rem;font-weight:700;color:#ff9f0a;">Momentum stark negativ ({{ info.momentum_pct | round(1) }}%)</div>
+    <div style="font-size:.72rem;color:#8A9BAD;margin-top:2px;">
+      Das Video verliert Views-Velocity. Überlege ob du verkaufen willst.
     </div>
   </div>
 </div>
@@ -599,5 +632,28 @@
   function closeMetricTooltip() {
     document.getElementById('metricTooltip').style.display = 'none';
   }
+
+  // ── Next price-update countdown (scheduler: every 3h at :00 UTC) ─────────
+  (function() {
+    const el = document.getElementById('nextUpdateBadge');
+    if (!el) return;
+    function update() {
+      const now = new Date();
+      const utcH = now.getUTCHours();
+      const nextH = (Math.floor(utcH / 3) + 1) * 3;
+      const nextUpdate = new Date(Date.UTC(
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
+        nextH >= 24 ? 0 : nextH, 0, 0
+      ));
+      if (nextH >= 24) nextUpdate.setUTCDate(nextUpdate.getUTCDate() + 1);
+      const diff = nextUpdate - now;
+      const hh = String(Math.floor(diff / 3600000)).padStart(2, '0');
+      const mm = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+      const ss = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+      el.textContent = `⏱ Kurs-Update in ${hh}:${mm}:${ss}`;
+    }
+    update();
+    setInterval(update, 1000);
+  })();
 </script>
 {% endblock %}

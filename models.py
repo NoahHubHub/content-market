@@ -351,3 +351,15 @@ class UserWatchlist(Base):
     added_at   = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User")
+
+
+class PortfolioSnapshot(Base):
+    """Persistente Portfolio-Verlaufsdaten — überleben Session-Ablauf."""
+    __tablename__ = "portfolio_snapshots"
+
+    id           = Column(Integer, primary_key=True)
+    user_id      = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    value        = Column(Float, nullable=False)
+    recorded_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")

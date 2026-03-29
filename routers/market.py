@@ -65,15 +65,34 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
 
     trending = sorted(video_data, key=lambda x: x["info"]["momentum_pct"], reverse=True)[:3]
 
+    RISK_ORDER = {"Low": 0, "Medium": 1, "High": 2, "Extreme": 3}
     if sort == "price_asc":
         video_data.sort(key=lambda x: x["video"].current_price)
     elif sort == "price_desc":
         video_data.sort(key=lambda x: x["video"].current_price, reverse=True)
     elif sort == "momentum":
         video_data.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
+    elif sort == "risk_low":
+        video_data.sort(key=lambda x: RISK_ORDER.get(x["info"]["risk"], 3))
+    elif sort == "risk_high":
+        video_data.sort(key=lambda x: RISK_ORDER.get(x["info"]["risk"], 3), reverse=True)
 
     portfolio_ids = set(get_portfolio(db_user).keys())
-    watchlist = request.session.get("watchlist", [])
+
+    # Read watchlist from DB (persistent) — merge with any legacy session items
+    db_wl_rows = db.query(models.UserWatchlist).filter_by(user_id=db_user.id).all()
+    db_wl_ids = [row.youtube_id for row in db_wl_rows]
+    session_wl = request.session.get("watchlist", [])
+    # Migrate session items to DB if not yet there
+    for yt_id in session_wl:
+        if yt_id not in db_wl_ids:
+            db.add(models.UserWatchlist(user_id=db_user.id, youtube_id=yt_id))
+            db_wl_ids.append(yt_id)
+    if session_wl:
+        db.commit()
+        request.session["watchlist"] = db_wl_ids  # normalise session
+    watchlist = db_wl_ids
+
     watchlist_data = []
     for yt_id in watchlist:
         wv = db.query(models.Video).filter(models.Video.youtube_id == yt_id).first()
@@ -268,8 +287,9 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
                    .order_by(models.Video.current_price.desc())
                    .limit(5).all())
 
-    watchlist   = request.session.get("watchlist", [])
-    is_watching = youtube_id in watchlist
+    is_watching = db.query(models.UserWatchlist).filter_by(
+        user_id=db_user.id, youtube_id=youtube_id
+    ).first() is not None
     leveled_up  = request.query_params.get("lvl") == "1"
     new_tasks   = get_current_tasks(db_user, db) if leveled_up else []
 
@@ -318,17 +338,22 @@ async def toggle_watchlist(request: Request, youtube_id: str, db: Session = Depe
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=302)
-    watchlist = request.session.get("watchlist", [])
-    if youtube_id in watchlist:
-        watchlist.remove(youtube_id)
+    existing = db.query(models.UserWatchlist).filter_by(
+        user_id=db_user.id, youtube_id=youtube_id
+    ).first()
+    if existing:
+        db.delete(existing)
+        db.commit()
         msg = "unwatched"
-        sync_watchlist_to_db(db_user.id, youtube_id, add=False, db=db)
     else:
-        watchlist.append(youtube_id)
+        db.add(models.UserWatchlist(user_id=db_user.id, youtube_id=youtube_id))
+        db.commit()
+        wl_count = db.query(models.UserWatchlist).filter_by(user_id=db_user.id).count()
+        update_tasks(db_user, db, "watchlist", value=wl_count)
         msg = "watched"
-        update_tasks(db_user, db, "watchlist", value=len(watchlist))
-        sync_watchlist_to_db(db_user.id, youtube_id, add=True, db=db)
-    request.session["watchlist"] = watchlist
+    # Keep session in sync for backwards compat
+    db_wl_ids = [r.youtube_id for r in db.query(models.UserWatchlist).filter_by(user_id=db_user.id).all()]
+    request.session["watchlist"] = db_wl_ids
     return RedirectResponse(f"/video/{youtube_id}?msg={msg}", status_code=302)
 
 

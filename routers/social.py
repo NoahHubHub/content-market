@@ -89,6 +89,20 @@ async def challenge_duel(request: Request, opponent_username: str = Form(...),
         status="active",
     ))
     db.commit()
+
+    # Notify the opponent via push (best-effort)
+    try:
+        from routers.push import send_push_to_user
+        send_push_to_user(
+            opponent.id,
+            title="⚔️ Duell-Herausforderung!",
+            body=f"{db_user.username} fordert dich heraus — 7 Tage, beste Rendite gewinnt.",
+            url="/duels",
+            db=db,
+        )
+    except Exception:
+        pass
+
     return RedirectResponse("/duels?msg=challenged", status_code=302)
 
 
@@ -126,6 +140,14 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
         opp_val   = calc_total_portfolio_value(opponent)
         opp_start = d.opponent_start if is_challenger else d.challenger_start
 
+        days_left = None
+        if d.status == "active":
+            try:
+                end_dt = datetime.strptime(d.end_date, "%Y-%m-%d")
+                days_left = max(0, (end_dt - datetime.utcnow()).days)
+            except Exception:
+                pass
+
         duel_data.append({
             "duel": d, "opponent": opponent,
             "my_return":  round((my_val  - my_start)  / max(my_start, 1)  * 100, 2),
@@ -133,6 +155,7 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
             "i_am_winning": (my_val - my_start) / max(my_start, 1) >=
                             (opp_val - opp_start) / max(opp_start, 1),
             "i_won": d.status == "completed" and d.winner_id == db_user.id,
+            "days_left": days_left,
         })
 
     return templates.TemplateResponse(request, "duels.html", {
@@ -177,8 +200,11 @@ async def create_league(request: Request, league_name: str = Form(...),
     if not db_user:
         return RedirectResponse("/login", status_code=302)
 
+    # Free users can create exactly 1 league; Premium users have no limit
     if not db_user.is_premium:
-        return RedirectResponse("/premium?ref=leagues_create", status_code=302)
+        created_count = db.query(models.League).filter_by(creator_id=db_user.id).count()
+        if created_count >= 1:
+            return RedirectResponse("/premium?ref=leagues_create_limit", status_code=302)
 
     for _ in range(10):
         code = secrets.token_hex(3).upper()
