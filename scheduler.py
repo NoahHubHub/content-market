@@ -34,6 +34,11 @@ def migrate():
         if "is_premium" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE"))
 
+    video_cols = [c["name"] for c in insp.get_columns("videos")]
+    with engine.begin() as conn:
+        if "category" not in video_cols:
+            conn.execute(text("ALTER TABLE videos ADD COLUMN category VARCHAR"))
+
     # Neue Tabellen anlegen falls sie noch nicht existieren
     tables = insp.get_table_names()
     if "user_watchlists" not in tables or "portfolio_snapshots" not in tables:

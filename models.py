@@ -132,6 +132,7 @@ class Video(Base):
     published_at = Column(DateTime)
     current_price = Column(Float, default=10.0)
     is_ipo = Column(Boolean, default=False)
+    category = Column(String, nullable=True)   # e.g. "Gaming", "Music", "Education"
     added_at = Column(DateTime, default=datetime.utcnow)
     last_updated = Column(DateTime, default=datetime.utcnow)
 

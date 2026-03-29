@@ -656,11 +656,31 @@
 </div>
 {% endif %}
 
+<!-- Category filter chips -->
+{% if all_categories %}
+<div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;">
+  <a href="/?sort={{ sort }}"
+     style="flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:.73rem;font-weight:600;
+            text-decoration:none;transition:all .15s;
+            {% if not active_cat %}background:#EEE9DF;color:#1B2632;{% else %}background:rgba(238,233,223,.08);color:#C9C1B1;border:1px solid rgba(238,233,223,.12);{% endif %}">
+    Alle
+  </a>
+  {% for c in all_categories %}
+  <a href="/?sort={{ sort }}&cat={{ c | urlencode }}"
+     style="flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:.73rem;font-weight:600;
+            text-decoration:none;transition:all .15s;
+            {% if active_cat == c %}background:#EEE9DF;color:#1B2632;{% else %}background:rgba(238,233,223,.08);color:#C9C1B1;border:1px solid rgba(238,233,223,.12);{% endif %}">
+    {{ c }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
 <!-- Sort controls -->
 {% if video_data %}
 <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;">
   {% for s, label in [("new", "Neu"), ("momentum", "Momentum"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑"), ("risk_low", "🟢 Low Risk"), ("risk_high", "🔴 High Risk")] %}
-  <a href="/?sort={{ s }}"
+  <a href="/?sort={{ s }}{% if active_cat %}&cat={{ active_cat | urlencode }}{% endif %}"
      style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;
             text-decoration:none;transition:all .15s;
             {% if sort == s %}background:#EEE9DF;color:#1B2632;{% else %}background:rgba(238,233,223,.08);color:#C9C1B1;border:1px solid rgba(238,233,223,.12);{% endif %}">

@@ -54,7 +54,8 @@
     <div class="tr-label" style="margin-bottom:10px;">Beitreten</div>
     <form method="post" action="/leagues/join">
       <input type="text" name="invite_code" class="tr-input" placeholder="Invite-Code…"
-             maxlength="10" style="text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;" required />
+             maxlength="10" style="text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;" required
+             value="{{ request.query_params.get('code', '') | upper }}" />
       <button type="submit" class="tr-btn-secondary" style="width:100%;padding:12px;font-size:.88rem;">
         ➕ Beitreten
       </button>

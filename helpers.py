@@ -120,6 +120,7 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
             thumbnail_url=yt["thumbnail_url"], published_at=yt["published_at"],
             current_price=price_data["price"],
             is_ipo=is_ipo,
+            category=yt.get("category"),
         )
         db.add(video)
         db.flush()
@@ -130,6 +131,8 @@ def upsert_video(db: Session, yt: dict) -> models.Video:
         video.thumbnail_url = yt["thumbnail_url"]
         video.current_price = price_data["price"]
         video.last_updated  = datetime.utcnow()
+        if yt.get("category"):
+            video.category = yt["category"]
     db.add(models.VideoStats(
         video_id=video.id, view_count=yt["view_count"], like_count=yt["like_count"],
         comment_count=yt["comment_count"], price_at_time=price_data["price"],

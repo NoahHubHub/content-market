@@ -50,9 +50,19 @@ def _parse_items(items: list) -> list:
                 "view_count": int(stats.get("viewCount", 0)),
                 "like_count": int(stats.get("likeCount", 0)),
                 "comment_count": int(stats.get("commentCount", 0)),
+                "category": CATEGORY_MAP.get(snippet.get("categoryId", ""), None),
             }
         )
     return results
+
+
+CATEGORY_MAP = {
+    "1":  "Film & Animation", "2":  "Autos",    "10": "Music",
+    "15": "Tiere",            "17": "Sport",     "20": "Gaming",
+    "22": "Vlogs",            "23": "Comedy",    "24": "Entertainment",
+    "25": "News",             "26": "Style",     "27": "Education",
+    "28": "Tech",             "29": "Soziales",
+}
 
 
 def get_video_details(video_ids: list) -> list:

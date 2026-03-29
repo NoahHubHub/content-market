@@ -18,6 +18,11 @@
 <div class="tr-alert tr-alert-info">★ Zur Beobachtungsliste hinzugefügt</div>
 {% elif msg == "unwatched" %}
 <div class="tr-alert tr-alert-info">Aus Beobachtungsliste entfernt</div>
+{% elif err == "watchlist_full" %}
+<div class="tr-alert tr-alert-error" style="justify-content:space-between;">
+  <span>Watchlist voll — max. 15 Videos (Free)</span>
+  <a href="/premium" style="color:#FFB162;font-weight:700;font-size:.82rem;flex-shrink:0;">⚡ Upgrade</a>
+</div>
 {% elif err == "slot_limit" %}
 <div class="tr-alert tr-alert-error" style="flex-direction:column;align-items:flex-start;gap:8px;">
   <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
@@ -206,13 +211,19 @@
   {% endif %}
 </div>
 
-<!-- Next price update countdown -->
-<div style="display:flex;justify-content:center;margin:8px 0 0;">
+<!-- Next price update countdown + stale hint -->
+<div style="display:flex;justify-content:center;gap:6px;margin:8px 0 0;flex-wrap:wrap;">
   <span id="nextUpdateBadge"
         style="font-size:.68rem;color:#556070;background:rgba(238,233,223,.06);
                border:1px solid rgba(238,233,223,.1);border-radius:20px;padding:3px 10px;">
     ⏱ Nächste Kurs-Aktualisierung …
   </span>
+  {% if price_is_stale %}
+  <span style="font-size:.68rem;color:#ff9f0a;background:rgba(255,159,10,.08);
+               border:1px solid rgba(255,159,10,.2);border-radius:20px;padding:3px 10px;">
+    ⚠️ Kurs unverändert seit mehreren Updates
+  </span>
+  {% endif %}
 </div>
 
 <!-- Metrik-Tooltip Overlay -->

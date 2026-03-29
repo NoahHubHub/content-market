@@ -26,9 +26,26 @@
   <div style="background:rgba(255,177,98,.1);border:1px solid rgba(255,177,98,.3);
               border-radius:10px;padding:10px 14px;text-align:center;">
     <div style="font-size:.65rem;color:#FFB162;font-weight:700;letter-spacing:.06em;margin-bottom:3px;">INVITE CODE</div>
-    <div style="font-family:monospace;font-size:1.1rem;font-weight:800;color:#FFB162;letter-spacing:.15em;">
+    <div id="inviteCode" style="font-family:monospace;font-size:1.1rem;font-weight:800;
+                                color:#FFB162;letter-spacing:.15em;cursor:pointer;"
+         onclick="copyInvite()" title="Tippen zum Kopieren">
       {{ league.invite_code }}
     </div>
+    <div style="display:flex;gap:6px;margin-top:8px;justify-content:center;">
+      <button onclick="copyInvite()"
+              style="background:rgba(255,177,98,.2);border:1px solid rgba(255,177,98,.4);
+                     border-radius:8px;color:#FFB162;font-size:.7rem;font-weight:700;
+                     padding:4px 10px;cursor:pointer;">
+        📋 Kopieren
+      </button>
+      <button onclick="shareInvite()"
+              style="background:rgba(255,177,98,.2);border:1px solid rgba(255,177,98,.4);
+                     border-radius:8px;color:#FFB162;font-size:.7rem;font-weight:700;
+                     padding:4px 10px;cursor:pointer;">
+        🔗 Teilen
+      </button>
+    </div>
+    <div id="copyToast" style="display:none;font-size:.65rem;color:#4CAF82;margin-top:4px;font-weight:700;">✓ Kopiert!</div>
   </div>
 </div>
 
@@ -121,4 +138,43 @@
 
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+const INVITE_CODE = "{{ league.invite_code }}";
+const INVITE_URL  = window.location.origin + "/leagues?code=" + INVITE_CODE;
+
+function copyInvite() {
+  navigator.clipboard.writeText(INVITE_CODE).then(() => {
+    const toast = document.getElementById('copyToast');
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 2000);
+  }).catch(() => {
+    const el = document.getElementById('inviteCode');
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+}
+
+function shareInvite() {
+  if (navigator.share) {
+    navigator.share({
+      title: "Content Market Liga-Einladung",
+      text: `Tritt meiner Liga "{{ league.name }}" bei! Code: ${INVITE_CODE}`,
+      url: INVITE_URL,
+    }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(`Liga "{{ league.name }}" — Code: ${INVITE_CODE}\n${INVITE_URL}`)
+      .then(() => {
+        const toast = document.getElementById('copyToast');
+        toast.textContent = '✓ Link kopiert!';
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; toast.textContent = '✓ Kopiert!'; }, 2500);
+      });
+  }
+}
+</script>
 {% endblock %}

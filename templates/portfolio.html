@@ -453,6 +453,35 @@
   </div>
 </div>
 
+<!-- Best Trade Share Card -->
+{% if best_trade and best_trade.pnl_pct >= 10 %}
+<div style="background:linear-gradient(135deg,rgba(48,209,88,.12),rgba(76,175,130,.06));
+            border:1px solid rgba(48,209,88,.25);border-radius:14px;padding:14px 16px;
+            margin-bottom:16px;margin-top:28px;">
+  <div style="font-size:.65rem;color:#30d158;font-weight:700;letter-spacing:.05em;margin-bottom:6px;">
+    🏆 BESTER TRADE
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:.85rem;font-weight:600;color:#EEE9DF;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        {{ best_trade.title[:40] }}{% if best_trade.title|length > 40 %}…{% endif %}
+      </div>
+      <div style="font-size:1.1rem;font-weight:800;color:#30d158;margin-top:2px;">
+        +{{ best_trade.pnl_pct }}% &nbsp;·&nbsp; +${{ "%.2f"|format(best_trade.pnl_abs) }}
+      </div>
+    </div>
+    <button onclick="shareBestTrade()"
+            style="flex-shrink:0;background:rgba(48,209,88,.2);border:1px solid rgba(48,209,88,.4);
+                   border-radius:10px;color:#30d158;font-size:.8rem;font-weight:700;
+                   padding:8px 14px;cursor:pointer;">
+      🔗 Teilen
+    </button>
+  </div>
+  <div id="shareToast" style="display:none;font-size:.7rem;color:#4CAF82;margin-top:6px;font-weight:700;">✓ Kopiert!</div>
+</div>
+{% endif %}
+
 <!-- Premium Pitch im Portfolio -->
 {% if not user.is_premium %}
 <a href="/premium?ref=portfolio" style="text-decoration:none;display:block;margin-top:28px;">
@@ -673,5 +702,21 @@
     el.style.padding = '2px 5px';
     el.style.borderRadius = '6px';
   });
+
+  // Best trade share
+  {% if best_trade %}
+  function shareBestTrade() {
+    const text = `Mein bester Trade auf Content Market:\n📈 {{ best_trade.title[:40] }}\n+{{ best_trade.pnl_pct }}% · +${{ "%.2f"|format(best_trade.pnl_abs) }}\ncontent-market.up.railway.app`;
+    if (navigator.share) {
+      navigator.share({ title: "Content Market Trade", text }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        const t = document.getElementById('shareToast');
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2500);
+      });
+    }
+  }
+  {% endif %}
 </script>
 {% endblock %}

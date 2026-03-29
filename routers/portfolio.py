@@ -115,6 +115,26 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "profitable_sells": profitable_sells,
     }
 
+    # Best completed trade (for share card)
+    best_trade = None
+    best_pnl_pct = 0.0
+    for t in sell_txs:
+        buy_txs = [b for b in db_user.transactions
+                   if b.transaction_type == "buy" and b.video_id == t.video_id
+                   and b.executed_at < t.executed_at]
+        if buy_txs:
+            avg_buy = sum(b.price_per_share for b in buy_txs) / len(buy_txs)
+            if avg_buy > 0:
+                pct = (t.price_per_share - avg_buy) / avg_buy * 100
+                if pct > best_pnl_pct:
+                    best_pnl_pct = pct
+                    best_trade = {
+                        "title": t.video.title if t.video else "?",
+                        "youtube_id": t.video.youtube_id if t.video else "",
+                        "pnl_pct": round(pct, 1),
+                        "pnl_abs": round((t.price_per_share - avg_buy) * t.shares, 2),
+                    }
+
     return templates.TemplateResponse(request, "portfolio.html", {
         "user": user,
         "holdings_data":  holdings_data,
@@ -127,6 +147,7 @@ async def portfolio_page(request: Request, psort: str = "value", db: Session = D
         "psort": psort,
         "net_pnl":     round(portfolio_value - 10000, 2),
         "net_pnl_pct": round((portfolio_value - 10000) / 10000 * 100, 2),
+        "best_trade":  best_trade,
         "all_achievements": ACHIEVEMENTS,
         "user_achievements": {a.achievement_id for a in db_user.achievements},
         "ach_stats": ach_stats,

@@ -24,7 +24,7 @@ router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse)
-async def home(request: Request, sort: str = "new", db: Session = Depends(get_db)):
+async def home(request: Request, sort: str = "new", cat: str = "", db: Session = Depends(get_db)):
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=302)
@@ -62,6 +62,11 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         )
         video_data.append({"video": v, "info": info, "last_stat": last,
                            "holders": holders_counts.get(v.id, 0)})
+
+    # Category filter
+    all_categories = sorted({v["video"].category for v in video_data if v["video"].category})
+    if cat:
+        video_data = [v for v in video_data if v["video"].category == cat]
 
     trending = sorted(video_data, key=lambda x: x["info"]["momentum_pct"], reverse=True)[:3]
 
@@ -208,6 +213,8 @@ async def home(request: Request, sort: str = "new", db: Session = Depends(get_db
         "season": season,
         "my_season_return": my_season_return,
         "starter_picks": starter_picks,
+        "all_categories": all_categories,
+        "active_cat": cat,
     })
 
 
@@ -269,7 +276,11 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
 
     price_history = [{"t": s.recorded_at.strftime("%d.%m %H:%M"), "p": s.price_at_time,
                       "ts": s.recorded_at.timestamp()}
-                     for s in video.stats[-90:]]
+                     for s in video.stats[-90:] if s.price_at_time]
+
+    # Detect stale price: last 3+ snapshots all at same price
+    recent_prices = [s.price_at_time for s in video.stats[-3:] if s.price_at_time]
+    price_is_stale = len(recent_prices) >= 3 and len(set(round(p, 2) for p in recent_prices)) == 1
 
     h = db.query(models.Holding).filter_by(user_id=db_user.id, video_id=video.id).first()
     holding = {"shares": h.shares, "avg_cost": h.avg_cost_basis} if h and h.shares > 0.001 else None
@@ -321,6 +332,7 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         "worst_holding": worst_holding,
         "max_slots": max_slots,
         "active_duels": active_duels,
+        "price_is_stale": price_is_stale,
         "msg": request.query_params.get("msg"),
         "err": request.query_params.get("err"),
         "xp":  request.query_params.get("xp"),
@@ -346,9 +358,13 @@ async def toggle_watchlist(request: Request, youtube_id: str, db: Session = Depe
         db.commit()
         msg = "unwatched"
     else:
+        MAX_WL = 9999 if db_user.is_premium else 15
+        wl_count = db.query(models.UserWatchlist).filter_by(user_id=db_user.id).count()
+        if wl_count >= MAX_WL:
+            return RedirectResponse(f"/video/{youtube_id}?err=watchlist_full", status_code=302)
         db.add(models.UserWatchlist(user_id=db_user.id, youtube_id=youtube_id))
         db.commit()
-        wl_count = db.query(models.UserWatchlist).filter_by(user_id=db_user.id).count()
+        wl_count += 1
         update_tasks(db_user, db, "watchlist", value=wl_count)
         msg = "watched"
     # Keep session in sync for backwards compat

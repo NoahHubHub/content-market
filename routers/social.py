@@ -169,7 +169,9 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
 async def leagues_page(request: Request, db: Session = Depends(get_db)):
     db_user = get_login(request, db)
     if not db_user:
-        return RedirectResponse("/login", status_code=302)
+        # Preserve invite code through login redirect
+        code = request.query_params.get("code", "")
+        return RedirectResponse(f"/login?next=/leagues{'?code=' + code if code else ''}", status_code=302)
     user = UserCtx(db_user)
 
     memberships = db.query(models.LeagueMember).filter_by(user_id=db_user.id).all()
