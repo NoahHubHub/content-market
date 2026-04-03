@@ -130,17 +130,16 @@ def calculate_price(
     }
 
 
-def calculate_ipo_price(view_count: int, like_count: int) -> float:
+def calculate_ipo_price(view_count: int = 0, like_count: int = 0) -> float:
     """
-    IPO price using only basic arithmetic (YouTube API policy compliant).
-    No log/sqrt/custom scoring — only division, multiplication, addition.
+    Fixed IPO price — $10.00 for every video regardless of YouTube metrics.
 
-    $1 per 100k views + like-ratio bonus up to $15, capped $5–$100.
+    YouTube API policy requires that no custom score is derived from API data.
+    A uniform starting price ensures zero dependency on YouTube metrics for
+    price determination. All subsequent price movement is driven exclusively
+    by in-app buy/sell trading activity.
     """
-    base = view_count / 100_000
-    like_bonus = (like_count / max(view_count, 1)) * 15
-    price = base + like_bonus
-    return round(max(5.0, min(100.0, price)), 2)
+    return 10.0
 
 
 def calculate_display_stats(view_count: int, published_at) -> dict:
