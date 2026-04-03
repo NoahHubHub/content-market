@@ -9,7 +9,7 @@ from database import get_db
 from helpers import (
     get_login, upsert_leaderboard, calc_total_portfolio_value, record_port_snap,
     log_league_activity, check_achievements, update_tasks, get_todays_drops,
-    get_max_portfolio_slots,
+    get_max_portfolio_slots, record_price_snap,
     XP_BUY, XP_SELL_PROFIT, XP_SELL_LOSS,
 )
 
@@ -61,6 +61,12 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
         user_id=db_user.id, video_id=video.id, transaction_type="buy",
         shares=shares, price_per_share=video.current_price, total_amount=total_cost,
     ))
+
+    # Market price impact: demand drives price up (+0.5% per share, max +20%)
+    impact = min(shares * 0.005, 0.20)
+    video.current_price = round(max(1.0, video.current_price * (1 + impact)), 2)
+    record_price_snap(db, video)
+
     db.commit()
     db.refresh(db_user)
 
@@ -113,6 +119,11 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
         user_id=db_user.id, video_id=video.id, transaction_type="sell",
         shares=shares, price_per_share=video.current_price, total_amount=revenue,
     ))
+
+    # Market price impact: supply drives price down (-0.4% per share, max -15%)
+    impact = min(shares * 0.004, 0.15)
+    video.current_price = round(max(1.0, video.current_price * (1 - impact)), 2)
+    record_price_snap(db, video)
 
     profit    = video.current_price >= avg_cost
     xp_gained = XP_SELL_PROFIT if profit else XP_SELL_LOSS
@@ -175,6 +186,11 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
         user_id=db_user.id, video_id=drop.video_id, transaction_type="buy",
         shares=shares, price_per_share=drop.video.current_price, total_amount=total_cost,
     ))
+    # Market price impact on daily drop purchase
+    impact = min(shares * 0.005, 0.20)
+    drop.video.current_price = round(max(1.0, drop.video.current_price * (1 + impact)), 2)
+    record_price_snap(db, drop.video)
+
     db_user.xp = (db_user.xp or 0) + XP_BUY + 5
     log_league_activity(db, db_user, "buy", drop.video, shares, drop.video.current_price)
     db.commit()

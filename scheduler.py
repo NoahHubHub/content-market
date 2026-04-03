@@ -297,6 +297,22 @@ def refresh_leaderboard():
         db.close()
 
 
+def cleanup_old_stats():
+    """Deletes VideoStats older than 30 days (YouTube API data retention policy)."""
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    db = SessionLocal()
+    try:
+        deleted = db.query(models.VideoStats).filter(
+            models.VideoStats.recorded_at < cutoff
+        ).delete()
+        db.commit()
+        if deleted:
+            print(f"[cleanup] Removed {deleted} VideoStats entries older than 30 days", flush=True)
+    finally:
+        db.close()
+
+
 # ── start ──────────────────────────────────────────────────────────────────────
 
 scheduler = BackgroundScheduler()
@@ -306,4 +322,5 @@ scheduler.add_job(seed_market,         "cron", hour=3,  minute=0)
 scheduler.add_job(resolve_hot_takes,   "cron", hour=7,  minute=0)
 scheduler.add_job(refresh_leaderboard, "cron", hour=8,  minute=0)
 scheduler.add_job(end_season,          "cron", day_of_week="mon", hour=0, minute=10)
+scheduler.add_job(cleanup_old_stats,   "cron", hour=4,  minute=0)
 scheduler.start()

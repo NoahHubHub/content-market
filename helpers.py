@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import models
 from database import SessionLocal
 from models import get_level_info, ACHIEVEMENTS, generate_tasks_for_level
-from pricing import calculate_price
+from pricing import calculate_price, calculate_ipo_price
 from youtube import get_video_details
 
 # ── XP rewards ─────────────────────────────────────────────────────────────────
@@ -103,43 +103,51 @@ def get_channel_videos(db: Session, channel_id: str, exclude_youtube_id: str) ->
 
 def upsert_video(db: Session, yt: dict) -> models.Video:
     video = db.query(models.Video).filter(models.Video.youtube_id == yt["youtube_id"]).first()
-    channel_vids = get_channel_videos(db, yt.get("channel_id", ""), yt["youtube_id"])
-    price_data = calculate_price(
-        view_count=yt["view_count"], like_count=yt["like_count"],
-        comment_count=yt["comment_count"], published_at=yt["published_at"],
-        channel_videos=channel_vids,
-    )
     if not video:
         is_ipo = (
             yt["published_at"] is not None and
             (datetime.utcnow() - yt["published_at"]).total_seconds() < 86400
         )
+        # IPO price: simple arithmetic only (YouTube API policy compliant — no custom scoring)
+        ipo_price = calculate_ipo_price(yt["view_count"], yt["like_count"])
         video = models.Video(
             youtube_id=yt["youtube_id"], title=yt["title"],
             channel_name=yt["channel_name"], channel_id=yt.get("channel_id", ""),
             thumbnail_url=yt["thumbnail_url"], published_at=yt["published_at"],
-            current_price=price_data["price"],
+            current_price=ipo_price,
             is_ipo=is_ipo,
             category=yt.get("category"),
         )
         db.add(video)
         db.flush()
     else:
+        # Only update display metadata — price moves via buy/sell market mechanics
         video.title         = yt["title"]
         video.channel_name  = yt["channel_name"]
         video.channel_id    = yt.get("channel_id", "")
         video.thumbnail_url = yt["thumbnail_url"]
-        video.current_price = price_data["price"]
         video.last_updated  = datetime.utcnow()
         if yt.get("category"):
             video.category = yt["category"]
     db.add(models.VideoStats(
         video_id=video.id, view_count=yt["view_count"], like_count=yt["like_count"],
-        comment_count=yt["comment_count"], price_at_time=price_data["price"],
+        comment_count=yt["comment_count"], price_at_time=video.current_price,
     ))
     db.commit()
     db.refresh(video)
     return video
+
+
+def record_price_snap(db: Session, video: models.Video):
+    """Writes the current market price to VideoStats so the chart reflects trades."""
+    last = video.stats[-1] if video.stats else None
+    db.add(models.VideoStats(
+        video_id=video.id,
+        view_count=last.view_count if last else 0,
+        like_count=last.like_count if last else 0,
+        comment_count=last.comment_count if last else 0,
+        price_at_time=video.current_price,
+    ))
 
 
 # ── portfolio helpers ──────────────────────────────────────────────────────────

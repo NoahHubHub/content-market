@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+import models
 from database import get_db
 from deps import templates
 from helpers import get_login, hash_pw, verify_pw, UserCtx
@@ -108,3 +109,26 @@ async def comeback_reset(request: Request, db: Session = Depends(get_db)):
     db.add(models.UserAchievement(user_id=db_user.id, achievement_id=RESET_FLAG))
     db.commit()
     return RedirectResponse("/portfolio?msg=comeback", status_code=303)
+
+
+@router.post("/account/delete")
+async def delete_account(request: Request, db: Session = Depends(get_db)):
+    """Permanently deletes the user account and all associated data."""
+    from sqlalchemy import or_
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=303)
+    db.query(models.UserTask).filter_by(user_id=db_user.id).delete()
+    db.query(models.UserAchievement).filter_by(user_id=db_user.id).delete()
+    db.query(models.HotTake).filter_by(user_id=db_user.id).delete()
+    db.query(models.Holding).filter_by(user_id=db_user.id).delete()
+    db.query(models.Transaction).filter_by(user_id=db_user.id).delete()
+    db.query(models.LeaderboardEntry).filter_by(username=db_user.username).delete()
+    db.query(models.SeasonEntry).filter_by(username=db_user.username).delete()
+    db.query(models.Duel).filter(
+        or_(models.Duel.challenger_id == db_user.id, models.Duel.opponent_id == db_user.id)
+    ).delete(synchronize_session=False)
+    db.delete(db_user)
+    db.commit()
+    request.session.clear()
+    return RedirectResponse("/login", status_code=303)
