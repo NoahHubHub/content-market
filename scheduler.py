@@ -11,7 +11,7 @@ from helpers import (
     upsert_video, calc_total_portfolio_value, upsert_leaderboard,
     get_channel_videos,
 )
-from pricing import calculate_price
+from pricing import calculate_price  # used only in auto_refresh_prices for internal price snap
 from youtube import get_video_details, get_trending_videos
 
 
@@ -181,23 +181,11 @@ def generate_daily_drop():
             if v.channel_id:
                 channel_map[v.channel_id].append(v)
 
-        scored = []
-        for v in videos:
-            if not v.stats:
-                continue
-            last = v.stats[-1]
-            prev = v.stats[-2].view_count if len(v.stats) >= 2 else None
-            channel_vids = [
-                (other.stats[-1].view_count, other.published_at)
-                for other in channel_map[v.channel_id]
-                if other.youtube_id != v.youtube_id and other.stats and other.stats[-1].view_count > 0
-            ]
-            info = calculate_price(
-                last.view_count, last.like_count, last.comment_count, v.published_at,
-                channel_videos=channel_vids, prev_view_count=prev,
-            )
-            scored.append((info["momentum_pct"], v))
-
+        # Select by raw view count — simple comparison, no derived scoring
+        scored = [
+            (v.stats[-1].view_count, v)
+            for v in videos if v.stats
+        ]
         scored.sort(key=lambda x: x[0], reverse=True)
         for video in [v for _, v in scored[:5]]:
             db.add(models.DailyDrop(

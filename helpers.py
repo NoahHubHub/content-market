@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import models
 from database import SessionLocal
 from models import get_level_info, ACHIEVEMENTS, generate_tasks_for_level
-from pricing import calculate_price, calculate_ipo_price
+from pricing import calculate_price, calculate_ipo_price, calculate_display_stats
 from youtube import get_video_details
 
 # ── XP rewards ─────────────────────────────────────────────────────────────────
@@ -377,6 +377,19 @@ def check_achievements(db_user: models.User, db: Session) -> list:
 
 # ── game helpers ───────────────────────────────────────────────────────────────
 
+def compute_price_change_pct(video: models.Video) -> float:
+    """
+    Price change % based purely on in-app trading history.
+    Uses VideoStats.price_at_time — no YouTube API data involved.
+    """
+    if not video.stats or len(video.stats) < 2:
+        return 0.0
+    first_price = video.stats[0].price_at_time
+    if not first_price or first_price <= 0:
+        return 0.0
+    return round((video.current_price - first_price) / first_price * 100, 1)
+
+
 def get_todays_drops(db: Session) -> list:
     today = datetime.utcnow().strftime("%Y-%m-%d")
     drops = db.query(models.DailyDrop).filter_by(date=today).all()
@@ -385,13 +398,13 @@ def get_todays_drops(db: Session) -> list:
         if not drop.video or not drop.video.stats:
             continue
         last = drop.video.stats[-1]
-        prev = drop.video.stats[-2].view_count if len(drop.video.stats) >= 2 else None
-        channel_vids = get_channel_videos(db, drop.video.channel_id or "", drop.video.youtube_id)
-        info = calculate_price(
-            last.view_count, last.like_count, last.comment_count, drop.video.published_at,
-            channel_videos=channel_vids, prev_view_count=prev,
-        )
-        result.append({"drop": drop, "video": drop.video, "info": info})
+        info = calculate_display_stats(last.view_count, drop.video.published_at)
+        result.append({
+            "drop": drop,
+            "video": drop.video,
+            "info": info,
+            "price_change_pct": compute_price_change_pct(drop.video),
+        })
     return result
 
 
@@ -464,12 +477,12 @@ def get_market_feed(db: Session, limit: int = 10) -> list:
 
 
 def get_hidden_gems(video_data: list) -> list:
-    """Videos mit hohem Momentum aber wenigen Investoren — Hidden Gems."""
+    """Videos with low price and few investors — discovered by the community."""
     gems = [
         item for item in video_data
-        if item["info"].get("momentum_pct", 0) >= 8 and item.get("holders", 0) <= 2
+        if item["video"].current_price <= 15.0 and item.get("holders", 0) <= 2
     ]
-    gems.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
+    gems.sort(key=lambda x: x["video"].current_price)
     return gems[:3]
 
 

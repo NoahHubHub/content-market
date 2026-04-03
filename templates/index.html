@@ -451,7 +451,7 @@
         {{ v.title[:28] }}{% if v.title|length > 28 %}…{% endif %}
       </div>
       <div style="font-size:.78rem;font-weight:700;color:#30d158;">
-        ▲ {{ info.momentum_pct | abs }}%
+        ▲ {{ item.price_change_pct | abs }}%
       </div>
       <div style="font-size:.68rem;color:#556070;margin-top:2px;">
         {{ item.holders }} Investor{{ "en" if item.holders != 1 else "" }}
@@ -503,10 +503,10 @@
                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;">
         {{ v.title[:28] }}{% if v.title|length > 28 %}…{% endif %}
       </div>
-      <div style="font-size:.8rem;font-weight:700;" class="{{ 'flash-up' if info.momentum_pct >= 0 else 'flash-down' }}">${{ "%.2f"|format(v.current_price) }}</div>
-      <div style="font-size:.72rem;font-weight:700;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
-        {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
-        {{ info.momentum_pct | abs }}%
+      <div style="font-size:.8rem;font-weight:700;" class="{{ 'flash-up' if item.price_change_pct >= 0 else 'flash-down' }}">${{ "%.2f"|format(v.current_price) }}</div>
+      <div style="font-size:.72rem;font-weight:700;{% if item.price_change_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
+        {% if item.price_change_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ item.price_change_pct | abs }}%
       </div>
     </a>
     {% endfor %}
@@ -555,8 +555,8 @@
         <div style="font-size:.75rem;color:#C9C1B1;margin-top:2px;">{{ v.channel_name }}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
           <span style="font-size:.88rem;font-weight:700;">${{ "%.2f"|format(v.current_price) }}</span>
-          <span class="{% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}" style="font-size:.78rem;">
-            {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}{{ info.momentum_pct | abs }}%
+          <span class="{% if item.price_change_pct >= 0 %}tr-up{% else %}tr-down{% endif %}" style="font-size:.78rem;">
+            {% if item.price_change_pct >= 0 %}▲{% else %}▼{% endif %}{{ item.price_change_pct | abs }}%
           </span>
         </div>
       </div>
@@ -624,14 +624,14 @@
           <div class="tr-row-sub">
             {{ v.channel_name }}
             &nbsp;·&nbsp;
-            <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+            
           </div>
         </div>
         <div class="tr-row-right">
           <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
-          <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
-            {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
-            {{ info.momentum_pct | abs | round(1) }}%
+          <div class="tr-row-pnl {% if item.price_change_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+            {% if item.price_change_pct >= 0 %}▲{% else %}▼{% endif %}
+            {{ item.price_change_pct | abs | round(1) }}%
           </div>
         </div>
       </a>
@@ -690,7 +690,7 @@
       </div>
       <div style="font-size:.82rem;font-weight:700;color:#FFB162;">${{ "%.2f"|format(v.current_price) }}</div>
       <div style="font-size:.72rem;font-weight:700;color:#4CAF82;">
-        ▲ {{ info.momentum_pct | abs | round(1) }}%
+        ▲ {{ item.price_change_pct | abs | round(1) }}%
       </div>
     </a>
     {% endfor %}
@@ -721,7 +721,7 @@
 <!-- Sort controls -->
 {% if video_data %}
 <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;">
-  {% for s, label in [("new", "Neu"), ("momentum", "Momentum"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑"), ("risk_low", "🟢 Low Risk"), ("risk_high", "🔴 High Risk")] %}
+  {% for s, label in [("new", "Neu"), ("views", "Meist gesehen"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑")] %}
   <a href="/?sort={{ s }}{% if active_cat %}&cat={{ active_cat | urlencode }}{% endif %}"
      style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;
             text-decoration:none;transition:all .15s;
@@ -754,18 +754,18 @@
       <div class="tr-row-sub">
         {{ v.channel_name }}
         &nbsp;·&nbsp;
-        <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
+        
         {% if item.holders > 0 %}&nbsp;<span style="color:#556070;">· {{ item.holders }} Investor{{ "en" if item.holders != 1 else "" }}</span>{% endif %}
         {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,177,98,.2);color:#FFB162;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
-        {% if info.momentum_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
+        {% if item.price_change_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
       </div>
     </div>
     <div class="tr-row-right">
-      <div class="tr-row-price {{ 'flash-up' if info.momentum_pct >= 0 else 'flash-down' }}"
+      <div class="tr-row-price {{ 'flash-up' if item.price_change_pct >= 0 else 'flash-down' }}"
            style="padding:3px 6px;margin:-3px -6px;">${{ "%.2f"|format(v.current_price) }}</div>
-      <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
-        {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
-        {{ info.momentum_pct | abs | round(1) }}%
+      <div class="tr-row-pnl {% if item.price_change_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+        {% if item.price_change_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ item.price_change_pct | abs | round(1) }}%
       </div>
     </div>
   </a>

@@ -174,22 +174,10 @@
   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
     <span id="priceDisplay" style="font-size:2.4rem;font-weight:700;"
           data-price="{{ video.current_price }}">$—</span>
-    {% if info.momentum_pct >= 0 %}
-    <span class="tr-up" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▲ {{ info.momentum_pct }}%</span>
+    {% if price_change_pct >= 0 %}
+    <span class="tr-up" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▲ {{ price_change_pct }}%</span>
     {% else %}
-    <span class="tr-down" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▼ {{ info.momentum_pct | abs }}%</span>
-    {% endif %}
-    <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
-    {% if info.rps >= 2.0 %}
-    <span style="font-size:.78rem;font-weight:700;color:#30d158;animation:fade-in .4s .35s both;">● Bullish</span>
-    {% elif info.rps >= 1.2 %}
-    <span style="font-size:.78rem;font-weight:700;color:#56d364;animation:fade-in .4s .35s both;">● Leicht bullish</span>
-    {% elif info.rps >= 0.8 %}
-    <span style="font-size:.78rem;font-weight:700;color:#555;animation:fade-in .4s .35s both;">● Neutral</span>
-    {% elif info.rps >= 0.5 %}
-    <span style="font-size:.78rem;font-weight:700;color:#ff9f0a;animation:fade-in .4s .35s both;">● Schwächelnd</span>
-    {% else %}
-    <span style="font-size:.78rem;font-weight:700;color:#ff453a;animation:fade-in .4s .35s both;">● Bearish</span>
+    <span class="tr-down" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▼ {{ price_change_pct | abs }}%</span>
     {% endif %}
   </div>
 </div>
@@ -258,41 +246,39 @@
     <div style="font-size:.65rem;color:#555;margin-bottom:2px;">LIKES</div>
     <div style="font-weight:700;font-size:.9rem;">{{ last_stat.like_count | fmt }}</div>
   </div>
-  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;cursor:pointer;"
-       onclick="showMetricTooltip('vpd')">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">VIEWS/TAG <span style="color:#FFB162;">?</span></div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">VIEWS/TAG</div>
     <div style="font-weight:700;font-size:.9rem;">{{ info.views_per_day | int | fmt }}</div>
   </div>
-  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;cursor:pointer;"
-       onclick="showMetricTooltip('rps')">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">RPS <span style="color:#FFB162;">?</span></div>
-    <div style="font-weight:700;font-size:.9rem;{% if info.rps >= 1 %}color:#30d158{% else %}color:#ff453a{% endif %}">
-      {{ "%.2f"|format(info.rps) }}×
-    </div>
+  <div style="flex:1;padding:12px 0;text-align:center;border-right:1px solid #111;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">INVESTOR</div>
+    <div style="font-weight:700;font-size:.9rem;">{{ holders_count }}</div>
   </div>
-  <div style="flex:1;padding:12px 0;text-align:center;cursor:pointer;"
-       onclick="showMetricTooltip('momentum')">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">TREND <span style="color:#FFB162;">?</span></div>
-    <div style="font-weight:700;font-size:.9rem;{% if info.momentum_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %};">
-      {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}{{ info.momentum_pct | abs }}%
+  <div style="flex:1;padding:12px 0;text-align:center;">
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">KURSÄNDERUNG</div>
+    <div style="font-weight:700;font-size:.9rem;{% if price_change_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %};">
+      {% if price_change_pct >= 0 %}▲{% else %}▼{% endif %}{{ price_change_pct | abs }}%
     </div>
   </div>
 </div>
 {% endif %}
 
-<!-- Sell signal: strong negative momentum while holding -->
-{% if holding and holding.shares > 0 and info.momentum_pct <= -20 %}
+<!-- Sell signal: price dropped significantly since entry -->
+{% if holding and holding.shares > 0 %}
+{% set pnl_check = (video.current_price - holding.avg_cost) / holding.avg_cost * 100 %}
+{% if pnl_check <= -20 %}
 <div style="background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.3);
             border-radius:12px;padding:12px 14px;margin-bottom:14px;
             display:flex;align-items:center;gap:10px;">
   <span style="font-size:1.2rem;flex-shrink:0;">⚠️</span>
   <div>
-    <div style="font-size:.82rem;font-weight:700;color:#ff9f0a;">Momentum stark negativ ({{ info.momentum_pct | round(1) }}%)</div>
+    <div style="font-size:.82rem;font-weight:700;color:#ff9f0a;">Position im Minus ({{ pnl_check | round(1) }}%)</div>
     <div style="font-size:.72rem;color:#8A9BAD;margin-top:2px;">
-      Das Video verliert Views-Velocity. Überlege ob du verkaufen willst.
+      Der Marktpreis liegt deutlich unter deinem Einstieg.
     </div>
   </div>
 </div>
+{% endif %}
 {% endif %}
 
 <!-- Holding info -->
@@ -609,32 +595,7 @@
   })();
 
   // ── Metrik-Tooltips ────────────────────────────────────────
-  const METRIC_INFO = {
-    rps: {
-      title: "RPS — Relative Performance Score",
-      body: `<p style="margin:0 0 10px;line-height:1.5;">Vergleicht dieses Video mit dem Kanal-Durchschnitt.</p>
-             <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.83rem;">
-               <span style="color:#30d158;font-weight:700;">≥ 2.0×</span><span>Bullish — übertrifft stark</span>
-               <span style="color:#56d364;font-weight:700;">1.2–2.0×</span><span>Leicht bullish</span>
-               <span style="color:#555;font-weight:700;">0.8–1.2×</span><span>Neutral — wie erwartet</span>
-               <span style="color:#ff9f0a;font-weight:700;">0.5–0.8×</span><span>Schwächelnd</span>
-               <span style="color:#ff453a;font-weight:700;">&lt; 0.5×</span><span>Bearish — deutlich schwächer</span>
-             </div>`,
-    },
-    vpd: {
-      title: "Views pro Tag",
-      body: `<p style="margin:0;line-height:1.5;">Durchschnittliche tägliche Aufrufe seit Veröffentlichung.<br>
-             Ein steigender Wert bedeutet: das Video gewinnt gerade Momentum.<br>
-             <span style="color:#FFB162;">Hohe Views/Tag → Hoher Kurs.</span></p>`,
-    },
-    momentum: {
-      title: "Momentum / Trend",
-      body: `<p style="margin:0;line-height:1.5;">Misst ob das Video gerade <strong>schneller oder langsamer</strong> wächst als bisher.<br><br>
-             Berechnung: 40% Recent Velocity + 60% kumulativer Durchschnitt.<br><br>
-             <span style="color:#30d158;">▲ Positiv</span> = Video gewinnt gerade Views schneller als üblich.<br>
-             <span style="color:#ff453a;">▼ Negativ</span> = Verlangsamung — Kurs könnte fallen.</p>`,
-    },
-  };
+  const METRIC_INFO = {};
 
   function showMetricTooltip(key) {
     const info = METRIC_INFO[key];

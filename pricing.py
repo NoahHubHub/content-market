@@ -141,3 +141,16 @@ def calculate_ipo_price(view_count: int, like_count: int) -> float:
     like_bonus = (like_count / max(view_count, 1)) * 15
     price = base + like_bonus
     return round(max(5.0, min(100.0, price)), 2)
+
+
+def calculate_display_stats(view_count: int, published_at) -> dict:
+    """
+    Returns ONLY simple-arithmetic display stats (YouTube API policy compliant).
+    No derived scores, no comparisons, no custom metrics.
+    Allowed operations: division only.
+    """
+    now = datetime.utcnow()
+    days_old = max((now - published_at).days, 1) if published_at else 30
+    return {
+        "views_per_day": round(view_count / days_old, 0),
+    }

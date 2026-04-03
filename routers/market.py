@@ -14,10 +14,11 @@ from helpers import (
     ensure_tasks, update_tasks, calc_total_portfolio_value, get_user_leagues_preview,
     get_market_feed, get_hidden_gems, sync_watchlist_to_db,
     get_user_active_duels, get_max_portfolio_slots, get_or_create_season,
+    compute_price_change_pct,
     XP_DAILY_LOGIN, STREAK_BONUS,
 )
 from models import ACHIEVEMENTS
-from pricing import calculate_price
+from pricing import calculate_display_stats
 from youtube import extract_video_id, get_video_by_id, search_videos
 
 router = APIRouter()
@@ -50,37 +51,29 @@ async def home(request: Request, sort: str = "new", cat: str = "", db: Session =
         if not v.stats:
             continue
         last = v.stats[-1]
-        prev = v.stats[-2].view_count if len(v.stats) >= 2 else None
-        channel_vids = [
-            (other.stats[-1].view_count, other.published_at)
-            for other in channel_map[v.channel_id]
-            if other.youtube_id != v.youtube_id and other.stats and other.stats[-1].view_count > 0
-        ]
-        info = calculate_price(
-            last.view_count, last.like_count, last.comment_count, v.published_at,
-            channel_videos=channel_vids, prev_view_count=prev,
-        )
-        video_data.append({"video": v, "info": info, "last_stat": last,
-                           "holders": holders_counts.get(v.id, 0)})
+        info = calculate_display_stats(last.view_count, v.published_at)
+        video_data.append({
+            "video": v,
+            "info": info,
+            "last_stat": last,
+            "holders": holders_counts.get(v.id, 0),
+            "price_change_pct": compute_price_change_pct(v),
+        })
 
     # Category filter
     all_categories = sorted({v["video"].category for v in video_data if v["video"].category})
     if cat:
         video_data = [v for v in video_data if v["video"].category == cat]
 
-    trending = sorted(video_data, key=lambda x: x["info"]["momentum_pct"], reverse=True)[:3]
+    # Trending = most viewed (raw view count — simple comparison, no derived score)
+    trending = sorted(video_data, key=lambda x: x["last_stat"].view_count, reverse=True)[:3]
 
-    RISK_ORDER = {"Low": 0, "Medium": 1, "High": 2, "Extreme": 3}
     if sort == "price_asc":
         video_data.sort(key=lambda x: x["video"].current_price)
     elif sort == "price_desc":
         video_data.sort(key=lambda x: x["video"].current_price, reverse=True)
-    elif sort == "momentum":
-        video_data.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
-    elif sort == "risk_low":
-        video_data.sort(key=lambda x: RISK_ORDER.get(x["info"]["risk"], 3))
-    elif sort == "risk_high":
-        video_data.sort(key=lambda x: RISK_ORDER.get(x["info"]["risk"], 3), reverse=True)
+    elif sort == "views":
+        video_data.sort(key=lambda x: x["last_stat"].view_count, reverse=True)
 
     portfolio_ids = set(get_portfolio(db_user).keys())
 
@@ -103,13 +96,12 @@ async def home(request: Request, sort: str = "new", cat: str = "", db: Session =
         wv = db.query(models.Video).filter(models.Video.youtube_id == yt_id).first()
         if wv and wv.stats:
             wlast = wv.stats[-1]
-            wchannel_vids = get_channel_videos(db, wv.channel_id or "", wv.youtube_id)
-            wprev = wv.stats[-2].view_count if len(wv.stats) >= 2 else None
-            winfo = calculate_price(
-                wlast.view_count, wlast.like_count, wlast.comment_count, wv.published_at,
-                channel_videos=wchannel_vids, prev_view_count=wprev,
-            )
-            watchlist_data.append({"video": wv, "info": winfo})
+            winfo = calculate_display_stats(wlast.view_count, wv.published_at)
+            watchlist_data.append({
+                "video": wv,
+                "info": winfo,
+                "price_change_pct": compute_price_change_pct(wv),
+            })
 
     streak_bonus = 0
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -185,15 +177,14 @@ async def home(request: Request, sort: str = "new", cat: str = "", db: Session =
         my_val = calc_total_portfolio_value(db_user)
         my_season_return = round((my_val - season_entry.start_value) / max(season_entry.start_value, 1) * 100, 2)
 
-    # Starter picks for new players: low price + positive momentum + few investors
+    # Starter picks: lowest priced videos with few holders (in-app data only)
     starter_picks = []
     if user.holdings_count == 0:
         candidates = [
             item for item in video_data
-            if item["video"].current_price <= 60
-            and item["info"].get("momentum_pct", 0) > 3
+            if item["video"].current_price <= 15.0 and item["holders"] <= 3
         ]
-        candidates.sort(key=lambda x: x["info"]["momentum_pct"], reverse=True)
+        candidates.sort(key=lambda x: x["video"].current_price)
         starter_picks = candidates[:3]
 
     return templates.TemplateResponse(request, "index.html", {
@@ -243,12 +234,13 @@ async def search_page(request: Request, q: str = "", db: Session = Depends(get_d
             yt_list = get_video_by_id(vid) if (len(vid) == 11 and " " not in q) else search_videos(q)
             for yt in yt_list:
                 video = upsert_video(db, yt)
-                channel_vids = get_channel_videos(db, yt.get("channel_id", ""), yt["youtube_id"])
-                info = calculate_price(
-                    yt["view_count"], yt["like_count"], yt["comment_count"], yt["published_at"],
-                    channel_videos=channel_vids,
-                )
-                results.append({"video": video, "yt": yt, "info": info})
+                info = calculate_display_stats(yt["view_count"], yt["published_at"])
+                results.append({
+                    "video": video,
+                    "yt": yt,
+                    "info": info,
+                    "price_change_pct": compute_price_change_pct(video),
+                })
         except Exception as e:
             error = str(e)
 
@@ -277,11 +269,8 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
         user = UserCtx(db_user)
 
     last = video.stats[-1] if video.stats else None
-    channel_vids = get_channel_videos(db, video.channel_id or "", video.youtube_id)
-    info = calculate_price(last.view_count, last.like_count, last.comment_count,
-                           video.published_at, channel_videos=channel_vids) if last \
-        else {"risk": "Unknown", "risk_color": "secondary", "momentum_pct": 0,
-              "views_per_day": 0, "rps": 1.0}
+    info = calculate_display_stats(last.view_count, video.published_at) if last \
+        else {"views_per_day": 0}
 
     price_history = [{"t": s.recorded_at.strftime("%d.%m %H:%M"), "p": s.price_at_time,
                       "ts": s.recorded_at.timestamp()}
@@ -336,6 +325,7 @@ async def video_detail(request: Request, youtube_id: str, db: Session = Depends(
     return templates.TemplateResponse(request, "video.html", {
         "user": user, "video": video,
         "last_stat": last, "info": info, "price_history": price_history,
+        "price_change_pct": compute_price_change_pct(video),
         "holding": holding, "holders_count": holders_count,
         "related": related, "is_watching": is_watching,
         "worst_holding": worst_holding,
@@ -437,12 +427,12 @@ async def channel_page(request: Request, channel_id: str, db: Session = Depends(
         if not v.stats:
             continue
         last = v.stats[-1]
-        prev = v.stats[-2].view_count if len(v.stats) >= 2 else None
-        info = calculate_price(
-            last.view_count, last.like_count, last.comment_count, v.published_at,
-            prev_view_count=prev,
-        )
-        video_data.append({"video": v, "info": info})
+        info = calculate_display_stats(last.view_count, v.published_at)
+        video_data.append({
+            "video": v,
+            "info": info,
+            "price_change_pct": compute_price_change_pct(v),
+        })
 
     return templates.TemplateResponse(request, "channel.html", {
         "user": user,

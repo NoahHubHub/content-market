@@ -31,15 +31,15 @@
     <div class="tr-row-body">
       <div class="tr-row-title">{{ v.title[:52] }}{% if v.title|length > 52 %}…{% endif %}</div>
       <div class="tr-row-sub">
-        <span class="tr-risk tr-risk-{{ info.risk_color }}">{{ info.risk }}</span>
-        {% if info.momentum_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
+        
+        {% if item.price_change_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
       </div>
     </div>
     <div class="tr-row-right">
       <div class="tr-row-price">${{ "%.2f"|format(v.current_price) }}</div>
-      <div class="tr-row-pnl {% if info.momentum_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
-        {% if info.momentum_pct >= 0 %}▲{% else %}▼{% endif %}
-        {{ info.momentum_pct | abs | round(1) }}%
+      <div class="tr-row-pnl {% if item.price_change_pct >= 0 %}tr-up{% else %}tr-down{% endif %}">
+        {% if item.price_change_pct >= 0 %}▲{% else %}▼{% endif %}
+        {{ item.price_change_pct | abs | round(1) }}%
       </div>
     </div>
   </a>
