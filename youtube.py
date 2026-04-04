@@ -9,9 +9,23 @@ load_dotenv()
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
+# ── Singleton API client ───────────────────────────────────────────────────────
+# build() fetches the discovery document over HTTP — only do it once per process.
+_yt_client = None
+
+def _client():
+    global _yt_client
+    if _yt_client is None:
+        _yt_client = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
+    return _yt_client
+
+
 # ── In-memory cache ────────────────────────────────────────────────────────────
+# Single namespace for all video data (full or stats-only).
+# Eviction runs automatically when the cache exceeds 500 entries.
 _CACHE: dict = {}
-_CACHE_TTL = 1800  # 30 minutes
+_CACHE_TTL = 1800   # 30 minutes
+_CACHE_MAX = 500    # max entries before eviction
 
 
 def _cache_get(key: str):
@@ -22,11 +36,17 @@ def _cache_get(key: str):
 
 
 def _cache_set(key: str, value):
+    if len(_CACHE) >= _CACHE_MAX:
+        # Evict all expired entries; if still over limit, remove oldest 20%
+        now = time()
+        expired = [k for k, (_, ts) in _CACHE.items() if now - ts >= _CACHE_TTL]
+        for k in expired:
+            del _CACHE[k]
+        if len(_CACHE) >= _CACHE_MAX:
+            oldest = sorted(_CACHE.items(), key=lambda x: x[1][1])
+            for k, _ in oldest[:_CACHE_MAX // 5]:
+                del _CACHE[k]
     _CACHE[key] = (value, time())
-
-
-def _client():
-    return build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
 
 def extract_video_id(url_or_id: str) -> str:
@@ -82,12 +102,12 @@ CATEGORY_MAP = {
 
 
 def get_video_details(video_ids: list) -> list:
-    """Fetch stats for up to 50 video IDs. Costs 1 quota unit per call.
-    Results are cached for 30 minutes to minimise quota usage."""
+    """Fetch snippet + statistics for up to 50 video IDs. Costs 1 quota unit per batch.
+    Results are cached for 30 minutes. Uses the unified cache — so if get_stats_only
+    already fetched a video, the stats portion is returned from cache without an API call."""
     if not video_ids:
         return []
 
-    # Split into cached and uncached IDs
     cached_results = []
     uncached_ids = []
     for vid in video_ids:
@@ -100,9 +120,8 @@ def get_video_details(video_ids: list) -> list:
     if not uncached_ids:
         return cached_results
 
-    yt = _client()
     response = (
-        yt.videos()
+        _client().videos()
         .list(id=",".join(uncached_ids), part="statistics,snippet")
         .execute()
     )
@@ -125,9 +144,8 @@ def search_videos(query: str, max_results: int = 8) -> list:
     if hit is not None:
         return hit
 
-    yt = _client()
     search_response = (
-        yt.search()
+        _client().search()
         .list(q=query, type="video", part="id", maxResults=max_results)
         .execute()
     )
@@ -138,27 +156,35 @@ def search_videos(query: str, max_results: int = 8) -> list:
 
 
 def get_stats_only(video_ids: list) -> list:
-    """Fetch ONLY statistics for known videos (no snippet). Costs 1 quota unit.
-    Used for periodic price refreshes where metadata already exists in DB.
-    Cached 30 min like get_video_details."""
+    """Fetch ONLY statistics for known videos (no snippet). Costs 1 quota unit per batch.
+    Used by the scheduler for periodic refreshes where metadata already exists in DB.
+
+    Cross-checks the full-data cache (vid:) first so a prior get_video_details call
+    avoids a redundant API hit."""
     if not video_ids:
         return []
 
     cached_results = []
     uncached_ids = []
     for vid in video_ids:
-        hit = _cache_get(f"stats:{vid}")
+        # Check stats-only cache first, then fall back to full-data cache
+        hit = _cache_get(f"stats:{vid}") or _cache_get(f"vid:{vid}")
         if hit is not None:
-            cached_results.append(hit)
+            # Normalise to stats-only shape if needed
+            cached_results.append({
+                "youtube_id": hit["youtube_id"],
+                "view_count": hit["view_count"],
+                "like_count": hit["like_count"],
+                "comment_count": hit["comment_count"],
+            })
         else:
             uncached_ids.append(vid)
 
     if not uncached_ids:
         return cached_results
 
-    yt = _client()
     response = (
-        yt.videos()
+        _client().videos()
         .list(id=",".join(uncached_ids), part="statistics")
         .execute()
     )
@@ -177,17 +203,15 @@ def get_stats_only(video_ids: list) -> list:
     return cached_results + fresh
 
 
-
 def get_trending_videos(region: str = "DE", max_results: int = 20) -> list:
-    """Fetch trending/most popular videos. Costs 1 quota unit. Cached 30 min."""
+    """Fetch trending/most popular videos. Costs 1 quota unit per call. Cached 30 min."""
     cache_key = f"trending:{region}:{max_results}"
     hit = _cache_get(cache_key)
     if hit is not None:
         return hit
 
-    yt = _client()
     response = (
-        yt.videos()
+        _client().videos()
         .list(chart="mostPopular", regionCode=region,
               part="statistics,snippet", maxResults=max_results)
         .execute()
