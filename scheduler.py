@@ -12,7 +12,7 @@ from helpers import (
     get_channel_videos,
 )
 from pricing import calculate_price  # used only in auto_refresh_prices for internal price snap
-from youtube import get_video_details, get_trending_videos
+from youtube import get_video_details, get_stats_only, get_trending_videos
 
 
 def migrate():
@@ -76,22 +76,36 @@ def _backfill_categories():
 # ── scheduled jobs ─────────────────────────────────────────────────────────────
 
 def auto_refresh_prices():
-    """Refresh all market videos every 3h; also notify watchlist holders of big moves."""
+    """Refresh all market videos every 3h; also notify watchlist holders of big moves.
+
+    DB-freshness check: skip any video updated within the last 30 minutes to avoid
+    redundant API calls (e.g. if seed_market or a manual fetch ran recently).
+    """
     db = SessionLocal()
     try:
         # Collect all market videos (not just held ones) so the market feels alive
+        cutoff = datetime.utcnow() - timedelta(minutes=30)
         all_videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(100).all()
-        yt_ids = [v.youtube_id for v in all_videos]
-        if not yt_ids:
-            return
 
-        # Snapshot prices before refresh for movement detection
+        # Filter: skip videos that were already refreshed within the last 30 min
+        stale_videos = [v for v in all_videos if not v.last_updated or v.last_updated < cutoff]
+        fresh_videos = [v for v in all_videos if v.last_updated and v.last_updated >= cutoff]
+
+        yt_ids = [v.youtube_id for v in stale_videos]
+
+        # Snapshot prices for movement detection (all videos, including fresh ones)
         price_before = {v.youtube_id: v.current_price for v in all_videos}
+
+        if not yt_ids:
+            notify_watchlist_movers(db, price_before)
+            snapshot_portfolio_values(db)
+            return
 
         for i in range(0, len(yt_ids), 50):
             batch = yt_ids[i:i+50]
             try:
-                yt_list = get_video_details(batch)
+                # Use statistics-only part for refresh — we already have snippet metadata
+                yt_list = get_stats_only(batch)
                 for yt in yt_list:
                     upsert_video(db, yt)
             except Exception:
