@@ -6,13 +6,11 @@
 <div class="tr-alert tr-alert-success">
   ✓ Hinzufügen erfolgreich
   {% if xp %}&nbsp;·&nbsp;<span style="color:#ff9f0a;font-weight:700;">+{{ xp }} XP ⚡</span>{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 </div>
 {% elif msg == "sold" %}
 <div class="tr-alert tr-alert-success">
   ✓ Entfernen erfolgreich
   {% if xp %}&nbsp;·&nbsp;<span style="color:#ff9f0a;font-weight:700;">+{{ xp }} XP ⚡</span>{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 </div>
 {% elif msg == "refreshed" %}
 <div class="tr-alert tr-alert-info">Wert aktualisiert</div>
@@ -37,18 +35,15 @@
     <a href="/video/{{ worst_holding.youtube_id }}"
        style="color:#FFB162;font-weight:700;text-decoration:none;">
       {{ worst_holding.title[:30] }}{% if worst_holding.title|length > 30 %}…{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
     </a>
     <span style="color:#A35139;font-weight:600;">({{ "%.1f"|format(worst_holding.pnl_pct) }}%)</span>
   </div>
   {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
   {% if max_slots and max_slots < 9999 %}
   <div style="font-size:.75rem;color:#8A9BAD;margin-top:4px;">
     🔥 Streak halten: 3d=+1 Slot · 7d=+2 · 14d=+3 (aktuell {{ max_slots }} Slots)
   </div>
   {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 </div>
 {% elif err == "insufficient_funds" %}
 <div class="tr-alert tr-alert-error">Nicht genug Guthaben</div>
@@ -59,14 +54,12 @@
 {% elif err == "drop_sold_out" %}
 <div class="tr-alert tr-alert-error">🚨 Daily Drop ausverkauft — alle Anteile wurden bereits vergeben</div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 {% if msg == "suggested" %}
 <div class="tr-alert tr-alert-success">
   ✓ Video zum Markt hinzugefügt &nbsp;·&nbsp; <span style="color:#ff9f0a;font-weight:700;">+5 XP ⚡</span>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 {% if request.query_params.get('lvl') %}
 <div class="vy-wrap" style="margin-bottom:16px;">
@@ -91,11 +84,9 @@
       {% endfor %}
     </div>
     {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 {% for ach in new_achievements %}
 <div style="background:linear-gradient(135deg,rgba(255,159,10,.15),rgba(255,107,0,.1));
@@ -126,7 +117,6 @@
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 {% if video.is_ipo %}
 <div style="background:linear-gradient(135deg,rgba(255,159,10,.2),rgba(255,107,0,.1));
@@ -139,7 +129,6 @@
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 <!-- Back + Watchlist toggle -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
@@ -147,13 +136,10 @@
   <form method="post" action="/watch/{{ video.youtube_id }}" style="margin:0;">
     <button type="submit"
       style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:4px 8px;
-             color:{% if is_watching %}#ff9f0a{% else %}#333{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>;
+             color:{% if is_watching %}#ff9f0a{% else %}#333{% endif %};
              transition:color .15s;"
-      title="{% if is_watching %}Aus Beobachtungsliste entfernen{% else %}Zur Beobachtungsliste{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>">
+      title="{% if is_watching %}Aus Beobachtungsliste entfernen{% else %}Zur Beobachtungsliste{% endif %}">
       {% if is_watching %}★{% else %}☆{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
     </button>
   </form>
 </div>
@@ -169,7 +155,6 @@
   {% else %}
   <div style="width:100%;aspect-ratio:16/9;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:3rem;">📺</div>
   {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
   <!-- Live-Indikator -->
   <div style="position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:5px;
               background:rgba(0,0,0,.65);backdrop-filter:blur(8px);border-radius:20px;padding:3px 10px;">
@@ -194,7 +179,7 @@
 
 <!-- Price block -->
 <div style="margin-bottom:8px;animation:slide-up .4s .18s cubic-bezier(.22,1,.36,1) both;">
-  <div class="tr-label" style="margin-bottom:4px;">Aktueller Wert</div>
+  <div class="tr-label" style="margin-bottom:4px;">Market Score</div>
   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
     <span id="priceDisplay" style="font-size:2.4rem;font-weight:700;"
           data-price="{{ video.current_price }}">$—</span>
@@ -203,15 +188,17 @@
     {% else %}
     <span class="tr-down" style="font-size:.95rem;font-weight:600;animation:bounce-in .4s .3s both;">▼ {{ price_change_pct | abs }}%</span>
     {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
   </div>
+  <p style="font-size:.72rem;color:#556070;margin:6px 0 0;">
+    Market Score ist eine Spielmetrik, abgeleitet aus öffentlichen YouTube-Daten.
+    Kein realer Finanzwert. <small style="color:#444;">Data provided by YouTube</small>
+  </p>
 </div>
 
 <!-- Time range tabs -->
 <div class="tr-timerange" style="margin-bottom:0;">
   {% for label in ["1T", "1W", "1M", "1J", "Max"] %}
-  <button class="tr-tr-btn {% if loop.first %}active{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>" onclick="switchRange(this, '{{ label }}')">{{ label }}</button>
+  <button class="tr-tr-btn {% if loop.first %}active{% endif %}" onclick="switchRange(this, '{{ label }}')">{{ label }}</button>
   {% endfor %}
 </div>
 
@@ -227,7 +214,6 @@
     </span>
   </div>
   {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 </div>
 
 <!-- Next price update countdown + stale hint -->
@@ -244,7 +230,6 @@
     ⚠️ Wert unverändert — Daten-Lag, kein Bug
   </span>
   {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 </div>
 
 <!-- Metrik-Tooltip Overlay -->
@@ -283,16 +268,14 @@
     <div style="font-weight:700;font-size:.9rem;">{{ holders_count }}</div>
   </div>
   <div style="flex:1;padding:12px 0;text-align:center;">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">WERTÄNDERUNG</div>
-    <div style="font-weight:700;font-size:.9rem;{% if price_change_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>;">
-      {% if price_change_pct >= 0 %}▲{% else %}▼{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>{{ price_change_pct | abs }}%
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">ÄNDERUNG</div>
+    <div style="font-weight:700;font-size:.9rem;{% if price_change_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %};">
+      {% if price_change_pct >= 0 %}▲{% else %}▼{% endif %}{{ price_change_pct | abs }}%
     </div>
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
+<p style="font-size:.62rem;color:#444;text-align:right;margin:-20px 0 20px;padding-right:4px;">Data provided by YouTube</p>
 
 <!-- Sell signal: price dropped significantly since entry -->
 {% if holding and holding.shares > 0 %}
@@ -310,18 +293,14 @@
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 <!-- Holding info -->
 {% if holding and holding.shares > 0 %}
 {% set pnl_pct = (video.current_price - holding.avg_cost) / holding.avg_cost * 100 %}
 {% set pnl_abs = (video.current_price - holding.avg_cost) * holding.shares %}
-<div style="background:rgba({% if pnl_pct >= 0 %}76,175,130{% else %}163,81,57{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>,.1);
-            border:1px solid rgba({% if pnl_pct >= 0 %}76,175,130{% else %}163,81,57{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>,.25);
+<div style="background:rgba({% if pnl_pct >= 0 %}76,175,130{% else %}163,81,57{% endif %},.1);
+            border:1px solid rgba({% if pnl_pct >= 0 %}76,175,130{% else %}163,81,57{% endif %},.25);
             border-radius:14px;padding:16px;margin-bottom:20px;">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <div>
@@ -333,21 +312,16 @@
       </div>
     </div>
     <div style="text-align:right;">
-      <div style="font-size:1.3rem;font-weight:800;{% if pnl_pct >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>">
-        {% if pnl_pct >= 0 %}+{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>{{ "%.1f"|format(pnl_pct) }}%
+      <div style="font-size:1.3rem;font-weight:800;{% if pnl_pct >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+        {% if pnl_pct >= 0 %}+{% endif %}{{ "%.1f"|format(pnl_pct) }}%
       </div>
-      <div style="font-size:.78rem;font-weight:600;{% if pnl_abs >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>">
-        {% if pnl_abs >= 0 %}+{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>${{ "%.2f"|format(pnl_abs) }}
+      <div style="font-size:.78rem;font-weight:600;{% if pnl_abs >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
+        {% if pnl_abs >= 0 %}+{% endif %}${{ "%.2f"|format(pnl_abs) }}
       </div>
     </div>
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 <!-- Duell-Kontext -->
 {% if active_duels %}
@@ -360,25 +334,20 @@
       <div style="flex:1;min-width:0;">
         <div style="font-size:.75rem;font-weight:700;color:#ff9f0a;">Duell läuft · vs. @{{ d.opponent_username }}</div>
         <div style="font-size:.68rem;color:#8A9BAD;margin-top:1px;">
-          Du: {% if d.my_return >= 0 %}+{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>{{ d.my_return }}%
-          &nbsp;·&nbsp; Gegner: {% if d.opp_return >= 0 %}+{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>{{ d.opp_return }}%
+          Du: {% if d.my_return >= 0 %}+{% endif %}{{ d.my_return }}%
+          &nbsp;·&nbsp; Gegner: {% if d.opp_return >= 0 %}+{% endif %}{{ d.opp_return }}%
           &nbsp;·&nbsp; Endet {{ d.end_date }}
         </div>
       </div>
       <span style="font-size:.75rem;font-weight:700;white-space:nowrap;
-        {% if d.leading %}color:#4CAF82{% else %}color:#A35139{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>">
+        {% if d.leading %}color:#4CAF82{% else %}color:#A35139{% endif %}">
         {% if d.leading %}Führend{% else %}Zurück{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
       </span>
     </div>
   </a>
   {% endfor %}
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 <!-- Buy form -->
 <div style="margin-bottom:16px;">
@@ -439,7 +408,6 @@
   </div>
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 <!-- Refresh -->
 <form method="post" action="/refresh/{{ video.youtube_id }}" style="margin-top:8px;">
@@ -459,7 +427,6 @@
       Alle ansehen →
     </a>
     {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
   </div>
   {% for rv in related %}
   <a href="/video/{{ rv.youtube_id }}" class="tr-row">
@@ -468,10 +435,8 @@
     {% else %}
     <div class="tr-row-icon-placeholder">📺</div>
     {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
     <div class="tr-row-body">
-      <div class="tr-row-title">{{ rv.title[:50] }}{% if rv.title|length > 50 %}…{% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p></div>
+      <div class="tr-row-title">{{ rv.title[:50] }}{% if rv.title|length > 50 %}…{% endif %}</div>
       <div class="tr-row-sub">${{ "%.2f"|format(rv.current_price) }}</div>
     </div>
     <div class="tr-row-right">
@@ -481,7 +446,6 @@
   {% endfor %}
 </div>
 {% endif %}
-<p style="font-size:.62rem;color:#555;text-align:right;margin:-22px 0 24px;padding-right:4px;">Daten von YouTube</p>
 
 <!-- YouTube link -->
 <div style="text-align:center;margin-top:20px;">
