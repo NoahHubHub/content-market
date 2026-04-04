@@ -7,20 +7,20 @@ import random
 
 XP_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000, 6000, 10000]
 LEVEL_NAMES = [
-    "Rookie", "Trader", "Analyst", "Investor", "Broker",
-    "Fund Manager", "Hedge Fund", "Whale", "Market Maker", "Legend"
+    "Rookie", "Entdecker", "Kurator", "Sammler", "Kenner",
+    "Experte", "Profi", "Star Collector", "Community Hub", "Legend"
 ]
 
 ACHIEVEMENTS = {
-    "first_buy":    {"name": "Erste Investition", "icon": "🚀", "desc": "Dein erstes Video gekauft",              "xp": 20},
-    "first_profit": {"name": "Im Gewinn",         "icon": "📈", "desc": "Einen Verkauf mit Gewinn abgeschlossen", "xp": 25},
-    "diversified":  {"name": "Diversifiziert",    "icon": "📊", "desc": "3 verschiedene Videos im Portfolio",     "xp": 30},
-    "whale":        {"name": "Wal",               "icon": "🐋", "desc": "50+ Anteile eines Videos gekauft",       "xp": 50},
-    "trader_10":    {"name": "Aktiver Trader",    "icon": "💼", "desc": "10 Trades abgeschlossen",                "xp": 40},
-    "daily_drop":   {"name": "Early Adopter",     "icon": "🎯", "desc": "Ersten Daily Drop gekauft",              "xp": 20},
+    "first_buy":    {"name": "Erste Sammlung",    "icon": "🚀", "desc": "Dein erstes Video gesammelt",            "xp": 20},
+    "first_profit": {"name": "Wert gestiegen",    "icon": "📈", "desc": "Ein Video mit Wertzuwachs entfernt",     "xp": 25},
+    "diversified":  {"name": "Kuratiert",         "icon": "📊", "desc": "3 verschiedene Videos in der Kollektion","xp": 30},
+    "whale":        {"name": "Superfan",          "icon": "🐋", "desc": "50+ Units eines Videos gesammelt",       "xp": 50},
+    "trader_10":    {"name": "Aktiver Sammler",   "icon": "💼", "desc": "10 Aktionen abgeschlossen",              "xp": 40},
+    "daily_drop":   {"name": "Early Adopter",     "icon": "🎯", "desc": "Ersten Hot Drop gesammelt",              "xp": 20},
     "streak_3":     {"name": "Auf Kurs",          "icon": "🔥", "desc": "3 Tage Streak erreicht",                 "xp": 15},
     "streak_7":     {"name": "Unaufhaltsam",      "icon": "⚡", "desc": "7 Tage Streak erreicht",                 "xp": 50},
-    "diamond_hands":{"name": "Diamond Hands",     "icon": "💎", "desc": "Eine Position 7+ Tage gehalten",         "xp": 100},
+    "diamond_hands":{"name": "Loyaler Supporter", "icon": "💎", "desc": "Ein Video 7+ Tage in der Kollektion",    "xp": 100},
     "level_5":      {"name": "Aufsteiger",        "icon": "⭐", "desc": "Level 5 erreicht",                       "xp": 75},
 }
 
@@ -30,33 +30,33 @@ ACHIEVEMENTS = {
 
 TASK_POOL = [
     # Level 1-2 (Einsteiger)
-    {"type": "buy",        "min_level": 1, "max_level": 2, "target": 1,    "icon": "🛒", "name": "Erste Investition",  "desc": "Kaufe dein erstes Video"},
-    {"type": "sell",       "min_level": 1, "max_level": 2, "target": 1,    "icon": "💸", "name": "Erste Verkauf",      "desc": "Verkaufe ein Video"},
+    {"type": "buy",        "min_level": 1, "max_level": 2, "target": 1,    "icon": "🛒", "name": "Erste Sammlung",     "desc": "Sammle dein erstes Video"},
+    {"type": "sell",       "min_level": 1, "max_level": 2, "target": 1,    "icon": "💸", "name": "Erste Entfernung",   "desc": "Entferne ein Video aus deiner Kollektion"},
     {"type": "streak",     "min_level": 1, "max_level": 2, "target": 2,    "icon": "🔥", "name": "2 Tage dabei",       "desc": "Melde dich 2 Tage in Folge an"},
     {"type": "watchlist",  "min_level": 1, "max_level": 2, "target": 1,    "icon": "★",  "name": "Beobachter",         "desc": "Füge ein Video zur Watchlist hinzu"},
     # Level 2-4 (Mittelstufe)
-    {"type": "buy",        "min_level": 2, "max_level": 4, "target": 3,    "icon": "🛒", "name": "Einkaufstour",       "desc": "Kaufe 3 verschiedene Videos"},
-    {"type": "sell",       "min_level": 2, "max_level": 4, "target": 3,    "icon": "💸", "name": "Händler",            "desc": "Verkaufe 3 mal"},
-    {"type": "trades",     "min_level": 2, "max_level": 4, "target": 5,    "icon": "📊", "name": "Aktiver Trader",     "desc": "Mache 5 Trades"},
-    {"type": "daily_drop", "min_level": 2, "max_level": 4, "target": 1,    "icon": "🎯", "name": "Early Bird",         "desc": "Kaufe einen Daily Drop"},
-    {"type": "profit",     "min_level": 2, "max_level": 4, "target": 1,    "icon": "📈", "name": "Erster Gewinn",      "desc": "Erziele einen gewinnbringenden Verkauf"},
-    {"type": "portfolio",  "min_level": 2, "max_level": 4, "target": 3,    "icon": "📁", "name": "Diversifiziert",     "desc": "Halte 3 Videos gleichzeitig"},
+    {"type": "buy",        "min_level": 2, "max_level": 4, "target": 3,    "icon": "🛒", "name": "Sammeltour",         "desc": "Sammle 3 verschiedene Videos"},
+    {"type": "sell",       "min_level": 2, "max_level": 4, "target": 3,    "icon": "💸", "name": "Aktiv dabei",        "desc": "Entferne 3 Videos aus deiner Kollektion"},
+    {"type": "trades",     "min_level": 2, "max_level": 4, "target": 5,    "icon": "📊", "name": "Aktiver Sammler",    "desc": "Führe 5 Aktionen durch"},
+    {"type": "daily_drop", "min_level": 2, "max_level": 4, "target": 1,    "icon": "🎯", "name": "Early Bird",         "desc": "Sammle einen Hot Drop"},
+    {"type": "profit",     "min_level": 2, "max_level": 4, "target": 1,    "icon": "📈", "name": "Erster Wertzuwachs", "desc": "Entferne ein Video mit Wertzuwachs"},
+    {"type": "portfolio",  "min_level": 2, "max_level": 4, "target": 3,    "icon": "📁", "name": "Kuratiert",          "desc": "Halte 3 Videos gleichzeitig in der Kollektion"},
     {"type": "streak",     "min_level": 2, "max_level": 4, "target": 3,    "icon": "🔥", "name": "3 Tage Streak",      "desc": "Melde dich 3 Tage in Folge an"},
-    {"type": "invest",     "min_level": 2, "max_level": 4, "target": 500,  "icon": "💵", "name": "Investor",           "desc": "Investiere insgesamt $500"},
+    {"type": "invest",     "min_level": 2, "max_level": 4, "target": 500,  "icon": "💵", "name": "Engagiert",          "desc": "Setze insgesamt $500 Budget ein"},
     # Level 4-7 (Fortgeschritten)
-    {"type": "trades",     "min_level": 4, "max_level": 7, "target": 10,   "icon": "📊", "name": "Viel Erfahrung",     "desc": "Mache 10 Trades"},
-    {"type": "portfolio",  "min_level": 4, "max_level": 7, "target": 5,    "icon": "📁", "name": "Großes Portfolio",   "desc": "Halte 5 Videos gleichzeitig"},
-    {"type": "profit",     "min_level": 4, "max_level": 7, "target": 3,    "icon": "📈", "name": "Gewinn-Serie",       "desc": "Erziele 3 gewinnbringende Verkäufe"},
-    {"type": "invest",     "min_level": 4, "max_level": 7, "target": 2000, "icon": "💵", "name": "Großinvestor",       "desc": "Investiere insgesamt $2.000"},
+    {"type": "trades",     "min_level": 4, "max_level": 7, "target": 10,   "icon": "📊", "name": "Viel Erfahrung",     "desc": "Führe 10 Aktionen durch"},
+    {"type": "portfolio",  "min_level": 4, "max_level": 7, "target": 5,    "icon": "📁", "name": "Große Kollektion",   "desc": "Halte 5 Videos gleichzeitig in der Kollektion"},
+    {"type": "profit",     "min_level": 4, "max_level": 7, "target": 3,    "icon": "📈", "name": "Wertzuwachs-Serie",  "desc": "Entferne 3 Videos mit Wertzuwachs"},
+    {"type": "invest",     "min_level": 4, "max_level": 7, "target": 2000, "icon": "💵", "name": "Super-Engagiert",    "desc": "Setze insgesamt $2.000 Budget ein"},
     {"type": "streak",     "min_level": 4, "max_level": 7, "target": 7,    "icon": "🔥", "name": "7 Tage Streak",      "desc": "Melde dich 7 Tage in Folge an"},
-    {"type": "daily_drop", "min_level": 4, "max_level": 7, "target": 3,    "icon": "🎯", "name": "Drop-Jäger",         "desc": "Kaufe 3 Daily Drops"},
+    {"type": "daily_drop", "min_level": 4, "max_level": 7, "target": 3,    "icon": "🎯", "name": "Drop-Jäger",         "desc": "Sammle 3 Hot Drops"},
     # Level 7-10 (Profi)
-    {"type": "trades",     "min_level": 7, "max_level": 10, "target": 25,  "icon": "📊", "name": "Profi-Trader",       "desc": "Mache 25 Trades"},
-    {"type": "portfolio",  "min_level": 7, "max_level": 10, "target": 8,   "icon": "📁", "name": "Mega-Portfolio",     "desc": "Halte 8 Videos gleichzeitig"},
-    {"type": "profit",     "min_level": 7, "max_level": 10, "target": 10,  "icon": "📈", "name": "Gewinn-Profi",       "desc": "Erziele 10 gewinnbringende Verkäufe"},
-    {"type": "invest",     "min_level": 7, "max_level": 10, "target": 5000,"icon": "💵", "name": "Millionär",          "desc": "Investiere insgesamt $5.000"},
+    {"type": "trades",     "min_level": 7, "max_level": 10, "target": 25,  "icon": "📊", "name": "Profi-Sammler",      "desc": "Führe 25 Aktionen durch"},
+    {"type": "portfolio",  "min_level": 7, "max_level": 10, "target": 8,   "icon": "📁", "name": "Mega-Kollektion",    "desc": "Halte 8 Videos gleichzeitig in der Kollektion"},
+    {"type": "profit",     "min_level": 7, "max_level": 10, "target": 10,  "icon": "📈", "name": "Wertzuwachs-Profi",  "desc": "Entferne 10 Videos mit Wertzuwachs"},
+    {"type": "invest",     "min_level": 7, "max_level": 10, "target": 5000,"icon": "💵", "name": "Budget-Profi",       "desc": "Setze insgesamt $5.000 Budget ein"},
     {"type": "streak",     "min_level": 7, "max_level": 10, "target": 14,  "icon": "🔥", "name": "14 Tage Streak",     "desc": "Melde dich 14 Tage in Folge an"},
-    {"type": "daily_drop", "min_level": 7, "max_level": 10, "target": 7,   "icon": "🎯", "name": "Drop-König",         "desc": "Kaufe 7 Daily Drops"},
+    {"type": "daily_drop", "min_level": 7, "max_level": 10, "target": 7,   "icon": "🎯", "name": "Drop-König",         "desc": "Sammle 7 Hot Drops"},
 ]
 
 
