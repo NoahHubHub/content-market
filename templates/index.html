@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Markt — Content Market{% endblock %}
 {% block content %}
+<!-- Game Simulation Disclaimer -->
+<div style="background:rgba(255,177,98,.07);border:1px solid rgba(255,177,98,.2);
+            border-radius:12px;padding:10px 14px;margin-bottom:16px;
+            font-size:.78rem;color:#8A9BAD;text-align:center;line-height:1.5;">
+  Content Market is a game-based simulation. All scores and values are fictional
+  and for entertainment purposes only. Not affiliated with or endorsed by YouTube.
+</div>
+
 
 <!-- Bonus Toast -->
 {% if bonus_msg == "xp" %}
@@ -721,7 +729,7 @@
 <!-- Sort controls -->
 {% if video_data %}
 <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;">
-  {% for s, label in [("new", "Neu"), ("views", "Meist gesehen"), ("price_desc", "Preis ↓"), ("price_asc", "Preis ↑")] %}
+  {% for s, label in [("new", "Neu"), ("views", "Meist gesehen"), ("price_desc", "Score ↓"), ("price_asc", "Score ↑")] %}
   <a href="/?sort={{ s }}{% if active_cat %}&cat={{ active_cat | urlencode }}{% endif %}"
      style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;
             text-decoration:none;transition:all .15s;
