@@ -28,6 +28,11 @@ app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 3
 
 # ── error handlers ─────────────────────────────────────────────────────────────
 
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    return templates.TemplateResponse(request, "terms.html", {})
+
+
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
     return templates.TemplateResponse(request, "error.html",
