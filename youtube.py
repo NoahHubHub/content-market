@@ -137,6 +137,47 @@ def search_videos(query: str, max_results: int = 8) -> list:
     return result
 
 
+def get_stats_only(video_ids: list) -> list:
+    """Fetch ONLY statistics for known videos (no snippet). Costs 1 quota unit.
+    Used for periodic price refreshes where metadata already exists in DB.
+    Cached 30 min like get_video_details."""
+    if not video_ids:
+        return []
+
+    cached_results = []
+    uncached_ids = []
+    for vid in video_ids:
+        hit = _cache_get(f"stats:{vid}")
+        if hit is not None:
+            cached_results.append(hit)
+        else:
+            uncached_ids.append(vid)
+
+    if not uncached_ids:
+        return cached_results
+
+    yt = _client()
+    response = (
+        yt.videos()
+        .list(id=",".join(uncached_ids), part="statistics")
+        .execute()
+    )
+    fresh = []
+    for item in response.get("items", []):
+        stats = item.get("statistics", {})
+        entry = {
+            "youtube_id": item["id"],
+            "view_count": int(stats.get("viewCount", 0)),
+            "like_count": int(stats.get("likeCount", 0)),
+            "comment_count": int(stats.get("commentCount", 0)),
+        }
+        _cache_set(f"stats:{entry['youtube_id']}", entry)
+        fresh.append(entry)
+
+    return cached_results + fresh
+
+
+
 def get_trending_videos(region: str = "DE", max_results: int = 20) -> list:
     """Fetch trending/most popular videos. Costs 1 quota unit. Cached 30 min."""
     cache_key = f"trending:{region}:{max_results}"
