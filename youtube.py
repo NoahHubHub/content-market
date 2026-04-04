@@ -1,12 +1,28 @@
 import os
 import re
 from datetime import datetime
+from time import time
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 
 load_dotenv()
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+# ── In-memory cache ────────────────────────────────────────────────────────────
+_CACHE: dict = {}
+_CACHE_TTL = 1800  # 30 minutes
+
+
+def _cache_get(key: str):
+    entry = _CACHE.get(key)
+    if entry and (time() - entry[1]) < _CACHE_TTL:
+        return entry[0]
+    return None
+
+
+def _cache_set(key: str, value):
+    _CACHE[key] = (value, time())
 
 
 def _client():
@@ -66,25 +82,49 @@ CATEGORY_MAP = {
 
 
 def get_video_details(video_ids: list) -> list:
-    """Fetch stats for up to 50 video IDs. Costs 1 quota unit per call."""
+    """Fetch stats for up to 50 video IDs. Costs 1 quota unit per call.
+    Results are cached for 30 minutes to minimise quota usage."""
     if not video_ids:
         return []
+
+    # Split into cached and uncached IDs
+    cached_results = []
+    uncached_ids = []
+    for vid in video_ids:
+        hit = _cache_get(f"vid:{vid}")
+        if hit is not None:
+            cached_results.append(hit)
+        else:
+            uncached_ids.append(vid)
+
+    if not uncached_ids:
+        return cached_results
+
     yt = _client()
     response = (
         yt.videos()
-        .list(id=",".join(video_ids), part="statistics,snippet")
+        .list(id=",".join(uncached_ids), part="statistics,snippet")
         .execute()
     )
-    return _parse_items(response.get("items", []))
+    fresh = _parse_items(response.get("items", []))
+    for item in fresh:
+        _cache_set(f"vid:{item['youtube_id']}", item)
+
+    return cached_results + fresh
 
 
 def get_video_by_id(video_id: str) -> list:
-    """Fetch a single video. Costs 1 quota unit."""
+    """Fetch a single video. Costs 1 quota unit (cached 30 min)."""
     return get_video_details([video_id])
 
 
 def search_videos(query: str, max_results: int = 8) -> list:
-    """Search YouTube. Costs 100 quota units — use sparingly."""
+    """Search YouTube. Costs 100 quota units — use sparingly. Cached 30 min."""
+    cache_key = f"search:{query}:{max_results}"
+    hit = _cache_get(cache_key)
+    if hit is not None:
+        return hit
+
     yt = _client()
     search_response = (
         yt.search()
@@ -92,11 +132,18 @@ def search_videos(query: str, max_results: int = 8) -> list:
         .execute()
     )
     video_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
-    return get_video_details(video_ids)
+    result = get_video_details(video_ids)
+    _cache_set(cache_key, result)
+    return result
 
 
 def get_trending_videos(region: str = "DE", max_results: int = 20) -> list:
-    """Fetch trending/most popular videos. Costs 1 quota unit."""
+    """Fetch trending/most popular videos. Costs 1 quota unit. Cached 30 min."""
+    cache_key = f"trending:{region}:{max_results}"
+    hit = _cache_get(cache_key)
+    if hit is not None:
+        return hit
+
     yt = _client()
     response = (
         yt.videos()
@@ -104,4 +151,6 @@ def get_trending_videos(region: str = "DE", max_results: int = 20) -> list:
               part="statistics,snippet", maxResults=max_results)
         .execute()
     )
-    return _parse_items(response.get("items", []))
+    result = _parse_items(response.get("items", []))
+    _cache_set(cache_key, result)
+    return result
