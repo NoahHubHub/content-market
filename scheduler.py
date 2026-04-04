@@ -301,6 +301,43 @@ def cleanup_old_stats():
         db.close()
 
 
+def cleanup_inactive_videos():
+    """Deletes Video records that have had no holders for 30+ days (YouTube API data retention policy).
+
+    YouTube API metadata (title, channel, thumbnail URL) must not be stored indefinitely
+    for videos that are no longer actively used. A video qualifies for deletion when:
+      - no user currently holds any shares in it, AND
+      - it has not been updated in the last 30 days (i.e., nobody has interacted with it).
+    """
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    db = SessionLocal()
+    try:
+        # Find videos with no current holdings and not updated in 30 days
+        held_video_ids = db.query(models.Holding.video_id).distinct().subquery()
+        inactive = (
+            db.query(models.Video)
+            .filter(
+                models.Video.last_updated < cutoff,
+                ~models.Video.id.in_(held_video_ids),
+            )
+            .all()
+        )
+        count = 0
+        for video in inactive:
+            # Cascade: remove related stats, watchlist entries, and daily drops first
+            db.query(models.VideoStats).filter(models.VideoStats.video_id == video.id).delete()
+            db.query(models.UserWatchlist).filter(models.UserWatchlist.youtube_id == video.youtube_id).delete()
+            db.query(models.DailyDrop).filter(models.DailyDrop.video_id == video.id).delete()
+            db.delete(video)
+            count += 1
+        db.commit()
+        if count:
+            print(f"[cleanup] Removed {count} inactive Video records (no holders, 30+ days old)", flush=True)
+    finally:
+        db.close()
+
+
 # ── start ──────────────────────────────────────────────────────────────────────
 
 scheduler = BackgroundScheduler()
@@ -310,5 +347,6 @@ scheduler.add_job(seed_market,         "cron", hour=3,  minute=0)
 scheduler.add_job(resolve_hot_takes,   "cron", hour=7,  minute=0)
 scheduler.add_job(refresh_leaderboard, "cron", hour=8,  minute=0)
 scheduler.add_job(end_season,          "cron", day_of_week="mon", hour=0, minute=10)
-scheduler.add_job(cleanup_old_stats,   "cron", hour=4,  minute=0)
+scheduler.add_job(cleanup_old_stats,      "cron", hour=4,  minute=0)
+scheduler.add_job(cleanup_inactive_videos, "cron", hour=4,  minute=30)
 scheduler.start()
