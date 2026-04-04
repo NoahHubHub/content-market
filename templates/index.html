@@ -8,7 +8,7 @@
 {% elif bonus_msg == "cash" %}
 <div class="tr-alert tr-alert-success">🎁 Tagesbonus: <strong>+${{ bonus_amount }}</strong> auf dein Konto!</div>
 {% elif bonus_msg == "share" %}
-<div class="tr-alert tr-alert-success">🎁 Tagesbonus: <strong>1 kostenloser Anteil</strong> erhalten!</div>
+<div class="tr-alert tr-alert-success">🎁 Tagesbonus: <strong>1 kostenloses Unit</strong> erhalten!</div>
 {% endif %}
 
 <!-- Streak Bonus Toast -->
@@ -57,8 +57,8 @@
     <div class="vy-name">Vy · Schritt 1 von 4</div>
     <div class="vy-text">
       Yo! Ich bin <strong>Vy</strong> — dein Begleiter im Content Market.<br>
-      Hier sammelst du Anteile an YouTube-Videos und verfolgst ihr Wachstum.<br>
-      <strong>Ein Video geht viral → dein Portfolio entwickelt sich mit.</strong><br><br>
+      Hier sammelst du Units von YouTube-Videos und verfolgst ihr Wachstum.<br>
+      <strong>Ein Video geht viral → deine Kollektion entwickelt sich mit.</strong><br><br>
       Ich zeig dir kurz wie das läuft. Dauert 2 Minuten.
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
@@ -104,7 +104,7 @@
     <span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);background-size:200% auto;animation:shimmer 2s linear infinite;border-radius:14px;"></span>
     <span style="font-size:1.4rem;position:relative;">🎁</span>
     <span style="position:relative;">Tagesbonus abholen</span>
-    <span style="font-size:.75rem;opacity:.7;position:relative;">XP · Cash · Anteil</span>
+    <span style="font-size:.75rem;opacity:.7;position:relative;">XP · Cash · Unit</span>
   </button>
 </form>
 {% endif %}
@@ -218,7 +218,7 @@
             border-radius:14px;padding:12px 16px;margin-bottom:14px;
             display:flex;justify-content:space-between;align-items:center;">
   <div>
-    <div style="font-size:.62rem;color:#8A9BAD;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Dein Portfolio</div>
+    <div style="font-size:.62rem;color:#8A9BAD;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">Deine Kollektion</div>
     <div style="font-size:1rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(morning_brief.portfolio_value) }}</div>
   </div>
   {% if morning_brief.best %}
@@ -250,7 +250,7 @@
   </div>
   <div style="width:1px;background:rgba(238,233,223,.1);flex-shrink:0;"></div>
   <div style="flex:1;padding:12px 14px;">
-    <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Investiert</div>
+    <div style="font-size:.62rem;color:#C9C1B1;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;">Eingesetzt</div>
     <div style="font-size:.95rem;font-weight:700;font-family:'Delight',sans-serif;">${{ "%.0f"|format(user.cost_basis) }}</div>
   </div>
   <a href="/portfolio" style="display:flex;align-items:center;padding:12px 14px;color:#FFB162;font-size:.9rem;font-weight:700;text-decoration:none;border-left:1px solid rgba(238,233,223,.1);">›</a>
@@ -334,7 +334,7 @@
     <div class="vy-text">
       Du weißt jetzt wie der Markt läuft. Zeit für das echte Spiel:<br>
       <strong>Ligen &amp; Duelle.</strong><br><br>
-      In einer <strong>Liga</strong> trittst du gegen Freunde an — wer hat die beste Rendite?<br>
+      In einer <strong>Liga</strong> trittst du gegen Freunde an — wer hat die beste Performance?<br>
       In einem <strong>Duell</strong> challengest du einzelne Spieler direkt. 7 Tage, bester Return gewinnt.
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
@@ -371,7 +371,7 @@
       <div style="font-size:.9rem;font-weight:800;color:{% if my_season_return >= 0 %}#4CAF82{% else %}#A35139{% endif %};">
         {% if my_season_return >= 0 %}+{% endif %}{{ "%.1f"|format(my_season_return) }}%
       </div>
-      <div style="font-size:.7rem;color:#556070;">Deine Rendite</div>
+      <div style="font-size:.7rem;color:#556070;">Deine Performance</div>
     </div>
   </div>
 </a>
@@ -414,9 +414,9 @@
         </div>
         <div style="font-size:.72rem;color:#556070;margin-top:1px;">
           <span style="color:{% if entry.action == 'buy' %}#4CAF82{% else %}#A35139{% endif %};font-weight:700;">
-            {{ "Gekauft" if entry.action == "buy" else "Verkauft" }}
+            {{ "Hinzugefügt" if entry.action == "buy" else "Entfernt" }}
           </span>
-          &nbsp;·&nbsp;{{ entry.shares }} Anteile
+          &nbsp;·&nbsp;{{ entry.shares }} Units
           &nbsp;·&nbsp;<a href="/u/{{ entry.username }}" style="color:#8A9BAD;text-decoration:none;" onclick="event.stopPropagation()">@{{ entry.username }}</a>
         </div>
       </div>
@@ -527,7 +527,7 @@
       <div class="vy-name">Vy</div>
       <div class="vy-text">
         Ich spür's in meinen Flammen. <strong>Diese Videos heute.</strong>
-        Limitierte Anteile — wer zuerst kommt.
+        Limitierte Units — wer zuerst kommt.
       </div>
     </div>
   </div>
@@ -568,7 +568,7 @@
         <span style="font-size:.7rem;color:#C9C1B1;">Noch verfügbar</span>
         <span style="font-size:.7rem;font-weight:700;
           {% if pct_remaining < 25 %}color:#ff453a{% elif pct_remaining < 60 %}color:#ff9f0a{% else %}color:#30d158{% endif %}">
-          {{ drop.shares_remaining | round(1) }} / {{ drop.total_shares | round(0) | int }} Anteile
+          {{ drop.shares_remaining | round(1) }} / {{ drop.total_shares | round(0) | int }} Units
         </span>
       </div>
       <div style="background:rgba(238,233,223,.12);border-radius:99px;height:4px;position:relative;">
@@ -583,7 +583,7 @@
       <input type="number" name="shares" value="1" min="0.1" max="{{ drop.shares_remaining }}" step="0.1"
              class="tr-input" style="flex:1;padding:10px 14px;font-size:.88rem;" />
       <button type="submit" class="tr-btn-buy" style="flex-shrink:0;padding:10px 18px;font-size:.85rem;width:auto;">
-        Kaufen <span style="font-size:.65rem;opacity:.7;">+{{ 10 + 5 }} XP</span>
+        Sammeln <span style="font-size:.65rem;opacity:.7;">+{{ 10 + 5 }} XP</span>
       </button>
     </form>
     {% else %}
@@ -756,7 +756,7 @@
         &nbsp;·&nbsp;
         
         {% if item.holders > 0 %}&nbsp;<span style="color:#556070;">· {{ item.holders }} Investor{{ "en" if item.holders != 1 else "" }}</span>{% endif %}
-        {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,177,98,.2);color:#FFB162;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 IPO</span>{% endif %}
+        {% if v.is_ipo %}&nbsp;<span style="background:rgba(255,177,98,.2);color:#FFB162;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;">🚀 Hot Drop</span>{% endif %}
         {% if item.price_change_pct >= 15 %}&nbsp;<span style="background:rgba(255,69,58,.18);color:#ff453a;font-size:.65rem;font-weight:800;padding:1px 6px;border-radius:20px;animation:pulse-glow 1.5s ease-in-out infinite;">🔥 Trending</span>{% endif %}
       </div>
     </div>
@@ -786,7 +786,7 @@
     <span>Suche</span><span>🔍</span>
   </a>
   <a href="/portfolio" class="tr-btn-ghost">
-    <span>Portfolio</span><span>›</span>
+    <span>Kollektion</span><span>›</span>
   </a>
 </div>
 

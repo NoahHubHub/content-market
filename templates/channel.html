@@ -9,6 +9,13 @@
     <span>{{ channel_name }}</span>
   </div>
   <div class="tr-sub" style="margin-top:4px;">{{ video_data | length }} Videos im Markt</div>
+  {% if channel_id %}
+  <a href="https://www.youtube.com/channel/{{ channel_id }}" target="_blank" rel="noopener"
+     style="display:inline-flex;align-items:center;gap:5px;font-size:.8rem;color:#ff4444;text-decoration:none;">
+    <svg height="11" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="20" rx="4" fill="#FF0000"/><polygon points="11,5 22,10 11,15" fill="white"/></svg>
+    Kanal auf YouTube
+  </a>
+  {% endif %}
 </div>
 
 {% if video_data %}

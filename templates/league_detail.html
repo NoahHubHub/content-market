@@ -71,7 +71,7 @@
       {{ entry.username }}{% if is_me %} <span style="font-size:.7rem;color:#8A9BAD;">(du)</span>{% endif %}
     </div>
 
-    <!-- Rendite + Wert -->
+    <!-- Performance + Wert -->
     <div style="text-align:right;">
       <div style="font-size:.9rem;font-weight:800;
                   color:{% if entry.return_pct >= 0 %}#4CAF82{% else %}#A35139{% endif %};">
@@ -110,16 +110,16 @@
         <strong style="color:{% if a.username == user.username %}#FFB162{% else %}#C9C1B1{% endif %};">
           {{ a.username }}
         </strong>
-        hat <strong>{{ a.shares }}</strong> Anteil{{ "e" if a.shares != 1 else "" }} von
+        hat <strong>{{ a.shares }}</strong> Unit{{ "s" if a.shares != 1 else "" }} von
         <a href="/video/{{ a.youtube_id }}" style="color:#EEE9DF;text-decoration:underline;text-underline-offset:2px;">
           {{ a.video_title[:40] }}{% if a.video_title and a.video_title|length > 40 %}…{% endif %}
         </a>
         {% if a.action == "buy" %}
-        <span style="color:#4CAF82;">gekauft</span>
+        <span style="color:#4CAF82;">hinzugefügt</span>
         {% else %}
-        <span style="color:#A35139;">verkauft</span>
+        <span style="color:#A35139;">entfernt</span>
         {% endif %}
-        · <span style="color:#8A9BAD;">${{ "%.2f"|format(a.price) }}/Anteil</span>
+        · <span style="color:#8A9BAD;">${{ "%.2f"|format(a.price) }}/Unit</span>
       </div>
       <div style="font-size:.7rem;color:#556070;margin-top:2px;">
         {{ a.created_at.strftime("%d.%m. %H:%M") }}
@@ -132,7 +132,7 @@
   {% else %}
   <div style="text-align:center;color:#8A9BAD;font-size:.85rem;padding:24px 0;">
     <div style="font-size:1.5rem;margin-bottom:8px;">📭</div>
-    Noch keine Aktivitäten. Fang an zu traden!
+    Noch keine Aktivitäten. Fang an mitzumachen!
   </div>
   {% endif %}
 

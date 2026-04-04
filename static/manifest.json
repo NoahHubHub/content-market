@@ -1,14 +1,14 @@
 {
   "name": "Content Market",
   "short_name": "ContentMkt",
-  "description": "Handele YouTube-Videos wie Aktien – steige ein, bevor alle anderen es tun.",
+  "description": "Entdecke und sammle YouTube-Videos – unterstütze Creator, bevor alle anderen es tun.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1B2632",
   "theme_color": "#FFB162",
   "lang": "de",
-  "categories": ["finance", "entertainment", "games"],
+  "categories": ["entertainment", "games"],
   "icons": [
     {
       "src": "/static/icon-192.svg",

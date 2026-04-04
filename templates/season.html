@@ -15,12 +15,12 @@
 {% if item.is_me %}
 <div style="background:rgba(48,209,88,.07);border:1px solid rgba(48,209,88,.15);
             border-radius:14px;padding:14px 16px;margin-bottom:24px;">
-  <div class="tr-label" style="margin-bottom:6px;">Deine Rendite diese Season</div>
+  <div class="tr-label" style="margin-bottom:6px;">Deine Performance diese Season</div>
   <div style="font-size:2rem;font-weight:700;
     {% if item.return_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
     {% if item.return_pct >= 0 %}+{% endif %}{{ "%.2f"|format(item.return_pct) }}%
   </div>
-  <div class="tr-sub">Aktueller Portfoliowert: ${{ "%.2f"|format(item.current) }}</div>
+  <div class="tr-sub">Aktueller Kollektionswert: ${{ "%.2f"|format(item.current) }}</div>
 </div>
 {% endif %}
 {% endfor %}

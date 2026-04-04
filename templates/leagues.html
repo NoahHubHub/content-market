@@ -13,7 +13,7 @@
 <div style="margin-bottom:24px;">
   <div class="tr-label" style="margin-bottom:4px;">Fantasy Trading</div>
   <div class="tr-title">Deine Ligen</div>
-  <div class="tr-sub" style="margin-top:4px;">Spiele mit Freunden — wer hat am Ende die beste Rendite?</div>
+  <div class="tr-sub" style="margin-top:4px;">Spiele mit Freunden — wer hat am Ende die beste Performance?</div>
 </div>
 
 <!-- Premium Pitch -->
@@ -115,9 +115,9 @@
     <div style="font-size:.75rem;color:#8A9BAD;border-top:1px solid rgba(238,233,223,.08);padding-top:8px;">
       {% if a.action == "buy" %}📈{% else %}📉{% endif %}
       <strong style="color:#C9C1B1;">{{ a.username }}</strong>
-      hat {{ a.shares }} Anteile von
+      hat {{ a.shares }} Units von
       <em style="color:#C9C1B1;">{{ a.video_title[:35] }}{% if a.video_title|length > 35 %}…{% endif %}</em>
-      {{ "gekauft" if a.action == "buy" else "verkauft" }}
+      {{ "hinzugefügt" if a.action == "buy" else "entfernt" }}
     </div>
     {% endif %}
 

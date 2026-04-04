@@ -10,13 +10,13 @@
 
 <div style="margin-bottom:24px;">
   <div class="tr-label" style="margin-bottom:4px;">Wer hat das bessere Händchen?</div>
-  <div class="tr-title">Duelle</div>
-  <div class="tr-sub" style="margin-top:4px;">Fordere einen anderen Trader heraus — 7 Tage, beste Rendite gewinnt.</div>
+  <div class="tr-title">Challenges</div>
+  <div class="tr-sub" style="margin-top:4px;">Fordere einen anderen Teilnehmer heraus — 7 Tage, beste Performance gewinnt.</div>
 </div>
 
 <!-- Challenge Form -->
 <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;margin-bottom:16px;">
-  <div class="tr-label" style="margin-bottom:10px;">Neues Duell starten</div>
+  <div class="tr-label" style="margin-bottom:10px;">Neue Challenge starten</div>
   <form method="post" action="/duel/challenge" style="display:flex;gap:10px;">
     <input type="text" name="opponent_username" id="opponentInput" class="tr-input"
            placeholder="Username eingeben…" style="flex:1;" required />
@@ -52,7 +52,7 @@
     <div style="flex:1;">
       <div style="font-size:.85rem;font-weight:700;color:#FFB162;">Premium: Mehr Duelle, mehr Kontrolle</div>
       <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
-        Unbegrenzte Duelle · Liga erstellen · Mehr Portfolio-Slots
+        Unbegrenzte Challenges · Liga erstellen · Mehr Kollektion-Slots
       </div>
     </div>
     <span style="font-size:.8rem;color:#FFB162;font-weight:700;flex-shrink:0;">Upgrade →</span>
@@ -62,7 +62,7 @@
 
 <!-- Aktive & abgeschlossene Duelle -->
 {% if duel_data %}
-<div class="tr-label" style="margin-bottom:10px;">Deine Duelle</div>
+<div class="tr-label" style="margin-bottom:10px;">Deine Challenges</div>
 {% for item in duel_data %}
 {% set d = item.duel %}
 <div style="background:#0a0a0a;border-radius:14px;padding:14px 16px;margin-bottom:12px;">

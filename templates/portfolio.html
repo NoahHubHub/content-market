@@ -97,7 +97,7 @@
 <!-- Header -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
   <div class="tr-tabs">
-    <button class="tr-tab active" onclick="switchTab(this,'portfolio')">Portfolio</button>
+    <button class="tr-tab active" onclick="switchTab(this,'portfolio')">Kollektion</button>
     <button class="tr-tab" onclick="switchTab(this,'diversifizierung')">Diversifizierung</button>
     <button class="tr-tab" onclick="switchTab(this,'cash')">Cash</button>
     <button class="tr-tab" onclick="switchTab(this,'achievements')">Erfolge</button>
@@ -111,7 +111,7 @@
 <!-- Total value — updates per tab -->
 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
   <div>
-    <div class="tr-total-label" id="val-label">Investiert</div>
+    <div class="tr-total-label" id="val-label">Eingesetzt</div>
     <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
       <div class="tr-total-value" id="val-main"
            data-value="{{ total_current }}" style="animation:slide-up .4s cubic-bezier(.22,1,.36,1) both;">$—</div>
@@ -164,9 +164,9 @@
 
   <!-- Investments list + sort -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin:28px 0 8px;">
-    <span style="font-size:1.05rem;font-weight:700;">Investments</span>
+    <span style="font-size:1.05rem;font-weight:700;">Meine Kollektion</span>
     <div style="display:flex;gap:6px;">
-      {% for s, label in [("value", "Wert"), ("pnl", "P&L"), ("name", "A–Z")] %}
+      {% for s, label in [("value", "Wert"), ("pnl", "Performance"), ("name", "A–Z")] %}
       <a href="/portfolio?psort={{ s }}"
          style="padding:4px 10px;border-radius:14px;font-size:.72rem;font-weight:600;text-decoration:none;
                 {% if psort == s %}background:#fff;color:#000;{% else %}background:#111;color:#555;{% endif %}">
@@ -261,7 +261,7 @@
         <div style="font-size:.85rem;font-weight:600;color:#fff;white-space:nowrap;
                     overflow:hidden;text-overflow:ellipsis;">{{ tx.title }}</div>
         <div class="tr-sub" style="font-size:.72rem;">
-          {{ tx.shares }} Anteile · ${{ "%.2f"|format(tx.price) }} · {{ tx.ts }}
+          {{ tx.shares }} Units · ${{ "%.2f"|format(tx.price) }} · {{ tx.ts }}
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
@@ -286,17 +286,17 @@
 <!-- ── TAB: Cash ─────────────────────────────────── -->
 <div id="panel-cash" class="tab-panel">
   <div style="margin:32px 0 24px;">
-    <div class="tr-total-label" style="margin-bottom:6px;">Verfügbares Guthaben</div>
+    <div class="tr-total-label" style="margin-bottom:6px;">Verfügbares Budget</div>
     <div style="font-size:3rem;font-weight:700;">${{ "%.2f"|format(user.balance) }}</div>
   </div>
 
   <div style="background:#111;border-radius:16px;padding:20px;margin-bottom:16px;">
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-      <span class="tr-sub">Startkapital</span>
+      <span class="tr-sub">Startbudget</span>
       <span style="font-weight:600;">$10.000,00</span>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
-      <span class="tr-sub">Investiert (Kostenbasis)</span>
+      <span class="tr-sub">Eingesetzt (Einstandswert)</span>
       <span style="font-weight:600;">${{ "%.2f"|format(total_invested) }}</span>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
@@ -304,7 +304,7 @@
       <span style="font-weight:600;">${{ "%.2f"|format(total_current) }}</span>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #1a1a1a;">
-      <span class="tr-sub">Unrealisierter P&L</span>
+      <span class="tr-sub">Unrealisierte Änderung</span>
       <span style="font-weight:600;{% if total_current >= total_invested %}color:#30d158{% else %}color:#ff453a{% endif %}">
         {% if total_current >= total_invested %}+{% endif %}${{ "%.2f"|format(total_current - total_invested) }}
       </span>
@@ -314,7 +314,7 @@
       <span style="font-weight:700;font-size:1.05rem;">${{ "%.2f"|format(user.balance) }}</span>
     </div>
     <div style="display:flex;justify-content:space-between;">
-      <span class="tr-sub">Gesamtrendite</span>
+      <span class="tr-sub">Gesamtperformance</span>
       <span style="font-weight:700;font-size:1.05rem;{% if net_pnl >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %}">
         {% if net_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(net_pnl) }}
         <span style="font-size:.8rem;">({% if net_pnl_pct >= 0 %}+{% endif %}{{ "%.2f"|format(net_pnl_pct) }}%)</span>
@@ -324,7 +324,7 @@
 
   <!-- Progress bar -->
   {% set spent_pct = ((10000 - user.balance) / 10000 * 100) | round(1) %}
-  <div class="tr-sub" style="margin-bottom:8px;">{{ spent_pct }}% investiert</div>
+  <div class="tr-sub" style="margin-bottom:8px;">{{ spent_pct }}% eingesetzt</div>
   <div style="height:6px;background:#111;border-radius:6px;overflow:hidden;">
     <div style="height:100%;width:{{ spent_pct }}%;background:#fff;border-radius:6px;
                 transition:width .6s ease;"></div>
@@ -332,7 +332,7 @@
 
   <div class="tr-actions" style="margin-top:32px;">
     <a href="/search" class="tr-btn-primary">
-      <span>Investieren</span><span>🔍</span>
+      <span>Sammeln</span><span>🔍</span>
     </a>
   </div>
 </div>
@@ -586,7 +586,7 @@
         tooltip: {
           backgroundColor: "#111", borderColor: "#222", borderWidth: 1,
           titleColor: "#555", bodyColor: "#fff",
-          callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)} Portfoliowert` }
+          callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)} Kollektionswert` }
         }
       },
       scales: { x: { display: false }, y: { display: false } }

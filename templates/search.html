@@ -4,6 +4,7 @@
 
 <div style="margin-bottom:28px;">
   <div class="tr-label" style="margin-bottom:6px;">Video finden</div>
+  <p style="font-size:.72rem;color:#8A9BAD;margin-bottom:8px;">Suche powered by YouTube Data API v3</p>
   <form method="get" action="/search">
     <div style="display:flex;gap:10px;">
       <input
@@ -70,7 +71,7 @@
     <div style="display:flex;gap:8px;padding:0 0 12px;">
       <a href="/video/{{ v.youtube_id }}" class="tr-btn-buy"
          style="flex:1;text-align:center;padding:10px;font-size:.82rem;">
-        Investieren
+        Sammeln
       </a>
       <form method="post" action="/suggest/{{ v.youtube_id }}" style="flex:1;margin:0;">
         <button type="submit"

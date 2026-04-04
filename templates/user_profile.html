@@ -25,7 +25,7 @@
 <div style="display:flex;gap:0;background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);
             border-radius:14px;margin-bottom:20px;overflow:hidden;">
   <div style="flex:1;padding:14px 12px;text-align:center;">
-    <div style="font-size:.6rem;color:#8A9BAD;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">Portfolio</div>
+    <div style="font-size:.6rem;color:#8A9BAD;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">Kollektion</div>
     <div style="font-size:1rem;font-weight:700;">${{ "%.0f"|format(portfolio_val) }}</div>
     <div style="font-size:.72rem;font-weight:600;{% if return_pct >= 0 %}color:#4CAF82{% else %}color:#A35139{% endif %}">
       {% if return_pct >= 0 %}+{% endif %}{{ "%.1f"|format(return_pct) }}%
@@ -62,7 +62,7 @@
              transition:all .15s;"
       onmouseover="this.style.borderColor='rgba(255,177,98,.4)';this.style.color='#FFB162'"
       onmouseout="this.style.borderColor='rgba(238,233,223,.2)';this.style.color='#EEE9DF'">
-      ⚔️ Duell starten &nbsp;<span style="font-size:.75rem;opacity:.6;">7 Tage · beste Rendite gewinnt</span>
+      ⚔️ Challenge starten &nbsp;<span style="font-size:.75rem;opacity:.6;">7 Tage · beste Performance gewinnt</span>
     </button>
   </form>
   {% endif %}

@@ -1,10 +1,10 @@
 # Content Market
 
-Handele YouTube-Videos wie Aktien. Investiere virtuelles Geld in echte Videos, deren Kurse anhand echter YouTube-Metriken berechnet werden — Views, Likes, Kommentare, Velocity, Kanalhistorie.
+Entdecke und sammle YouTube-Videos. Setze virtuelles Budget ein für echte Videos, deren Werte anhand echter YouTube-Metriken berechnet werden — Views, Likes, Kommentare, Velocity, Kanalhistorie.
 
 ## Features
 
-- **Trading** — Kauf & Verkauf von Video-Anteilen mit realem YouTube-Kursalgorithmus
+- **Engagement** — Sammeln & Entfernen von Video-Units mit realem YouTube-Wert-Algorithmus
 - **Gamification** — XP, Level, Achievements, tägliche Streaks
 - **Wettbewerb** — Duelle, Saisonrankings, Leagues mit Invite-Codes
 - **Hot Takes** — tägliche Vorhersagen auf View-Entwicklung
@@ -85,6 +85,15 @@ Die generierte `.aab`-Datei kann direkt in der Google Play Console hochgeladen w
 | `DATABASE_URL` | Datenbank-URL (Standard: SQLite) | Nein (Dev) |
 | `ASSET_LINK_FINGERPRINT` | SHA-256 Fingerprint für TWA | Nur Play Store |
 | `ANDROID_PACKAGE_NAME` | Android App Package Name | Nur Play Store |
+
+## YouTube API Compliance
+
+Diese App nutzt die YouTube Data API v3 gemäß den [YouTube API Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service).
+
+- Videodaten werden nach 30 Tagen ohne aktive Nutzung gelöscht
+- Alle Nutzer werden über die Datenschutzseite auf die Google-Datenschutzerklärung hingewiesen
+- Die App ist kein Finanzprodukt – alle Werte sind virtuelle Spielwährung
+- YouTube® ist eine eingetragene Marke von Google LLC
 
 ## Lizenz
 

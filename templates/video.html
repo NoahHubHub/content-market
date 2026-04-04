@@ -4,16 +4,16 @@
 
 {% if msg == "bought" %}
 <div class="tr-alert tr-alert-success">
-  ✓ Kauf erfolgreich
+  ✓ Hinzufügen erfolgreich
   {% if xp %}&nbsp;·&nbsp;<span style="color:#ff9f0a;font-weight:700;">+{{ xp }} XP ⚡</span>{% endif %}
 </div>
 {% elif msg == "sold" %}
 <div class="tr-alert tr-alert-success">
-  ✓ Verkauf erfolgreich
+  ✓ Entfernen erfolgreich
   {% if xp %}&nbsp;·&nbsp;<span style="color:#ff9f0a;font-weight:700;">+{{ xp }} XP ⚡</span>{% endif %}
 </div>
 {% elif msg == "refreshed" %}
-<div class="tr-alert tr-alert-info">Kurs aktualisiert</div>
+<div class="tr-alert tr-alert-info">Wert aktualisiert</div>
 {% elif msg == "watched" %}
 <div class="tr-alert tr-alert-info">★ Zur Beobachtungsliste hinzugefügt</div>
 {% elif msg == "unwatched" %}
@@ -26,7 +26,7 @@
 {% elif err == "slot_limit" %}
 <div class="tr-alert tr-alert-error" style="flex-direction:column;align-items:flex-start;gap:8px;">
   <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
-    <span style="font-weight:700;">Portfolio voll — max. 7 Positionen (Free)</span>
+    <span style="font-weight:700;">Kollektion voll — max. 7 Positionen (Free)</span>
     <a href="/premium" style="color:#FFB162;font-weight:700;white-space:nowrap;font-size:.82rem;flex-shrink:0;">⚡ Upgrade</a>
   </div>
   {% if worst_holding %}
@@ -110,9 +110,9 @@
   <div class="vy-bubble" style="border-color:rgba(255,159,10,.3);">
     <div class="vy-name">Vy · Schritt 3 von 4</div>
     <div class="vy-text">
-      Gut. Jetzt siehst du den aktuellen Kurs dieses Videos.<br>
-      <strong>Gib unten eine Anzahl Anteile ein und drück Kaufen.</strong><br>
-      <span style="color:#555;font-size:.8rem;">Start klein — 1 Anteil reicht zum Üben.</span>
+      Gut. Jetzt siehst du den aktuellen Wert dieses Videos.<br>
+      <strong>Gib unten eine Anzahl Units ein und drück Sammeln.</strong><br>
+      <span style="color:#555;font-size:.8rem;">Start klein — 1 Unit reicht zum Üben.</span>
     </div>
   </div>
 </div>
@@ -124,15 +124,15 @@
             margin-bottom:16px;display:flex;align-items:center;gap:12px;">
   <span style="font-size:1.8rem;">🚀</span>
   <div>
-    <div style="font-size:.7rem;color:#ff9f0a;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">IPO — Neu auf dem Markt</div>
-    <div style="font-size:.88rem;color:#fff;margin-top:1px;">Dieses Video ist weniger als 24h alt. Früh kaufen = Early Investor Badge.</div>
+    <div style="font-size:.7rem;color:#ff9f0a;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">Hot Drop — Neu auf dem Markt</div>
+    <div style="font-size:.88rem;color:#fff;margin-top:1px;">Dieses Video ist weniger als 24h alt. Früh sammeln = Early Supporter Badge.</div>
   </div>
 </div>
 {% endif %}
 
 <!-- Back + Watchlist toggle -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-  <a href="/" class="tr-sub">← Markt</a>
+  <a href="/" class="tr-sub">← Discover</a>
   <form method="post" action="/watch/{{ video.youtube_id }}" style="margin:0;">
     <button type="submit"
       style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:4px 8px;
@@ -168,9 +168,18 @@
 <div class="tr-label" style="margin-bottom:4px;animation:fade-in .4s .1s both;">{{ video.channel_name }}</div>
 <div style="font-size:1.1rem;font-weight:700;line-height:1.3;margin-bottom:20px;animation:slide-up .4s .12s cubic-bezier(.22,1,.36,1) both;">{{ video.title }}</div>
 
+<!-- Watch on YouTube -->
+<a href="https://www.youtube.com/watch?v={{ video.youtube_id }}" target="_blank" rel="noopener"
+   style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,0,0,.12);
+          border:1px solid rgba(255,0,0,.25);border-radius:10px;padding:7px 14px;
+          font-size:.82rem;font-weight:600;color:#ff4444;text-decoration:none;margin-bottom:16px;">
+  <svg height="12" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="20" rx="4" fill="#FF0000"/><polygon points="11,5 22,10 11,15" fill="white"/></svg>
+  Auf YouTube ansehen
+</a>
+
 <!-- Price block -->
 <div style="margin-bottom:8px;animation:slide-up .4s .18s cubic-bezier(.22,1,.36,1) both;">
-  <div class="tr-label" style="margin-bottom:4px;">Aktueller Kurs</div>
+  <div class="tr-label" style="margin-bottom:4px;">Aktueller Wert</div>
   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
     <span id="priceDisplay" style="font-size:2.4rem;font-weight:700;"
           data-price="{{ video.current_price }}">$—</span>
@@ -208,13 +217,13 @@
   <span id="nextUpdateBadge"
         style="font-size:.68rem;color:#556070;background:rgba(238,233,223,.06);
                border:1px solid rgba(238,233,223,.1);border-radius:20px;padding:3px 10px;">
-    ⏱ Nächste Kurs-Aktualisierung …
+    ⏱ Nächste Wert-Aktualisierung …
   </span>
   {% if price_is_stale %}
   <span title="Das ist kein Bug — YouTube-Daten werden manchmal langsamer aktualisiert. Trades sind trotzdem gültig."
         style="font-size:.68rem;color:#ff9f0a;background:rgba(255,159,10,.08);
                border:1px solid rgba(255,159,10,.2);border-radius:20px;padding:3px 10px;cursor:help;">
-    ⚠️ Kurs unverändert — Daten-Lag, kein Bug
+    ⚠️ Wert unverändert — Daten-Lag, kein Bug
   </span>
   {% endif %}
 </div>
@@ -255,7 +264,7 @@
     <div style="font-weight:700;font-size:.9rem;">{{ holders_count }}</div>
   </div>
   <div style="flex:1;padding:12px 0;text-align:center;">
-    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">KURSÄNDERUNG</div>
+    <div style="font-size:.65rem;color:#555;margin-bottom:2px;">WERTÄNDERUNG</div>
     <div style="font-weight:700;font-size:.9rem;{% if price_change_pct >= 0 %}color:#30d158{% else %}color:#ff453a{% endif %};">
       {% if price_change_pct >= 0 %}▲{% else %}▼{% endif %}{{ price_change_pct | abs }}%
     </div>
@@ -274,7 +283,7 @@
   <div>
     <div style="font-size:.82rem;font-weight:700;color:#ff9f0a;">Position im Minus ({{ pnl_check | round(1) }}%)</div>
     <div style="font-size:.72rem;color:#8A9BAD;margin-top:2px;">
-      Der Marktpreis liegt deutlich unter deinem Einstieg.
+      Der aktuelle Wert liegt deutlich unter deinem Einstieg.
     </div>
   </div>
 </div>
@@ -290,10 +299,10 @@
             border-radius:14px;padding:16px;margin-bottom:20px;">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <div>
-      <div class="tr-label" style="margin-bottom:4px;">Deine Position</div>
-      <div style="font-weight:700;font-size:.95rem;">{{ "%.2f"|format(holding.shares) }} Anteile</div>
+      <div class="tr-label" style="margin-bottom:4px;">Deine Kollektion</div>
+      <div style="font-weight:700;font-size:.95rem;">{{ "%.2f"|format(holding.shares) }} Units</div>
       <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
-        Ø Einstieg: <strong style="color:#C9C1B1;">${{ "%.2f"|format(holding.avg_cost) }}</strong>
+        Ø Hinzugefügt am: <strong style="color:#C9C1B1;">${{ "%.2f"|format(holding.avg_cost) }}</strong>
         · Wert: <strong style="color:#C9C1B1;">${{ "%.2f"|format(holding.shares * video.current_price) }}</strong>
       </div>
     </div>
@@ -337,12 +346,12 @@
 
 <!-- Buy form -->
 <div style="margin-bottom:16px;">
-  <div class="tr-label" style="margin-bottom:8px;">Kaufen</div>
+  <div class="tr-label" style="margin-bottom:8px;">Hinzufügen</div>
   <form method="post" action="/buy/{{ video.youtube_id }}" style="display:flex;gap:10px;">
     <input type="number" name="shares" class="tr-input" min="0.1" step="0.1" value="1"
            id="buyShares" style="flex:1;" />
     <button type="submit" class="tr-btn-buy" style="flex-shrink:0;width:auto;padding:14px 24px;">
-      Kaufen
+      Sammeln
     </button>
   </form>
   <!-- Quick-fill buttons -->
@@ -370,12 +379,12 @@
 <!-- Sell form -->
 {% if holding and holding.shares > 0 %}
 <div style="margin-bottom:16px;">
-  <div class="tr-label" style="margin-bottom:8px;">Verkaufen</div>
+  <div class="tr-label" style="margin-bottom:8px;">Entfernen</div>
   <form method="post" action="/sell/{{ video.youtube_id }}" style="display:flex;gap:10px;">
     <input type="number" name="shares" class="tr-input" min="0.1" step="0.1" value="1"
            max="{{ holding.shares }}" id="sellShares" style="flex:1;" />
     <button type="submit" class="tr-btn-sell" style="flex-shrink:0;width:auto;padding:14px 24px;">
-      Verkaufen
+      Entfernen
     </button>
   </form>
   <!-- Quick-sell buttons -->
@@ -390,7 +399,7 @@
     {% endfor %}
   </div>
   <div class="tr-sub" style="margin-top:6px;">
-    Erlös: <span id="sellRevenue" style="color:#fff;font-weight:600;">${{ "%.2f"|format(video.current_price) }}</span>
+    Betrag: <span id="sellRevenue" style="color:#fff;font-weight:600;">${{ "%.2f"|format(video.current_price) }}</span>
   </div>
 </div>
 {% endif %}
@@ -398,7 +407,7 @@
 <!-- Refresh -->
 <form method="post" action="/refresh/{{ video.youtube_id }}" style="margin-top:8px;">
   <button type="submit" class="tr-btn-ghost" style="width:100%;text-align:center;">
-    Kurs aktualisieren
+    Wert aktualisieren
   </button>
 </form>
 
