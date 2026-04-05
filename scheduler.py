@@ -40,6 +40,8 @@ def migrate():
             conn.execute(text("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0"))
         if "locked_until" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
+        if "is_admin" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
 
     video_cols = [c["name"] for c in insp.get_columns("videos")]
     with engine.begin() as conn:

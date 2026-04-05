@@ -112,6 +112,7 @@ class User(Base):
     # Login security
     failed_login_attempts = Column(Integer, default=0)
     locked_until          = Column(DateTime, nullable=True)
+    is_admin              = Column(Boolean, default=False)
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

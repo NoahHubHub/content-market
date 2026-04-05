@@ -65,6 +65,11 @@ async def account_save(request: Request, db: Session = Depends(get_db)):
         if len(new_password) < 12:
             db.rollback()
             return RedirectResponse("/account?error=pw_short", status_code=303)
+        from routers.auth import _check_password_strength
+        pw_error = _check_password_strength(new_password, db_user.username)
+        if pw_error:
+            db.rollback()
+            return RedirectResponse("/account?error=pw_weak", status_code=303)
         if not verify_pw(old_password, db_user.password_hash):
             db.rollback()
             return RedirectResponse("/account?error=pw_wrong", status_code=303)

@@ -11,3 +11,6 @@ bcrypt
 apscheduler
 slowapi
 pywebpush
+redis
+starlette-session
+zxcvbn

@@ -19,7 +19,7 @@ from deps import limiter, templates
 from csrf import CSRFMiddleware
 
 import scheduler  # starts APScheduler and runs migrate() on import
-from routers import auth, market, trading, portfolio, social, pwa, push, account, premium
+from routers import auth, market, trading, portfolio, social, pwa, push, account, premium, admin
 
 Base.metadata.create_all(bind=engine)
 scheduler.migrate()
@@ -30,7 +30,30 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
-app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
+_redis_url   = os.getenv("REDIS_URL")
+
+if _redis_url:
+    # Redis-backed sessions — shared across workers, survives restarts
+    try:
+        from starlette_session import SessionMiddleware as RedisSessionMiddleware
+        from starlette_session.backends import BackendType
+        app.add_middleware(
+            RedisSessionMiddleware,
+            secret_key=_session_key,
+            max_age=86400 * 30,
+            backend_type=BackendType.redis,
+            backend_url=_redis_url,
+        )
+        logging.getLogger(__name__).info("Sessions: Redis backend (%s)", _redis_url.split("@")[-1])
+    except ImportError:
+        logging.getLogger(__name__).warning(
+            "REDIS_URL set but starlette-session not installed — falling back to cookie sessions. "
+            "Add starlette-session to requirements.txt to enable Redis sessions."
+        )
+        app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
+else:
+    app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
+
 app.add_middleware(CSRFMiddleware)
 
 
@@ -68,6 +91,7 @@ app.include_router(social.router)
 app.include_router(push.router)
 app.include_router(account.router)
 app.include_router(premium.router)
+app.include_router(admin.router)
 
 
 # ── startup seed ───────────────────────────────────────────────────────────────

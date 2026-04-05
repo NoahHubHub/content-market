@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 import re
 import threading
@@ -7,11 +9,12 @@ from googleapiclient.discovery import build
 from dotenv import load_dotenv
 
 load_dotenv()
+log = logging.getLogger(__name__)
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+_CACHE_TTL = 1800  # 30 minutes
 
 # ── Singleton API client ───────────────────────────────────────────────────────
-# build() fetches the discovery document over HTTP — only do it once per process.
 _yt_client = None
 
 def _client():
@@ -21,16 +24,43 @@ def _client():
     return _yt_client
 
 
-# ── In-memory cache ────────────────────────────────────────────────────────────
-# Single namespace for all video data (full or stats-only).
-# Eviction runs automatically when the cache exceeds 500 entries.
+# ── Cache backend — Redis if REDIS_URL is set, in-memory otherwise ─────────────
+# Redis: shared across workers, survives restarts, no race conditions.
+# In-memory: zero dependencies, fine for single-worker Railway deployments.
+
+_REDIS_URL = os.getenv("REDIS_URL")
+_redis_client = None
+
+def _get_redis():
+    global _redis_client
+    if _redis_client is None:
+        try:
+            import redis
+            _redis_client = redis.from_url(_REDIS_URL, decode_responses=False)
+            _redis_client.ping()
+            log.info("YouTube cache: using Redis at %s", _REDIS_URL.split("@")[-1])
+        except Exception:
+            log.warning("YouTube cache: Redis unavailable, falling back to in-memory", exc_info=True)
+            _redis_client = False
+    return _redis_client if _redis_client else None
+
+
+# In-memory fallback
 _CACHE: dict = {}
 _CACHE_LOCK = threading.Lock()
-_CACHE_TTL = 1800   # 30 minutes
-_CACHE_MAX = 500    # max entries before eviction
+_CACHE_MAX = 500
 
 
 def _cache_get(key: str):
+    if _REDIS_URL:
+        r = _get_redis()
+        if r:
+            try:
+                raw = r.get(f"yt:{key}")
+                return json.loads(raw) if raw else None
+            except Exception:
+                log.warning("Redis cache_get failed for %s", key, exc_info=True)
+
     with _CACHE_LOCK:
         entry = _CACHE.get(key)
         if entry and (time() - entry[1]) < _CACHE_TTL:
@@ -39,9 +69,17 @@ def _cache_get(key: str):
 
 
 def _cache_set(key: str, value):
+    if _REDIS_URL:
+        r = _get_redis()
+        if r:
+            try:
+                r.setex(f"yt:{key}", _CACHE_TTL, json.dumps(value, default=str))
+                return
+            except Exception:
+                log.warning("Redis cache_set failed for %s", key, exc_info=True)
+
     with _CACHE_LOCK:
         if len(_CACHE) >= _CACHE_MAX:
-            # Evict all expired entries; if still over limit, remove oldest 20%
             now = time()
             expired = [k for k, (_, ts) in _CACHE.items() if now - ts >= _CACHE_TTL]
             for k in expired:

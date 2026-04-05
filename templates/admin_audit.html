@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Audit Log — Clip Capital{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:24px 16px;">
+
+  <h2 style="color:var(--oat);margin-bottom:4px;">Audit Log</h2>
+  <p style="color:rgba(238,233,223,.5);font-size:.82rem;margin-bottom:24px;">
+    {{ total }} Einträge insgesamt
+  </p>
+
+  <!-- Filter -->
+  <form method="get" action="/admin/audit"
+        style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    {{ csrf_input | safe }}
+    <select name="action" style="background:#1B2632;color:var(--oat);border:1px solid rgba(238,233,223,.15);
+      border-radius:8px;padding:7px 12px;font-size:.82rem;">
+      <option value="">Alle Aktionen</option>
+      {% for a in actions %}
+        <option value="{{ a }}" {% if filter_action == a %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+    <input name="username" value="{{ filter_username }}" placeholder="Username…"
+      style="background:#1B2632;color:var(--oat);border:1px solid rgba(238,233,223,.15);
+      border-radius:8px;padding:7px 12px;font-size:.82rem;width:160px;" />
+    <button type="submit" style="background:#FFB162;color:#1B2632;border:none;
+      border-radius:8px;padding:7px 18px;font-weight:700;cursor:pointer;font-size:.82rem;">
+      Filtern
+    </button>
+    {% if filter_action or filter_username %}
+    <a href="/admin/audit" style="color:rgba(238,233,223,.4);font-size:.82rem;align-self:center;">
+      Zurücksetzen
+    </a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+      <thead>
+        <tr style="color:rgba(238,233,223,.4);border-bottom:1px solid rgba(238,233,223,.1);">
+          <th style="text-align:left;padding:8px 12px;">Zeit</th>
+          <th style="text-align:left;padding:8px 12px;">Aktion</th>
+          <th style="text-align:left;padding:8px 12px;">User</th>
+          <th style="text-align:left;padding:8px 12px;">IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr style="border-bottom:1px solid rgba(238,233,223,.06);
+          {% if e.action == 'login_failed' or e.action == 'account_delete' %}
+            background:rgba(224,112,85,.05);
+          {% endif %}">
+          <td style="padding:8px 12px;color:rgba(238,233,223,.55);white-space:nowrap;">
+            {{ e.timestamp.strftime('%d.%m.%Y %H:%M') if e.timestamp else '—' }}
+          </td>
+          <td style="padding:8px 12px;">
+            <span style="
+              {% if e.action == 'login' %}color:#4CAF82;
+              {% elif e.action == 'login_failed' %}color:#E07055;
+              {% elif e.action == 'logout' %}color:rgba(238,233,223,.5);
+              {% elif e.action == 'password_change' %}color:#FFB162;
+              {% elif e.action == 'account_delete' %}color:#E07055;font-weight:700;
+              {% else %}color:var(--oat);
+              {% endif %}
+              font-family:monospace;">{{ e.action }}</span>
+          </td>
+          <td style="padding:8px 12px;color:var(--oat);">{{ e.username or '—' }}</td>
+          <td style="padding:8px 12px;color:rgba(238,233,223,.4);font-family:monospace;font-size:.75rem;">
+            {{ e.ip_address or '—' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" style="padding:24px;text-align:center;color:rgba(238,233,223,.3);">
+            Keine Einträge gefunden.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pages > 1 %}
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:20px;">
+    {% if page > 1 %}
+    <a href="/admin/audit?page={{ page - 1 }}&action={{ filter_action }}&username={{ filter_username }}"
+       style="color:#FFB162;font-size:.82rem;">← Zurück</a>
+    {% endif %}
+    <span style="color:rgba(238,233,223,.4);font-size:.82rem;">Seite {{ page }} / {{ pages }}</span>
+    {% if page < pages %}
+    <a href="/admin/audit?page={{ page + 1 }}&action={{ filter_action }}&username={{ filter_username }}"
+       style="color:#FFB162;font-size:.82rem;">Weiter →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

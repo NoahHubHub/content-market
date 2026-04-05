@@ -10,6 +10,21 @@ from helpers import get_login, hash_pw, verify_pw
 
 _MAX_ATTEMPTS = 5
 _LOCK_MINUTES = 15
+_MIN_PW_SCORE = 2  # zxcvbn score 0–4; 2 = "fair"
+
+
+def _check_password_strength(password: str, username: str) -> str | None:
+    """Returns an error message if the password is too weak, None if OK."""
+    try:
+        from zxcvbn import zxcvbn
+        result = zxcvbn(password, user_inputs=[username])
+        if result["score"] < _MIN_PW_SCORE:
+            suggestions = result["feedback"].get("suggestions", [])
+            hint = suggestions[0] if suggestions else "Wähle ein stärkeres Passwort."
+            return f"Passwort zu schwach. {hint}"
+    except ImportError:
+        pass  # zxcvbn not installed — fall back to length-only check
+    return None
 
 
 def _audit(db: Session, request: Request, action: str, user=None):
@@ -40,6 +55,10 @@ async def register(request: Request, username: str = Form(...), password: str = 
     if len(password) < 12:
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": "Passwort zu kurz (min. 12 Zeichen)"})
+    pw_error = _check_password_strength(password, username)
+    if pw_error:
+        return templates.TemplateResponse(request, "register.html",
+            {"user": None, "error": pw_error})
     if db.query(models.User).filter(models.User.username == username).first():
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": "Username bereits vergeben"})
