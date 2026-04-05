@@ -7,6 +7,7 @@ import models
 from database import get_db
 from deps import templates
 from helpers import get_login, hash_pw, verify_pw, UserCtx
+from routers.auth import _audit
 
 router = APIRouter()
 
@@ -68,6 +69,9 @@ async def account_save(request: Request, db: Session = Depends(get_db)):
             db.rollback()
             return RedirectResponse("/account?error=pw_wrong", status_code=303)
         db_user.password_hash = hash_pw(new_password)
+        db.commit()
+        _audit(db, request, "password_change", db_user)
+        return RedirectResponse("/account?saved=1", status_code=303)
 
     db.commit()
     return RedirectResponse("/account?saved=1", status_code=303)
@@ -128,6 +132,9 @@ async def delete_account(request: Request, db: Session = Depends(get_db)):
     db.query(models.Duel).filter(
         or_(models.Duel.challenger_id == db_user.id, models.Duel.opponent_id == db_user.id)
     ).delete(synchronize_session=False)
+    # Audit before delete (user_id will be nulled by SET NULL cascade)
+    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else None)
+    db.add(models.AuditLog(user_id=None, username=db_user.username, action="account_delete", ip_address=ip))
     db.delete(db_user)
     db.commit()
     request.session.clear()

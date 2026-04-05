@@ -367,3 +367,15 @@ class PortfolioSnapshot(Base):
     recorded_at  = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User")
+
+
+class AuditLog(Base):
+    """Protokolliert sicherheitsrelevante Aktionen für Debugging und Compliance."""
+    __tablename__ = "audit_logs"
+
+    id         = Column(Integer, primary_key=True)
+    user_id    = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    username   = Column(String, nullable=True)   # bleibt erhalten nach Account-Löschung
+    action     = Column(String, nullable=False)  # login | login_failed | logout | password_change | account_delete
+    ip_address = Column(String, nullable=True)
+    timestamp  = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

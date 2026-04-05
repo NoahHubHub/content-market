@@ -47,10 +47,7 @@ def migrate():
             conn.execute(text("ALTER TABLE videos ADD COLUMN category VARCHAR"))
 
     # Neue Tabellen anlegen falls sie noch nicht existieren
-    tables = insp.get_table_names()
-    if "user_watchlists" not in tables or "portfolio_snapshots" not in tables:
-        # SQLAlchemy erstellt fehlende Tabellen via create_all (bereits in main.py)
-        pass
+    # (SQLAlchemy create_all in main.py legt fehlende Tabellen an)
 
     # Backfill category for existing videos that have none
     _backfill_categories()

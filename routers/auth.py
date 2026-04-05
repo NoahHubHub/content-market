@@ -11,6 +11,17 @@ from helpers import get_login, hash_pw, verify_pw
 _MAX_ATTEMPTS = 5
 _LOCK_MINUTES = 15
 
+
+def _audit(db: Session, request: Request, action: str, user=None):
+    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else None)
+    db.add(models.AuditLog(
+        user_id=user.id if user else None,
+        username=user.username if user else None,
+        action=action,
+        ip_address=ip,
+    ))
+    db.commit()
+
 router = APIRouter()
 
 
@@ -66,6 +77,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
                 db_user.locked_until = datetime.utcnow() + timedelta(minutes=_LOCK_MINUTES)
                 db_user.failed_login_attempts = 0
             db.commit()
+            _audit(db, request, "login_failed", db_user)
         return templates.TemplateResponse(request, "login.html",
             {"user": None, "error": "Ungültige Zugangsdaten", "next": next})
 
@@ -73,6 +85,7 @@ async def login(request: Request, username: str = Form(...), password: str = For
     db_user.failed_login_attempts = 0
     db_user.locked_until = None
     db.commit()
+    _audit(db, request, "login", db_user)
 
     request.session.clear()
     request.session["user_id"] = db_user.id
@@ -83,7 +96,10 @@ async def login(request: Request, username: str = Form(...), password: str = For
 
 
 @router.post("/logout")
-async def logout(request: Request):
+async def logout(request: Request, db: Session = Depends(get_db)):
+    db_user = get_login(request, db)
+    if db_user:
+        _audit(db, request, "logout", db_user)
     request.session.clear()
     return RedirectResponse("/login", status_code=302)
 
