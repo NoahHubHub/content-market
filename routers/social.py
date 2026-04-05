@@ -57,9 +57,14 @@ async def season_page(request: Request, db: Session = Depends(get_db)):
     ensure_season_entry(db_user, db)
 
     entries = db.query(models.SeasonEntry).filter_by(season_id=season.id).all()
+    usernames = [e.username for e in entries]
+    users_by_name = {
+        u.username: u
+        for u in db.query(models.User).filter(models.User.username.in_(usernames)).all()
+    }
     board = []
     for e in entries:
-        u = db.query(models.User).filter_by(username=e.username).first()
+        u = users_by_name.get(e.username)
         current = calc_total_portfolio_value(u) if u else e.start_value
         ret = round((current - e.start_value) / max(e.start_value, 1) * 100, 2)
         board.append({"username": e.username, "return_pct": ret,

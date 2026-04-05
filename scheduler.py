@@ -36,6 +36,10 @@ def migrate():
             conn.execute(text("ALTER TABLE users ADD COLUMN avatar_color VARCHAR(7) DEFAULT '#FFB162'"))
         if "is_premium" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE"))
+        if "failed_login_attempts" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0"))
+        if "locked_until" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
 
     video_cols = [c["name"] for c in insp.get_columns("videos")]
     with engine.begin() as conn:

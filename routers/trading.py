@@ -1,6 +1,7 @@
 import logging
 import random
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from deps import limiter
 
 log = logging.getLogger(__name__)
 from fastapi.responses import RedirectResponse
@@ -20,6 +21,7 @@ router = APIRouter()
 
 
 @router.post("/buy/{youtube_id}")
+@limiter.limit("15/minute")
 async def buy(request: Request, youtube_id: str, shares: float = Form(...),
               db: Session = Depends(get_db)):
     db_user = get_login(request, db)
@@ -97,6 +99,7 @@ async def buy(request: Request, youtube_id: str, shares: float = Form(...),
 
 
 @router.post("/sell/{youtube_id}")
+@limiter.limit("15/minute")
 async def sell(request: Request, youtube_id: str, shares: float = Form(...),
                db: Session = Depends(get_db)):
     db_user = get_login(request, db)
@@ -151,6 +154,7 @@ async def sell(request: Request, youtube_id: str, shares: float = Form(...),
 
 
 @router.post("/daily-drop/buy/{drop_id}")
+@limiter.limit("10/minute")
 async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(...),
                          db: Session = Depends(get_db)):
     db_user = get_login(request, db)

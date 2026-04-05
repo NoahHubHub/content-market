@@ -1,6 +1,6 @@
 """Account settings routes: view and update profile."""
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 import models
@@ -61,7 +61,7 @@ async def account_save(request: Request, db: Session = Depends(get_db)):
 
     # Password change — optional
     if new_password:
-        if len(new_password) < 6:
+        if len(new_password) < 12:
             db.rollback()
             return RedirectResponse("/account?error=pw_short", status_code=303)
         if not verify_pw(old_password, db_user.password_hash):
@@ -132,3 +132,46 @@ async def delete_account(request: Request, db: Session = Depends(get_db)):
     db.commit()
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+
+@router.get("/account/export")
+async def export_data(request: Request, db: Session = Depends(get_db)):
+    """GDPR data export — returns all stored data for the authenticated user as JSON."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+
+    data = {
+        "account": {
+            "username": db_user.username,
+            "display_name": db_user.display_name,
+            "bio": db_user.bio,
+            "balance": db_user.balance,
+            "xp": db_user.xp,
+            "level": db_user.level,
+            "streak_days": db_user.streak_days,
+            "is_premium": db_user.is_premium,
+            "created_at": db_user.created_at.isoformat() if db_user.created_at else None,
+        },
+        "holdings": [
+            {"youtube_id": h.youtube_id, "shares": h.shares, "avg_buy_price": h.avg_buy_price}
+            for h in db_user.holdings
+        ],
+        "transactions": [
+            {
+                "youtube_id": t.youtube_id,
+                "type": t.transaction_type,
+                "shares": t.shares,
+                "price": t.price,
+                "timestamp": t.timestamp.isoformat() if t.timestamp else None,
+            }
+            for t in db_user.transactions
+        ],
+        "achievements": [
+            {"achievement_id": a.achievement_id, "earned_at": a.earned_at.isoformat() if a.earned_at else None}
+            for a in db_user.achievements
+        ],
+    }
+
+    headers = {"Content-Disposition": 'attachment; filename="clip-capital-export.json"'}
+    return JSONResponse(content=data, headers=headers)

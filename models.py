@@ -109,6 +109,9 @@ class User(Base):
     avatar_color  = Column(String(7), default="#FFB162")
     # Subscription
     is_premium    = Column(Boolean, default=False)
+    # Login security
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until          = Column(DateTime, nullable=True)
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

@@ -525,7 +525,10 @@
 <!-- Account / Privacy footer -->
 <div style="margin-top:28px;display:flex;justify-content:space-between;align-items:center;
             padding-top:16px;border-top:1px solid rgba(238,233,223,.08);">
-  <a href="/privacy" class="tr-sub" style="font-size:.76rem;">Datenschutz</a>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <a href="/privacy" class="tr-sub" style="font-size:.76rem;">Datenschutz</a>
+    <a href="/account/export" class="tr-sub" style="font-size:.76rem;">Daten exportieren</a>
+  </div>
   <form method="post" action="/account/delete" style="margin:0;"
         onsubmit="return confirm('Konto wirklich löschen? Alle Daten werden sofort und unwiderruflich entfernt.')">
     <button type="submit"
@@ -535,6 +538,7 @@
       onmouseout="this.style.color='rgba(224,112,85,.4)'">
       Konto löschen
     </button>
+    {{ csrf_input | safe }}
   </form>
 </div>
 

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -6,6 +7,9 @@ import models
 from database import get_db
 from deps import limiter, templates
 from helpers import get_login, hash_pw, verify_pw
+
+_MAX_ATTEMPTS = 5
+_LOCK_MINUTES = 15
 
 router = APIRouter()
 
@@ -22,6 +26,9 @@ async def register(request: Request, username: str = Form(...), password: str = 
     if len(username) < 3:
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": "Username zu kurz (min. 3 Zeichen)"})
+    if len(password) < 12:
+        return templates.TemplateResponse(request, "register.html",
+            {"user": None, "error": "Passwort zu kurz (min. 12 Zeichen)"})
     if db.query(models.User).filter(models.User.username == username).first():
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": "Username bereits vergeben"})
@@ -45,9 +52,28 @@ async def login_page(request: Request):
 async def login(request: Request, username: str = Form(...), password: str = Form(...),
                 next: str = Form(default=""), db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == username).first()
+
+    # Account lockout check
+    if db_user and db_user.locked_until and datetime.utcnow() < db_user.locked_until:
+        remaining = int((db_user.locked_until - datetime.utcnow()).total_seconds() // 60) + 1
+        return templates.TemplateResponse(request, "login.html",
+            {"user": None, "error": f"Account gesperrt. Versuche es in {remaining} Minuten erneut.", "next": next})
+
     if not db_user or not verify_pw(password, db_user.password_hash):
+        if db_user:
+            db_user.failed_login_attempts = (db_user.failed_login_attempts or 0) + 1
+            if db_user.failed_login_attempts >= _MAX_ATTEMPTS:
+                db_user.locked_until = datetime.utcnow() + timedelta(minutes=_LOCK_MINUTES)
+                db_user.failed_login_attempts = 0
+            db.commit()
         return templates.TemplateResponse(request, "login.html",
             {"user": None, "error": "Ungültige Zugangsdaten", "next": next})
+
+    # Successful login — reset lockout counters
+    db_user.failed_login_attempts = 0
+    db_user.locked_until = None
+    db.commit()
+
     request.session.clear()
     request.session["user_id"] = db_user.id
     # Only allow relative redirects to prevent open redirect

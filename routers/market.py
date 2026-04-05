@@ -373,7 +373,8 @@ async def toggle_watchlist(request: Request, youtube_id: str, db: Session = Depe
 
 
 @router.post("/refresh/{youtube_id}")
-async def refresh_video(youtube_id: str, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def refresh_video(request: Request, youtube_id: str, db: Session = Depends(get_db)):
     yt_list = get_video_by_id(youtube_id)
     if yt_list:
         upsert_video(db, yt_list[0])
@@ -444,6 +445,7 @@ async def channel_page(request: Request, channel_id: str, db: Session = Depends(
 
 
 @router.post("/refresh-portfolio")
+@limiter.limit("3/minute")
 async def refresh_portfolio(request: Request, db: Session = Depends(get_db)):
     db_user = get_login(request, db)
     if not db_user:
