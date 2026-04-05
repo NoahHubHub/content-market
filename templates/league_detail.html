@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ league.name }} — Content Market{% endblock %}
+{% block title %}{{ league.name }} — Clip Capital{% endblock %}
 {% block content %}
 
 {% if msg == "joined" %}
@@ -162,7 +162,7 @@ function copyInvite() {
 function shareInvite() {
   if (navigator.share) {
     navigator.share({
-      title: "Content Market Liga-Einladung",
+      title: "Clip Capital Liga-Einladung",
       text: `Tritt meiner Liga "{{ league.name }}" bei! Code: ${INVITE_CODE}`,
       url: INVITE_URL,
     }).catch(() => {});

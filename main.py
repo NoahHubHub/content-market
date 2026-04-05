@@ -17,7 +17,7 @@ from routers import auth, market, trading, portfolio, social, pwa, push, account
 Base.metadata.create_all(bind=engine)
 scheduler.migrate()
 
-app = FastAPI(title="Content Market")
+app = FastAPI(title="Clip Capital")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.mount("/static", StaticFiles(directory="static"), name="static")

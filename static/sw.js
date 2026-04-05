@@ -64,9 +64,9 @@ self.addEventListener('push', event => {
   if (!event.data) return;
 
   let data = {};
-  try { data = event.data.json(); } catch { data = { title: 'Content Market', body: event.data.text() }; }
+  try { data = event.data.json(); } catch { data = { title: 'Clip Capital', body: event.data.text() }; }
 
-  const title   = data.title || 'Content Market';
+  const title   = data.title || 'Clip Capital';
   const options = {
     body:    data.body  || '',
     icon:    data.icon  || '/static/icon-192.svg',

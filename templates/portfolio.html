@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Portfolio — Content Market{% endblock %}
+{% block title %}Portfolio — Clip Capital{% endblock %}
 
 {% block content %}
 <style>
@@ -730,9 +730,9 @@
   // Best trade share
   {% if best_trade %}
   function shareBestTrade() {
-    const text = `Mein bester Trade auf Content Market:\n📈 {{ best_trade.title[:40] }}\n+{{ best_trade.pnl_pct }}% · +${{ "%.2f"|format(best_trade.pnl_abs) }}\n{{ APP_URL }}`;
+    const text = `Mein bester Trade auf Clip Capital:\n📈 {{ best_trade.title[:40] }}\n+{{ best_trade.pnl_pct }}% · +${{ "%.2f"|format(best_trade.pnl_abs) }}\n{{ APP_URL }}`;
     if (navigator.share) {
-      navigator.share({ title: "Content Market Trade", text }).catch(() => {});
+      navigator.share({ title: "Clip Capital Trade", text }).catch(() => {});
     } else {
       navigator.clipboard.writeText(text).then(() => {
         const t = document.getElementById('shareToast');

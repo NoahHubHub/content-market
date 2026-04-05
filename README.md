@@ -1,4 +1,4 @@
-# Content Market
+# Clip Capital
 
 Entdecke und sammle YouTube-Videos. Setze virtuelles Budget ein für echte Videos, deren Werte anhand echter YouTube-Metriken berechnet werden — Views, Likes, Kommentare, Velocity, Kanalhistorie.
 
@@ -26,8 +26,8 @@ Entdecke und sammle YouTube-Videos. Setze virtuelles Budget ein für echte Video
 
 ```bash
 # 1. Repo klonen
-git clone https://github.com/NoahHubHub/Content-Market.git
-cd Content-Market
+git clone https://github.com/NoahHubHub/Clip-Capital.git
+cd clip-capital
 
 # 2. Virtuelle Umgebung
 python -m venv venv
