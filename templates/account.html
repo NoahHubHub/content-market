@@ -22,6 +22,7 @@
   {% endif %}
 
   <form method="post" action="/account">
+    {{ csrf_input | safe }}
 
     <!-- ── Avatar Preview ──────────────────────────────────── -->
     <div style="display:flex;align-items:center;gap:18px;margin-bottom:28px;">

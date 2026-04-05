@@ -73,6 +73,7 @@
         Profil ansehen
       </a>
       <form method="post" action="/duel/challenge" style="flex:1;margin:0;">
+    {{ csrf_input | safe }}
         <input type="hidden" name="opponent_username" value="{{ item.username }}" />
         <button type="submit"
           style="width:100%;padding:8px 0;font-size:.75rem;font-weight:700;color:#FFB162;

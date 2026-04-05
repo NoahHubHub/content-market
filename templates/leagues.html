@@ -48,6 +48,7 @@
       {% endif %}
     </div>
     <form method="post" action="/leagues/create">
+    {{ csrf_input | safe }}
       <input type="text" name="league_name" class="tr-input" placeholder="Liga-Name…"
              maxlength="40" required style="margin-bottom:10px;" />
       <button type="submit" class="tr-btn-primary" style="width:100%;padding:12px;font-size:.88rem;"
@@ -66,6 +67,7 @@
   <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;">
     <div class="tr-label" style="margin-bottom:10px;">Beitreten</div>
     <form method="post" action="/leagues/join">
+    {{ csrf_input | safe }}
       <input type="text" name="invite_code" class="tr-input" placeholder="Invite-Code…"
              maxlength="10" style="text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;" required
              value="{{ request.query_params.get('code', '') | upper }}" />

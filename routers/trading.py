@@ -1,5 +1,8 @@
+import logging
 import random
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
+
+log = logging.getLogger(__name__)
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -214,7 +217,7 @@ async def buy_daily_drop(request: Request, drop_id: int, shares: float = Form(..
                         db=db,
                     )
     except Exception:
-        pass
+        log.warning("buy_daily_drop: push notification failed", exc_info=True)
 
     total_drops = sum(1 for t in db_user.transactions
                       if t.transaction_type == "buy" and

@@ -533,6 +533,7 @@
          style="color:var(--muted);font-size:1rem;line-height:1;text-decoration:none;transition:color .15s;"
          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">⚙️</a>
       <form method="post" action="/logout" style="margin:0;">
+    {{ csrf_input | safe }}
         <button type="submit"
           style="background:none;border:none;color:#333;font-size:.88rem;
                  cursor:pointer;padding:0;transition:color .15s;"

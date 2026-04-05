@@ -1,5 +1,6 @@
 import os
 import re
+import threading
 from datetime import datetime
 from time import time
 from googleapiclient.discovery import build
@@ -24,29 +25,32 @@ def _client():
 # Single namespace for all video data (full or stats-only).
 # Eviction runs automatically when the cache exceeds 500 entries.
 _CACHE: dict = {}
+_CACHE_LOCK = threading.Lock()
 _CACHE_TTL = 1800   # 30 minutes
 _CACHE_MAX = 500    # max entries before eviction
 
 
 def _cache_get(key: str):
-    entry = _CACHE.get(key)
-    if entry and (time() - entry[1]) < _CACHE_TTL:
-        return entry[0]
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if entry and (time() - entry[1]) < _CACHE_TTL:
+            return entry[0]
     return None
 
 
 def _cache_set(key: str, value):
-    if len(_CACHE) >= _CACHE_MAX:
-        # Evict all expired entries; if still over limit, remove oldest 20%
-        now = time()
-        expired = [k for k, (_, ts) in _CACHE.items() if now - ts >= _CACHE_TTL]
-        for k in expired:
-            del _CACHE[k]
+    with _CACHE_LOCK:
         if len(_CACHE) >= _CACHE_MAX:
-            oldest = sorted(_CACHE.items(), key=lambda x: x[1][1])
-            for k, _ in oldest[:_CACHE_MAX // 5]:
+            # Evict all expired entries; if still over limit, remove oldest 20%
+            now = time()
+            expired = [k for k, (_, ts) in _CACHE.items() if now - ts >= _CACHE_TTL]
+            for k in expired:
                 del _CACHE[k]
-    _CACHE[key] = (value, time())
+            if len(_CACHE) >= _CACHE_MAX:
+                oldest = sorted(_CACHE.items(), key=lambda x: x[1][1])
+                for k, _ in oldest[:_CACHE_MAX // 5]:
+                    del _CACHE[k]
+        _CACHE[key] = (value, time())
 
 
 def extract_video_id(url_or_id: str) -> str:

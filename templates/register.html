@@ -14,6 +14,7 @@
   {% endif %}
 
   <form method="post" action="/register">
+    {{ csrf_input | safe }}
     <div style="margin-bottom:14px;">
       <div class="tr-label" style="margin-bottom:6px;">Username</div>
       <input name="username" type="text" class="tr-input" required autofocus

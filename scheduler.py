@@ -1,7 +1,10 @@
 """Background scheduler jobs and startup migrations."""
+import logging
 import os
 from collections import defaultdict
 from datetime import datetime, timedelta
+
+log = logging.getLogger(__name__)
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -60,6 +63,7 @@ def _backfill_categories():
         try:
             yt_items = get_video_details(ids)
         except Exception:
+            log.warning("backfill_categories: YouTube API call failed", exc_info=True)
             return
         yt_map = {item["youtube_id"]: item.get("category") for item in yt_items}
         for v in missing[:50]:
@@ -68,7 +72,7 @@ def _backfill_categories():
                 v.category = cat
         db.commit()
     except Exception:
-        pass
+        log.exception("backfill_categories: unexpected error")
     finally:
         db.close()
 
@@ -109,7 +113,7 @@ def auto_refresh_prices():
                 for yt in yt_list:
                     upsert_video(db, yt)
             except Exception:
-                pass
+                log.warning("auto_refresh_prices: batch %s failed", batch, exc_info=True)
 
         # Send push notifications for watchlist videos that moved ±15%
         notify_watchlist_movers(db, price_before)
@@ -140,7 +144,7 @@ def snapshot_portfolio_values(db):
             db.add(models.PortfolioSnapshot(user_id=u.id, value=val))
         db.commit()
     except Exception:
-        pass
+        log.exception("snapshot_portfolio_values: unexpected error")
 
 
 def notify_watchlist_movers(db, price_before: dict):
@@ -179,7 +183,7 @@ def notify_watchlist_movers(db, price_before: dict):
                     db=db,
                 )
     except Exception:
-        pass
+        log.exception("notify_watchlist_movers: unexpected error")
 
 
 def generate_daily_drop():
@@ -221,7 +225,7 @@ def seed_market():
             for yt in yt_list:
                 upsert_video(db, yt)
         except Exception:
-            pass
+            log.warning("seed_market: YouTube API call failed", exc_info=True)
     finally:
         db.close()
 

@@ -300,6 +300,7 @@
   <!-- CTA -->
   <div class="pm-cta">
     <form method="post" action="/premium/upgrade">
+    {{ csrf_input | safe }}
       <button type="submit" class="pm-btn">
         ⚡ Jetzt upgraden — €2,99/Monat
       </button>

@@ -134,6 +134,7 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
   <a href="/" class="tr-sub">← Discover</a>
   <form method="post" action="/watch/{{ video.youtube_id }}" style="margin:0;">
+    {{ csrf_input | safe }}
     <button type="submit"
       style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:4px 8px;
              color:{% if is_watching %}#ff9f0a{% else %}#333{% endif %};
@@ -353,6 +354,7 @@
 <div style="margin-bottom:16px;">
   <div class="tr-label" style="margin-bottom:8px;">Hinzufügen</div>
   <form method="post" action="/buy/{{ video.youtube_id }}" style="display:flex;gap:10px;">
+    {{ csrf_input | safe }}
     <input type="number" name="shares" class="tr-input" min="0.1" step="0.1" value="1"
            id="buyShares" style="flex:1;" />
     <button type="submit" class="tr-btn-buy" style="flex-shrink:0;width:auto;padding:14px 24px;">
@@ -386,6 +388,7 @@
 <div style="margin-bottom:16px;">
   <div class="tr-label" style="margin-bottom:8px;">Entfernen</div>
   <form method="post" action="/sell/{{ video.youtube_id }}" style="display:flex;gap:10px;">
+    {{ csrf_input | safe }}
     <input type="number" name="shares" class="tr-input" min="0.1" step="0.1" value="1"
            max="{{ holding.shares }}" id="sellShares" style="flex:1;" />
     <button type="submit" class="tr-btn-sell" style="flex-shrink:0;width:auto;padding:14px 24px;">
@@ -411,6 +414,7 @@
 
 <!-- Refresh -->
 <form method="post" action="/refresh/{{ video.youtube_id }}" style="margin-top:8px;">
+    {{ csrf_input | safe }}
   <button type="submit" class="tr-btn-ghost" style="width:100%;text-align:center;">
     Wert aktualisieren
   </button>

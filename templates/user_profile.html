@@ -54,6 +54,7 @@
   </a>
   {% else %}
   <form method="post" action="/duel/challenge" style="margin:0;">
+    {{ csrf_input | safe }}
     <input type="hidden" name="opponent_username" value="{{ profile.username }}" />
     <button type="submit"
       style="width:100%;background:rgba(238,233,223,.08);border:1px solid rgba(238,233,223,.2);

@@ -1,5 +1,8 @@
+import logging
 import secrets
 from datetime import datetime, timedelta
+
+log = logging.getLogger(__name__)
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -101,7 +104,7 @@ async def challenge_duel(request: Request, opponent_username: str = Form(...),
             db=db,
         )
     except Exception:
-        pass
+        log.warning("challenge_duel: push notification failed", exc_info=True)
 
     return RedirectResponse("/duels?msg=challenged", status_code=302)
 
@@ -151,7 +154,7 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
                     db=db,
                 )
             except Exception:
-                pass
+                log.warning("duels_page: push notification for completed duel failed", exc_info=True)
 
         opponent     = d.opponent if d.challenger_id == db_user.id else d.challenger
         is_challenger = d.challenger_id == db_user.id
@@ -166,7 +169,7 @@ async def duels_page(request: Request, db: Session = Depends(get_db)):
                 end_dt = datetime.strptime(d.end_date, "%Y-%m-%d")
                 days_left = max(0, (end_dt - datetime.utcnow()).days)
             except Exception:
-                pass
+                log.warning("duels_page: could not parse end_date '%s'", d.end_date, exc_info=True)
 
         duel_data.append({
             "duel": d, "opponent": opponent,

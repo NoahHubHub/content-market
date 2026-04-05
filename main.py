@@ -1,7 +1,13 @@
+import logging
 import os
 import secrets
 
 from fastapi import FastAPI, Request
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+)
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -10,6 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from database import Base, engine
 from deps import limiter, templates
+from csrf import CSRFMiddleware
 
 import scheduler  # starts APScheduler and runs migrate() on import
 from routers import auth, market, trading, portfolio, social, pwa, push, account, premium
@@ -24,6 +31,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
+app.add_middleware(CSRFMiddleware)
 
 
 # ── error handlers ─────────────────────────────────────────────────────────────
@@ -68,4 +76,4 @@ try:
     scheduler.seed_market()
     scheduler.generate_daily_drop()
 except Exception:
-    pass
+    logging.getLogger(__name__).warning("startup seed failed", exc_info=True)

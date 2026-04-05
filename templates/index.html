@@ -71,11 +71,13 @@
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
       <form method="post" action="/vy/dismiss" style="margin:0;">
+    {{ csrf_input | safe }}
         <button type="submit" class="tr-btn-primary" style="padding:10px 18px;font-size:.85rem;">
           Los geht's →
         </button>
       </form>
       <form method="post" action="/vy/dismiss" style="margin:0;">
+    {{ csrf_input | safe }}
         <button type="submit"
           style="background:none;border:none;color:#333;font-size:.78rem;cursor:pointer;padding:10px 4px;">
           Überspringen
@@ -103,6 +105,7 @@
 <!-- Täglicher Bonus -->
 {% if bonus_available %}
 <form method="post" action="/bonus/claim" style="margin-bottom:16px;">
+    {{ csrf_input | safe }}
   <button type="submit"
     style="width:100%;background:linear-gradient(135deg,#ff9f0a,#ff6b00);border:none;
            border-radius:14px;padding:16px;color:#000;font-size:.95rem;font-weight:700;
@@ -164,6 +167,7 @@
     Hat dieses Video morgen mehr Views als heute?
   </div>
   <form method="post" action="/hottake/{{ hot_take_video.id }}" style="display:flex;gap:8px;">
+    {{ csrf_input | safe }}
     <button type="submit" name="prediction" value="up"
       style="flex:1;background:rgba(76,175,130,.15);border:1px solid rgba(76,175,130,.35);border-radius:12px;
              color:#4CAF82;font-size:.9rem;font-weight:700;padding:12px;cursor:pointer;transition:background .15s;">
@@ -355,6 +359,7 @@
         ⚔️ Duell starten
       </a>
       <form method="post" action="/tutorial/next" style="margin:0;">
+    {{ csrf_input | safe }}
         <button type="submit"
           style="background:none;border:none;color:#556070;font-size:.75rem;cursor:pointer;padding:9px 4px;">
           Später
@@ -588,6 +593,7 @@
     </div>
     {% if drop.shares_remaining > 0 %}
     <form method="post" action="/daily-drop/buy/{{ drop.id }}" style="display:flex;gap:8px;">
+    {{ csrf_input | safe }}
       <input type="number" name="shares" value="1" min="0.1" max="{{ drop.shares_remaining }}" step="0.1"
              class="tr-input" style="flex:1;padding:10px 14px;font-size:.88rem;" />
       <button type="submit" class="tr-btn-buy" style="flex-shrink:0;padding:10px 18px;font-size:.85rem;width:auto;">
@@ -646,6 +652,7 @@
       <!-- Hot Take Buttons für Watchlist-Videos -->
       {% if not already_tipped %}
       <form method="post" action="/hottake/{{ v.id }}" style="display:flex;gap:6px;padding:0 0 10px;">
+    {{ csrf_input | safe }}
         <button type="submit" name="prediction" value="up"
           style="flex:1;background:rgba(76,175,130,.1);border:1px solid rgba(76,175,130,.25);
                  border-radius:10px;color:#4CAF82;font-size:.78rem;font-weight:700;padding:8px 0;cursor:pointer;">

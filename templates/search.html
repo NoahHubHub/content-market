@@ -74,6 +74,7 @@
         Sammeln
       </a>
       <form method="post" action="/suggest/{{ v.youtube_id }}" style="flex:1;margin:0;">
+    {{ csrf_input | safe }}
         <button type="submit"
           style="width:100%;background:rgba(238,233,223,.08);border:1px solid rgba(238,233,223,.15);
                  color:#C9C1B1;border-radius:12px;padding:10px;font-size:.82rem;cursor:pointer;

@@ -18,6 +18,7 @@
 <div style="background:rgba(238,233,223,.07);border:1px solid rgba(238,233,223,.12);border-radius:14px;padding:16px;margin-bottom:16px;">
   <div class="tr-label" style="margin-bottom:10px;">Neue Challenge starten</div>
   <form method="post" action="/duel/challenge" style="display:flex;gap:10px;">
+    {{ csrf_input | safe }}
     <input type="text" name="opponent_username" id="opponentInput" class="tr-input"
            placeholder="Username eingeben…" style="flex:1;" required />
     <button type="submit" class="tr-btn-primary"
@@ -128,6 +129,7 @@
     <div style="flex:1;font-size:.75rem;color:#556070;">Beim nächsten Mal klappt's!</div>
     {% endif %}
     <form method="post" action="/duel/challenge" style="margin:0;">
+    {{ csrf_input | safe }}
       <input type="hidden" name="opponent_username" value="{{ item.opponent.username }}" />
       <button type="submit"
               style="background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.25);
