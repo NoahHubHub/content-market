@@ -14,7 +14,6 @@ from helpers import (
     upsert_video, calc_total_portfolio_value, upsert_leaderboard,
     get_channel_videos,
 )
-from pricing import calculate_price  # used only in auto_refresh_prices for internal price snap
 from youtube import get_video_details, get_stats_only, get_trending_videos
 
 
@@ -83,25 +82,39 @@ def _backfill_categories():
 # ── scheduled jobs ─────────────────────────────────────────────────────────────
 
 def auto_refresh_prices():
-    """Refresh all market videos every 3h; also notify watchlist holders of big moves.
+    """Refresh YouTube display stats for actively held videos once per day.
 
-    DB-freshness check: skip any video updated within the last 30 minutes to avoid
-    redundant API calls (e.g. if seed_market or a manual fetch ran recently).
+    Only fetches data for videos that at least one user currently holds.
+    This keeps YouTube API usage tied to genuine user interest rather than
+    polling the full market catalog.
     """
     db = SessionLocal()
     try:
-        # Collect all market videos (not just held ones) so the market feels alive
-        cutoff = datetime.utcnow() - timedelta(minutes=30)
-        all_videos = db.query(models.Video).order_by(models.Video.last_updated.desc()).limit(100).all()
+        # Only refresh videos with at least one active holder
+        held_video_ids = (
+            db.query(models.Holding.video_id)
+            .filter(models.Holding.shares > 0.001)
+            .distinct()
+            .subquery()
+        )
+        cutoff = datetime.utcnow() - timedelta(hours=20)
+        held_videos = (
+            db.query(models.Video)
+            .filter(
+                models.Video.id.in_(held_video_ids),
+                (models.Video.last_updated == None) | (models.Video.last_updated < cutoff),
+            )
+            .limit(50)
+            .all()
+        )
 
-        # Filter: skip videos that were already refreshed within the last 30 min
-        stale_videos = [v for v in all_videos if not v.last_updated or v.last_updated < cutoff]
-        fresh_videos = [v for v in all_videos if v.last_updated and v.last_updated >= cutoff]
+        yt_ids = [v.youtube_id for v in held_videos]
 
-        yt_ids = [v.youtube_id for v in stale_videos]
-
-        # Snapshot prices for movement detection (all videos, including fresh ones)
-        price_before = {v.youtube_id: v.current_price for v in all_videos}
+        # Snapshot prices for watchlist movement detection
+        all_watched_ids = db.query(models.UserWatchlist.youtube_id).distinct().all()
+        watched_yt_ids = {row[0] for row in all_watched_ids}
+        watched_videos = db.query(models.Video).filter(models.Video.youtube_id.in_(watched_yt_ids)).all()
+        price_before = {v.youtube_id: v.current_price for v in watched_videos}
 
         if not yt_ids:
             notify_watchlist_movers(db, price_before)
@@ -202,10 +215,10 @@ def generate_daily_drop():
             if v.channel_id:
                 channel_map[v.channel_id].append(v)
 
-        # Select by raw view count — simple comparison, no derived scoring
+        # Select by in-app trading activity (transaction count) — no YouTube metrics used
         scored = [
-            (v.stats[-1].view_count, v)
-            for v in videos if v.stats
+            (len(v.transactions), v)
+            for v in videos
         ]
         scored.sort(key=lambda x: x[0], reverse=True)
         for video in [v for _, v in scored[:5]]:
@@ -362,7 +375,7 @@ def cleanup_inactive_videos():
 # ── start ──────────────────────────────────────────────────────────────────────
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(auto_refresh_prices, "cron", hour="*/3", minute=0)
+scheduler.add_job(auto_refresh_prices, "cron", hour=6,  minute=0)
 scheduler.add_job(generate_daily_drop, "cron", hour=0,  minute=5)
 scheduler.add_job(seed_market,         "cron", hour=3,  minute=0)
 scheduler.add_job(resolve_hot_takes,   "cron", hour=7,  minute=0)

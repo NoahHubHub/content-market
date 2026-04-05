@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 import models
-from pricing import calculate_price, calculate_ipo_price, calculate_display_stats
+from pricing import calculate_ipo_price, calculate_display_stats
 
 
 def get_channel_videos(db: Session, channel_id: str, exclude_youtube_id: str) -> list:
