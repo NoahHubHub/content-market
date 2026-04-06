@@ -14,3 +14,5 @@ pywebpush
 redis
 starlette-session
 zxcvbn
+cryptography
+httpx

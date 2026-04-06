@@ -56,7 +56,13 @@
       <li>Login-Zeitstempel und Streak-Informationen</li>
       <li>IP-Adresse (temporär für Rate Limiting)</li>
     </ul>
-    <p>Wir erheben <strong>keine</strong> E-Mail-Adressen, Telefonnummern oder Zahlungsdaten.</p>
+    <p>Wenn du dich über <strong>Google anmeldest</strong>, erhalten wir zusätzlich:</p>
+    <ul>
+      <li>Google Account-ID (eindeutige Kennung)</li>
+      <li>E-Mail-Adresse (zur Account-Verknüpfung)</li>
+      <li>OAuth-Zugriffstoken (verschlüsselt gespeichert, für YouTube-Datenzugriff)</li>
+    </ul>
+    <p>Ohne Google-Anmeldung erheben wir <strong>keine</strong> E-Mail-Adressen, Telefonnummern oder Zahlungsdaten.</p>
 
     <h2>3. YouTube-Daten</h2>
     <p>Die App nutzt die <strong>YouTube Data API v3</strong> von Google, um öffentliche Videodaten (Aufrufe, Likes, Kommentare, Titel, Kanal) abzurufen. Diese Daten sind öffentlich zugänglich und werden nicht dauerhaft mit deinem Nutzerprofil verknüpft.</p>
@@ -89,7 +95,17 @@
     </ul>
     <p>Zur Ausübung dieser Rechte wende dich an: <a href="mailto:clipcapitalcontact@gmail.com">clipcapitalcontact@gmail.com</a></p>
 
-    <h2>7. Datenlöschung</h2>
+    <h2>7. Aufbewahrungsfristen (Datenretention)</h2>
+    <p>Wir halten uns an folgende automatische Löschfristen:</p>
+    <ul>
+      <li><strong>YouTube Statistikdaten</strong> (Views, Likes, Kommentare) — automatische Löschung nach <strong>30 Tagen</strong> (täglich um 04:00 UTC)</li>
+      <li><strong>Videometadaten</strong> (Titel, Kanal, Thumbnail) — Löschung nach <strong>30 Tagen</strong> ohne aktive Nutzung (täglich um 04:30 UTC)</li>
+      <li><strong>Sicherheits-Auditlogs</strong> (Login, Logout, Fehler) — automatische Löschung nach <strong>90 Tagen</strong> (täglich um 05:00 UTC)</li>
+      <li><strong>Transaktionshistorie</strong> (Sammel- und Entfernungsaktionen) — bleibt bis zur Kontolöschung erhalten, da sie für die Spielmechanik benötigt wird</li>
+      <li><strong>Account-Daten</strong> — bleiben bis zur manuellen Löschung durch dich erhalten</li>
+    </ul>
+
+    <h2>8. Datenlöschung</h2>
     <p>Du kannst dein Konto und alle gespeicherten Daten jederzeit selbst löschen — die Löschung erfolgt sofort und ist unwiderruflich.</p>
     <p style="margin-top:12px;">
       <a href="/account" style="display:inline-block;background:#1e2a36;border:1px solid rgba(224,112,85,.4);
@@ -99,7 +115,7 @@
       </a>
     </p>
 
-    <h2>8. Kinder</h2>
+    <h2>10. Kinder</h2>
     <p>Die App ist nicht für Kinder unter 13 Jahren bestimmt. Wir erheben wissentlich keine Daten von Minderjährigen unter 13 Jahren.</p>
 
     <hr />

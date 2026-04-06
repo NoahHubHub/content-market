@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Zustimmung erforderlich — Clip Capital{% endblock %}
+{% block content %}
+
+<div style="max-width:400px;margin:60px auto 0;">
+  <div style="margin-bottom:28px;">
+    <div class="tr-label" style="margin-bottom:4px;">Clip Capital</div>
+    <div class="tr-title">Fast geschafft!</div>
+    <div class="tr-sub" style="margin-top:6px;">
+      Bitte lies und bestätige die folgenden Bedingungen, bevor du startest.
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="tr-alert tr-alert-error">{{ error }}</div>
+  {% endif %}
+
+  <div style="background:rgba(44,59,77,.6);border:1px solid rgba(238,233,223,.1);
+              border-radius:14px;padding:16px 18px;margin-bottom:22px;font-size:.85rem;
+              color:#C9C1B1;line-height:1.6;">
+    <p style="margin:0 0 10px;">
+      <strong style="color:#EEE9DF;">Clip Capital ist ein Unterhaltungsspiel</strong> —
+      kein Finanzprodukt. Alle dargestellten Werte sind virtuelle Spielwährung ohne
+      realen Gegenwert und können weder ausgezahlt noch umgetauscht werden.
+    </p>
+    <p style="margin:0 0 10px;">
+      Videodaten werden über die <strong style="color:#EEE9DF;">YouTube Data API v3</strong>
+      von Google LLC abgerufen. Clip Capital ist weder mit YouTube noch mit Google LLC
+      verbunden. YouTube® ist eine eingetragene Marke von Google LLC.
+    </p>
+    <p style="margin:0;">
+      Deine Daten werden gemäß unserer
+      <a href="/privacy" target="_blank" style="color:#FFB162;">Datenschutzerklärung</a>
+      verarbeitet und auf Anfrage gelöscht.
+    </p>
+  </div>
+
+  <form method="post" action="/auth/consent">
+    {{ csrf_input | safe }}
+    <div style="margin-bottom:22px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="checkbox" name="consent" required
+               style="margin-top:3px;accent-color:var(--accent,#FFB162);flex-shrink:0;" />
+        <span style="font-size:.82rem;color:#8A9BAD;line-height:1.5;">
+          Ich habe die
+          <a href="/terms" target="_blank" style="color:#C9C1B1;">Nutzungsbedingungen</a>
+          und die
+          <a href="/privacy" target="_blank" style="color:#C9C1B1;">Datenschutzerklärung</a>
+          gelesen und stimme diesen zu. Ich bestätige, dass es sich um ein reines
+          Unterhaltungsspiel handelt.
+        </span>
+      </label>
+    </div>
+    <button type="submit" class="tr-btn-primary" style="width:100%;text-align:center;">
+      Zustimmen &amp; loslegen
+    </button>
+  </form>
+
+  <div style="text-align:center;margin-top:16px;font-size:.72rem;color:#8A9BAD;">
+    Fragen? <a href="mailto:clipcapitalcontact@gmail.com" style="color:#8A9BAD;">clipcapitalcontact@gmail.com</a>
+  </div>
+</div>
+
+{% endblock %}

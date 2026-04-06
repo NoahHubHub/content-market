@@ -41,6 +41,20 @@ def migrate():
             conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
         if "is_admin" not in cols:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+        if "google_id" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN google_id VARCHAR"))
+        if "google_email" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN google_email VARCHAR"))
+        if "google_access_token" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN google_access_token VARCHAR"))
+        if "google_refresh_token" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN google_refresh_token VARCHAR"))
+        if "google_token_expiry" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN google_token_expiry TIMESTAMP"))
+        if "consent_accepted" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN consent_accepted BOOLEAN DEFAULT FALSE"))
+        if "consent_at" not in cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN consent_at TIMESTAMP"))
 
     video_cols = [c["name"] for c in insp.get_columns("videos")]
     with engine.begin() as conn:
@@ -335,6 +349,21 @@ def cleanup_old_stats():
         db.close()
 
 
+def cleanup_old_audit_logs():
+    """Deletes AuditLog entries older than 90 days (data retention policy)."""
+    cutoff = datetime.utcnow() - timedelta(days=90)
+    db = SessionLocal()
+    try:
+        deleted = db.query(models.AuditLog).filter(
+            models.AuditLog.timestamp < cutoff
+        ).delete()
+        db.commit()
+        if deleted:
+            log.info("[cleanup] Removed %d AuditLog entries older than 90 days", deleted)
+    finally:
+        db.close()
+
+
 def cleanup_inactive_videos():
     """Deletes Video records that have had no holders for 30+ days (YouTube API data retention policy).
 
@@ -381,6 +410,7 @@ scheduler.add_job(seed_market,         "cron", hour=3,  minute=0)
 scheduler.add_job(resolve_hot_takes,   "cron", hour=7,  minute=0)
 scheduler.add_job(refresh_leaderboard, "cron", hour=8,  minute=0)
 scheduler.add_job(end_season,          "cron", day_of_week="mon", hour=0, minute=10)
-scheduler.add_job(cleanup_old_stats,      "cron", hour=4,  minute=0)
+scheduler.add_job(cleanup_old_stats,       "cron", hour=4,  minute=0)
 scheduler.add_job(cleanup_inactive_videos, "cron", hour=4,  minute=30)
+scheduler.add_job(cleanup_old_audit_logs,  "cron", hour=5,  minute=0)
 scheduler.start()

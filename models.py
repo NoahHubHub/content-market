@@ -93,7 +93,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)   # nullable for Google-only accounts
     balance = Column(Float, default=10000.0)
     xp = Column(Integer, default=0)
     level = Column(Integer, default=1)
@@ -109,6 +109,15 @@ class User(Base):
     avatar_color  = Column(String(7), default="#FFB162")
     # Subscription
     is_premium    = Column(Boolean, default=False)
+    # Google OAuth
+    google_id           = Column(String, unique=True, nullable=True, index=True)
+    google_email        = Column(String, nullable=True)
+    google_access_token  = Column(String, nullable=True)   # Fernet-encrypted
+    google_refresh_token = Column(String, nullable=True)   # Fernet-encrypted
+    google_token_expiry  = Column(DateTime, nullable=True)
+    # Consent
+    consent_accepted = Column(Boolean, default=False)
+    consent_at       = Column(DateTime, nullable=True)
     # Login security
     failed_login_attempts = Column(Integer, default=0)
     locked_until          = Column(DateTime, nullable=True)

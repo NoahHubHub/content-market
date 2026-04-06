@@ -83,17 +83,53 @@ Die generierte `.aab`-Datei kann direkt in der Google Play Console hochgeladen w
 | `YOUTUBE_API_KEY` | YouTube Data API v3 Key | Ja |
 | `SECRET_KEY` | Session-Verschlüsselung | Ja |
 | `DATABASE_URL` | Datenbank-URL (Standard: SQLite) | Nein (Dev) |
+| `APP_URL` | Vollständige App-URL (z.B. `https://clip-capital.up.railway.app`) | Ja (Prod) |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID | Nur OAuth |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 Client Secret | Nur OAuth |
 | `ASSET_LINK_FINGERPRINT` | SHA-256 Fingerprint für TWA | Nur Play Store |
 | `ANDROID_PACKAGE_NAME` | Android App Package Name | Nur Play Store |
 
+## Google OAuth 2.0 einrichten
+
+1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) öffnen
+2. „OAuth 2.0-Client-ID" erstellen (Typ: Webanwendung)
+3. Autorisierte Weiterleitungs-URI hinzufügen: `https://DEINE-APP-URL/auth/google/callback`
+4. `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` in Railway setzen
+5. OAuth-Consent-Screen konfigurieren — Scopes: `openid`, `email`, `profile`, `youtube.readonly`
+
 ## YouTube API Compliance
 
-Diese App nutzt die YouTube Data API v3 gemäß den [YouTube API Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service).
+Diese App nutzt ausschließlich **öffentliche YouTube Data API v3 Endpunkte** — es werden keine privaten Nutzerdaten von YouTube abgerufen.
 
-- Videodaten werden nach 30 Tagen ohne aktive Nutzung gelöscht
-- Alle Nutzer werden über die Datenschutzseite auf die Google-Datenschutzerklärung hingewiesen
-- Die App ist kein Finanzprodukt – alle Werte sind virtuelle Spielwährung
-- YouTube® ist eine eingetragene Marke von Google LLC
+### Genutzte API-Methoden
+
+| Methode | Zweck |
+|---|---|
+| `videos.list` (part: `snippet,statistics,contentDetails`) | Videometadaten und Statistiken abrufen |
+| `search.list` (part: `snippet`, type: `video`) | Videos suchen |
+| `channels.list` (part: `snippet,statistics,contentDetails`) | Kanalinfo abrufen |
+| `videos.list` (chart: `mostPopular`) | Trending-Videos für den Markt |
+
+### Datenschutz & Löschfristen
+
+| Datenkategorie | Aufbewahrungsfrist | Scheduler-Job |
+|---|---|---|
+| YouTube Statistikdaten (Views, Likes, Kommentare) | 30 Tage | `cleanup_old_stats` tägl. 04:00 UTC |
+| Videometadaten (ohne aktive Nutzer) | 30 Tage | `cleanup_inactive_videos` tägl. 04:30 UTC |
+| Sicherheits-Auditlogs | 90 Tage | `cleanup_old_audit_logs` tägl. 05:00 UTC |
+| Transaktionshistorie | bis Kontolöschung | — |
+
+### Weitere Compliance-Punkte
+
+- Alle Nutzer stimmen explizit den Nutzungsbedingungen und der Datenschutzerklärung zu (Checkbox bei Registrierung / OAuth-Erstanmeldung)
+- Nutzer können ihr Konto und alle Daten jederzeit selbst löschen (`/account`)
+- Datenschutzrichtlinie öffentlich unter `/privacy`
+- Die App ist kein Finanzprodukt — alle Werte sind virtuelle Spielwährung ohne realen Gegenwert
+- Clip Capital ist nicht mit YouTube oder Google LLC verbunden — YouTube® ist eine eingetragene Marke von Google LLC
+
+## Kontakt
+
+Fragen zur App oder Datenschutz: **clipcapitalcontact@gmail.com**
 
 ## Lizenz
 

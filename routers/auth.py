@@ -1,4 +1,13 @@
+import base64
+import hashlib
+import os
+import re
+import secrets
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
+
+import httpx
+from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -7,6 +16,55 @@ import models
 from database import get_db
 from deps import limiter, templates
 from helpers import get_login, hash_pw, verify_pw
+
+# ── OAuth constants ────────────────────────────────────────────────────────────
+
+_GOOGLE_AUTH_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_INFO_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
+_SCOPES = " ".join([
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/youtube.readonly",
+])
+
+
+def _fernet() -> Fernet:
+    """Derive a Fernet key from SECRET_KEY."""
+    secret = os.getenv("SECRET_KEY", "dev-secret-not-for-production")
+    key = base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest())
+    return Fernet(key)
+
+
+def _encrypt(value: str) -> str:
+    return _fernet().encrypt(value.encode()).decode()
+
+
+def _decrypt(value: str) -> str:
+    return _fernet().decrypt(value.encode()).decode()
+
+
+def _google_redirect_uri(request: Request) -> str:
+    app_url = os.getenv("APP_URL", "").rstrip("/")
+    if app_url:
+        return f"{app_url}/auth/google/callback"
+    # Fall back to deriving from request (works in local dev)
+    base = str(request.base_url).rstrip("/")
+    return f"{base}/auth/google/callback"
+
+
+def _make_username_from_email(email: str, db: Session) -> str:
+    """Generate a unique username from a Google email address."""
+    base = re.sub(r"[^a-zA-Z0-9_]", "", email.split("@")[0])[:20] or "user"
+    if len(base) < 3:
+        base = base + "user"
+    candidate = base
+    counter = 1
+    while db.query(models.User).filter(models.User.username == candidate).first():
+        candidate = f"{base}{counter}"
+        counter += 1
+    return candidate
 
 _MAX_ATTEMPTS = 5
 _LOCK_MINUTES = 15
@@ -47,8 +105,13 @@ async def register_page(request: Request):
 
 @router.post("/register", response_class=HTMLResponse)
 @limiter.limit("5/minute")
-async def register(request: Request, username: str = Form(...), password: str = Form(...),
-                   db: Session = Depends(get_db)):
+async def register(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    consent: str = Form(default=""),
+    db: Session = Depends(get_db),
+):
     if len(username) < 3:
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": "Username zu kurz (min. 3 Zeichen)"})
@@ -59,10 +122,20 @@ async def register(request: Request, username: str = Form(...), password: str = 
     if pw_error:
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": pw_error})
+    if consent != "on":
+        return templates.TemplateResponse(request, "register.html",
+            {"user": None, "error": "Bitte stimme den Nutzungsbedingungen und der Datenschutzerklärung zu."})
     if db.query(models.User).filter(models.User.username == username).first():
         return templates.TemplateResponse(request, "register.html",
             {"user": None, "error": "Username bereits vergeben"})
-    db_user = models.User(username=username, password_hash=hash_pw(password), balance=10000.0)
+    now = datetime.utcnow()
+    db_user = models.User(
+        username=username,
+        password_hash=hash_pw(password),
+        balance=10000.0,
+        consent_accepted=True,
+        consent_at=now,
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -141,3 +214,183 @@ async def tutorial_next(request: Request, db: Session = Depends(get_db)):
         db_user.tutorial_step = step + 1
         db.commit()
     return RedirectResponse(request.headers.get("referer", "/"), status_code=302)
+
+
+# ── Google OAuth 2.0 ──────────────────────────────────────────────────────────
+
+@router.get("/auth/google/login")
+async def google_login(request: Request):
+    """Redirect to Google's OAuth 2.0 consent screen."""
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        return templates.TemplateResponse(request, "error.html", {
+            "code": 503,
+            "title": "Google-Login nicht konfiguriert",
+            "message": "GOOGLE_CLIENT_ID ist nicht gesetzt. Bitte wende dich an den Betreiber.",
+        }, status_code=503)
+
+    state = secrets.token_urlsafe(32)
+    request.session["oauth_state"] = state
+
+    params = {
+        "client_id":     client_id,
+        "redirect_uri":  _google_redirect_uri(request),
+        "response_type": "code",
+        "scope":         _SCOPES,
+        "state":         state,
+        "access_type":   "offline",   # request refresh token
+        "prompt":        "select_account",
+    }
+    url = f"{_GOOGLE_AUTH_URL}?{urlencode(params)}"
+    return RedirectResponse(url, status_code=302)
+
+
+@router.get("/auth/google/callback")
+async def google_callback(
+    request: Request,
+    db: Session = Depends(get_db),
+    code: str = None,
+    state: str = None,
+    error: str = None,
+):
+    """Handle the OAuth 2.0 callback from Google."""
+    if error:
+        return templates.TemplateResponse(request, "error.html", {
+            "code": 403,
+            "title": "Google-Login abgebrochen",
+            "message": "Du hast den Zugriff abgelehnt oder es ist ein Fehler aufgetreten.",
+        }, status_code=403)
+
+    # CSRF check
+    expected_state = request.session.pop("oauth_state", None)
+    if not state or state != expected_state:
+        return templates.TemplateResponse(request, "error.html", {
+            "code": 400,
+            "title": "Ungültige Anfrage",
+            "message": "OAuth-State ungültig. Bitte versuche es erneut.",
+        }, status_code=400)
+
+    client_id     = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        return templates.TemplateResponse(request, "error.html", {
+            "code": 503,
+            "title": "Google-Login nicht konfiguriert",
+            "message": "OAuth-Credentials fehlen. Bitte wende dich an den Betreiber.",
+        }, status_code=503)
+
+    # Exchange code for tokens
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(_GOOGLE_TOKEN_URL, data={
+            "code":          code,
+            "client_id":     client_id,
+            "client_secret": client_secret,
+            "redirect_uri":  _google_redirect_uri(request),
+            "grant_type":    "authorization_code",
+        })
+    if token_resp.status_code != 200:
+        return templates.TemplateResponse(request, "error.html", {
+            "code": 502,
+            "title": "Token-Austausch fehlgeschlagen",
+            "message": "Google hat keinen gültigen Token zurückgegeben. Bitte versuche es erneut.",
+        }, status_code=502)
+
+    token_data    = token_resp.json()
+    access_token  = token_data.get("access_token")
+    refresh_token = token_data.get("refresh_token")
+    expires_in    = token_data.get("expires_in", 3600)
+    token_expiry  = datetime.utcnow() + timedelta(seconds=expires_in)
+
+    # Fetch user info
+    async with httpx.AsyncClient() as client:
+        info_resp = await client.get(
+            _GOOGLE_INFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+    if info_resp.status_code != 200:
+        return templates.TemplateResponse(request, "error.html", {
+            "code": 502,
+            "title": "Nutzerinfo nicht abrufbar",
+            "message": "Google hat keine Nutzerinformationen zurückgegeben. Bitte versuche es erneut.",
+        }, status_code=502)
+
+    info       = info_resp.json()
+    google_id  = info.get("id")
+    email      = info.get("email", "")
+
+    # Find or create user
+    db_user = db.query(models.User).filter(models.User.google_id == google_id).first()
+    is_new = db_user is None
+
+    if is_new:
+        # Check if an account already exists with same email (link it)
+        if email:
+            db_user = db.query(models.User).filter(models.User.google_email == email).first()
+        if db_user is None:
+            username = _make_username_from_email(email, db)
+            db_user = models.User(
+                username=username,
+                password_hash=None,
+                balance=10000.0,
+                google_id=google_id,
+                google_email=email,
+            )
+            db.add(db_user)
+            db.flush()
+        else:
+            db_user.google_id = google_id
+
+    # Update/store tokens (encrypted)
+    db_user.google_access_token  = _encrypt(access_token)
+    db_user.google_token_expiry  = token_expiry
+    if refresh_token:
+        db_user.google_refresh_token = _encrypt(refresh_token)
+    if email and not db_user.google_email:
+        db_user.google_email = email
+
+    db.commit()
+    db.refresh(db_user)
+
+    _audit(db, request, "google_login", db_user)
+
+    request.session.clear()
+    request.session["user_id"] = db_user.id
+
+    # New users or users who haven't accepted consent → consent page
+    if is_new or not db_user.consent_accepted:
+        return RedirectResponse("/auth/consent", status_code=302)
+
+    return RedirectResponse("/", status_code=302)
+
+
+@router.get("/auth/consent", response_class=HTMLResponse)
+async def consent_page(request: Request, db: Session = Depends(get_db)):
+    """Show consent page for users who haven't accepted T&C yet."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    if db_user.consent_accepted:
+        return RedirectResponse("/", status_code=302)
+    return templates.TemplateResponse(request, "consent.html", {"user": db_user})
+
+
+@router.post("/auth/consent")
+async def consent_accept(
+    request: Request,
+    db: Session = Depends(get_db),
+    consent: str = Form(default=""),
+):
+    """Record consent acceptance."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=302)
+    if consent != "on":
+        return templates.TemplateResponse(request, "consent.html", {
+            "user": db_user,
+            "error": "Du musst den Nutzungsbedingungen zustimmen, um fortzufahren.",
+        })
+    db_user.consent_accepted = True
+    db_user.consent_at = datetime.utcnow()
+    db.commit()
+    _audit(db, request, "consent_accepted", db_user)
+    return RedirectResponse("/", status_code=302)

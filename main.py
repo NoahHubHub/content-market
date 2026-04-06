@@ -64,6 +64,11 @@ async def terms_page(request: Request):
     return templates.TemplateResponse(request, "terms.html", {})
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    return templates.TemplateResponse(request, "privacy.html", {})
+
+
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
     return templates.TemplateResponse(request, "error.html",
