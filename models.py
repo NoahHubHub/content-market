@@ -389,3 +389,29 @@ class AuditLog(Base):
     action     = Column(String, nullable=False)  # login | login_failed | logout | password_change | account_delete
     ip_address = Column(String, nullable=True)
     timestamp  = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class UserDeletion(Base):
+    """30-Tage-Löschfenster: Nutzer fordert Löschung an, Job führt sie durch."""
+    __tablename__ = "user_deletions"
+
+    id                   = Column(Integer, primary_key=True)
+    user_id              = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
+                                  nullable=False, unique=True)
+    requested_at         = Column(DateTime, default=datetime.utcnow, nullable=False)
+    scheduled_deletion_at = Column(DateTime, nullable=False)
+    cancelled            = Column(Boolean, default=False)
+
+    user = relationship("User")
+
+
+class QuotaUsage(Base):
+    """Protokolliert YouTube-API-Quota-Verbrauch pro Tag und Endpunkt."""
+    __tablename__ = "quota_usage"
+
+    id          = Column(Integer, primary_key=True)
+    date        = Column(String, index=True)   # YYYY-MM-DD
+    endpoint    = Column(String, nullable=False)
+    units_used  = Column(Integer, default=0)
+    calls_count = Column(Integer, default=0)
+    recorded_at = Column(DateTime, default=datetime.utcnow)

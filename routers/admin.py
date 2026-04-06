@@ -1,5 +1,7 @@
 """Admin routes — only accessible to users with is_admin=True."""
 import logging
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -18,6 +20,37 @@ def _require_admin(request: Request, db: Session):
     if not db_user or not db_user.is_admin:
         return None
     return db_user
+
+
+@router.get("/quota", response_class=HTMLResponse)
+async def quota_dashboard(request: Request, db: Session = Depends(get_db)):
+    """YouTube API quota usage — last 30 days."""
+    admin = _require_admin(request, db)
+    if not admin:
+        return RedirectResponse("/", status_code=302)
+
+    last_30_str = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%d")
+    rows = (
+        db.query(models.QuotaUsage)
+        .filter(models.QuotaUsage.date >= last_30_str)
+        .order_by(models.QuotaUsage.date.desc(), models.QuotaUsage.endpoint)
+        .all()
+    )
+
+    today_str   = datetime.utcnow().strftime("%Y-%m-%d")
+    total_units = sum(r.units_used for r in rows)
+    today_units = sum(r.units_used for r in rows if r.date == today_str)
+    quota_limit = 10_000
+
+    return templates.TemplateResponse(request, "admin_quota.html", {
+        "user":        admin,
+        "rows":        rows,
+        "total_units": total_units,
+        "daily_avg":   round(total_units / 30, 1),
+        "today_units": today_units,
+        "utilization": round(today_units / quota_limit * 100, 1),
+        "quota_limit": quota_limit,
+    })
 
 
 @router.get("/audit", response_class=HTMLResponse)

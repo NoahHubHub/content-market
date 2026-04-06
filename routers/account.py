@@ -1,4 +1,6 @@
 """Account settings routes: view and update profile."""
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -23,12 +25,19 @@ async def account_page(request: Request, db: Session = Depends(get_db)):
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=303)
+    deletion_req = (
+        db.query(models.UserDeletion)
+        .filter_by(user_id=db_user.id, cancelled=False)
+        .first()
+    )
     return templates.TemplateResponse(request, "account.html", {
         "user": UserCtx(db_user),
         "db_user": db_user,
         "emojis": ALLOWED_EMOJIS,
         "saved": request.query_params.get("saved"),
         "error": request.query_params.get("error"),
+        "deletion_req": deletion_req,
+        "deletion_msg": request.query_params.get("deletion"),
     })
 
 
@@ -187,3 +196,49 @@ async def export_data(request: Request, db: Session = Depends(get_db)):
 
     headers = {"Content-Disposition": 'attachment; filename="clip-capital-export.json"'}
     return JSONResponse(content=data, headers=headers)
+
+
+# ── 30-Day Deletion Window (GDPR / YouTube API Compliance) ────────────────────
+
+@router.post("/account/request-deletion")
+async def request_deletion(request: Request, db: Session = Depends(get_db)):
+    """User requests account deletion — starts 30-day window before purge."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=303)
+
+    existing = (
+        db.query(models.UserDeletion)
+        .filter_by(user_id=db_user.id, cancelled=False)
+        .first()
+    )
+    if existing:
+        return RedirectResponse("/account?deletion=pending", status_code=303)
+
+    scheduled = datetime.utcnow() + timedelta(days=30)
+    db.add(models.UserDeletion(
+        user_id=db_user.id,
+        scheduled_deletion_at=scheduled,
+    ))
+    _audit(db, request, "deletion_requested", db_user)
+    db.commit()
+    return RedirectResponse("/account?deletion=requested", status_code=303)
+
+
+@router.post("/account/cancel-deletion")
+async def cancel_deletion(request: Request, db: Session = Depends(get_db)):
+    """Cancel a pending scheduled deletion."""
+    db_user = get_login(request, db)
+    if not db_user:
+        return RedirectResponse("/login", status_code=303)
+
+    req = (
+        db.query(models.UserDeletion)
+        .filter_by(user_id=db_user.id, cancelled=False)
+        .first()
+    )
+    if req:
+        req.cancelled = True
+        _audit(db, request, "deletion_cancelled", db_user)
+        db.commit()
+    return RedirectResponse("/account?deletion=cancelled", status_code=303)

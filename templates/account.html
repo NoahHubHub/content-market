@@ -149,6 +149,94 @@
     <div style="font-weight:600;">🔥 {{ user.streak_days }} Tage</div>
   </div>
 
+  <!-- ── Data & Privacy ─────────────────────────────────── -->
+  <div style="margin-top:24px;padding:16px 18px;background:var(--surface);border-radius:14px;
+              border:1px solid var(--border);">
+    <div class="tr-label" style="margin-bottom:12px;">Daten &amp; Datenschutz</div>
+
+    <a href="/account/export"
+       style="display:flex;align-items:center;gap:8px;padding:10px 0;
+              color:var(--muted2);text-decoration:none;font-size:.85rem;border-bottom:1px solid var(--border);">
+      <span style="font-size:1rem;">📥</span> Meine Daten exportieren (JSON)
+    </a>
+
+    <a href="/privacy" target="_blank"
+       style="display:flex;align-items:center;gap:8px;padding:10px 0;
+              color:var(--muted2);text-decoration:none;font-size:.85rem;border-bottom:1px solid var(--border);">
+      <span style="font-size:1rem;">🔒</span> Datenschutzerklärung
+    </a>
+
+    <a href="/terms" target="_blank"
+       style="display:flex;align-items:center;gap:8px;padding:10px 0;
+              color:var(--muted2);text-decoration:none;font-size:.85rem;">
+      <span style="font-size:1rem;">📋</span> Nutzungsbedingungen
+    </a>
+  </div>
+
+  <!-- ── Danger Zone ────────────────────────────────────── -->
+  <div style="margin-top:24px;padding:16px 18px;background:rgba(163,81,57,.06);border-radius:14px;
+              border:1px solid rgba(163,81,57,.25);">
+    <div class="tr-label" style="margin-bottom:12px;color:#E07055;">Gefahrenzone</div>
+
+    {% if deletion_msg == 'requested' %}
+    <div style="background:rgba(252,200,80,.1);border:1px solid rgba(252,200,80,.3);
+                border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#FCC850;">
+      Löschung angefragt. Dein Konto wird in 30 Tagen permanent gelöscht.
+    </div>
+    {% elif deletion_msg == 'cancelled' %}
+    <div style="background:rgba(76,175,130,.1);border:1px solid rgba(76,175,130,.3);
+                border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#4CAF82;">
+      Löschung abgebrochen. Dein Konto bleibt aktiv.
+    </div>
+    {% endif %}
+
+    {% if deletion_req %}
+    <!-- Pending deletion — show cancel option -->
+    <div style="background:rgba(252,200,80,.08);border:1px solid rgba(252,200,80,.25);
+                border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-size:.82rem;color:#FCC850;margin-bottom:8px;">
+        Konto-Löschung geplant für:
+        <strong>{{ deletion_req.scheduled_deletion_at.strftime('%d.%m.%Y') }}</strong>
+      </div>
+      <p style="font-size:.78rem;color:#8A9BAD;margin:0 0 10px;">
+        Du kannst die Löschung bis dahin jederzeit widerrufen.
+      </p>
+      <form method="post" action="/account/cancel-deletion">
+        {{ csrf_input | safe }}
+        <button type="submit" class="tr-btn-primary" style="font-size:.82rem;padding:8px 14px;">
+          Löschung abbrechen
+        </button>
+      </form>
+    </div>
+    {% else %}
+    <!-- Request 30-day deletion -->
+    <p style="font-size:.82rem;color:#8A9BAD;margin:0 0 14px;line-height:1.5;">
+      Nach der Anfrage hast du <strong style="color:#C9C1B1;">30 Tage</strong>,
+      um sie zu widerrufen. Danach werden alle Daten permanent gelöscht.
+    </p>
+    <form method="post" action="/account/request-deletion"
+          onsubmit="return confirm('Konto-Löschung anfragen? Du hast 30 Tage zum Widerrufen.');">
+      {{ csrf_input | safe }}
+      <button type="submit"
+              style="background:transparent;border:1px solid rgba(163,81,57,.5);color:#E07055;
+                     font-size:.82rem;font-weight:600;padding:10px 16px;border-radius:10px;
+                     cursor:pointer;width:100%;text-align:center;">
+        Konto löschen (30-Tage-Fenster)
+      </button>
+    </form>
+    <!-- Immediate delete (legacy, kept for transparency) -->
+    <form method="post" action="/account/delete" style="margin-top:10px;"
+          onsubmit="return confirm('ACHTUNG: Sofortige und unwiderrufliche Löschung. Fortfahren?');">
+      {{ csrf_input | safe }}
+      <button type="submit"
+              style="background:transparent;border:none;color:#8A9BAD;
+                     font-size:.75rem;cursor:pointer;padding:4px 0;text-decoration:underline;">
+        Sofort löschen (unwiderruflich)
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
 </div>
 
 <script>

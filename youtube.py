@@ -91,6 +91,34 @@ def _cache_set(key: str, value):
         _CACHE[key] = (value, time())
 
 
+def _log_quota_usage(endpoint: str, units: int) -> None:
+    """Async-safe quota tracker — fire and forget, never raises."""
+    try:
+        from database import SessionLocal
+        import models as _models
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        db = SessionLocal()
+        try:
+            entry = (
+                db.query(_models.QuotaUsage)
+                .filter_by(date=today, endpoint=endpoint)
+                .first()
+            )
+            if entry:
+                entry.units_used  += units
+                entry.calls_count += 1
+            else:
+                db.add(_models.QuotaUsage(
+                    date=today, endpoint=endpoint,
+                    units_used=units, calls_count=1,
+                ))
+            db.commit()
+        finally:
+            db.close()
+    except Exception:
+        log.debug("_log_quota_usage failed silently", exc_info=True)
+
+
 def extract_video_id(url_or_id: str) -> str:
     """Extract video ID from a YouTube URL or return the input if it looks like an ID."""
     patterns = [
@@ -167,6 +195,7 @@ def get_video_details(video_ids: list) -> list:
         .list(id=",".join(uncached_ids), part="statistics,snippet")
         .execute()
     )
+    _log_quota_usage("videos.list", 1)
     fresh = _parse_items(response.get("items", []))
     for item in fresh:
         _cache_set(f"vid:{item['youtube_id']}", item)
@@ -191,6 +220,7 @@ def search_videos(query: str, max_results: int = 8) -> list:
         .list(q=query, type="video", part="id", maxResults=max_results)
         .execute()
     )
+    _log_quota_usage("search.list", 100)
     video_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
     result = get_video_details(video_ids)
     _cache_set(cache_key, result)
@@ -230,6 +260,7 @@ def get_stats_only(video_ids: list) -> list:
         .list(id=",".join(uncached_ids), part="statistics")
         .execute()
     )
+    _log_quota_usage("videos.list", 1)
     fresh = []
     for item in response.get("items", []):
         stats = item.get("statistics", {})
@@ -258,6 +289,7 @@ def get_trending_videos(region: str = "DE", max_results: int = 20) -> list:
               part="statistics,snippet", maxResults=max_results)
         .execute()
     )
+    _log_quota_usage("videos.list(trending)", 1)
     result = _parse_items(response.get("items", []))
     _cache_set(cache_key, result)
     return result

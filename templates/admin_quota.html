@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Quota Dashboard — Admin{% endblock %}
+{% block content %}
+<div style="max-width:720px;margin:28px auto 0;padding:0 16px 120px;">
+  <div style="margin-bottom:20px;">
+    <a href="/admin/audit" style="font-size:.8rem;color:var(--muted);text-decoration:none;">← Audit Log</a>
+    <div class="tr-title" style="margin-top:8px;">YouTube API Quota</div>
+    <div class="tr-sub">Verbrauch der letzten 30 Tage · Limit: {{ quota_limit|int }} Units/Tag</div>
+  </div>
+
+  <!-- Summary cards -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;">Heute</div>
+      <div style="font-size:1.4rem;font-weight:700;">{{ today_units }}</div>
+      <div style="font-size:.75rem;color:var(--muted);">{{ utilization }}% genutzt</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;">Ø pro Tag (30d)</div>
+      <div style="font-size:1.4rem;font-weight:700;">{{ daily_avg }}</div>
+      <div style="font-size:.75rem;color:var(--muted);">von {{ quota_limit|int }}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;">Gesamt (30d)</div>
+      <div style="font-size:1.4rem;font-weight:700;">{{ total_units }}</div>
+      <div style="font-size:.75rem;color:var(--muted);">API Units</div>
+    </div>
+  </div>
+
+  <!-- Usage table -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="padding:10px 14px;text-align:left;color:var(--muted);font-weight:600;">Datum</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--muted);font-weight:600;">Endpunkt</th>
+          <th style="padding:10px 14px;text-align:right;color:var(--muted);font-weight:600;">Units</th>
+          <th style="padding:10px 14px;text-align:right;color:var(--muted);font-weight:600;">Aufrufe</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr style="border-bottom:1px solid rgba(238,233,223,.05);">
+          <td style="padding:9px 14px;color:var(--muted2);">{{ row.date }}</td>
+          <td style="padding:9px 14px;color:var(--text);font-family:monospace;font-size:.78rem;">{{ row.endpoint }}</td>
+          <td style="padding:9px 14px;text-align:right;color:var(--accent);">{{ row.units_used }}</td>
+          <td style="padding:9px 14px;text-align:right;color:var(--muted);">{{ row.calls_count }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" style="padding:20px 14px;text-align:center;color:var(--muted);">
+            Noch keine Quota-Daten vorhanden.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

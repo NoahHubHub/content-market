@@ -63,6 +63,7 @@ def migrate():
 
     # Neue Tabellen anlegen falls sie noch nicht existieren
     # (SQLAlchemy create_all in main.py legt fehlende Tabellen an)
+    # user_deletions and quota_usage are created via create_all in main.py
 
     # Backfill category for existing videos that have none
     _backfill_categories()
@@ -349,6 +350,51 @@ def cleanup_old_stats():
         db.close()
 
 
+def purge_deleted_users():
+    """Deletes users whose 30-day deletion window has expired (GDPR compliance)."""
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        pending = (
+            db.query(models.UserDeletion)
+            .filter(
+                models.UserDeletion.scheduled_deletion_at <= now,
+                models.UserDeletion.cancelled == False,  # noqa: E712
+            )
+            .all()
+        )
+        for req in pending:
+            user = db.query(models.User).filter_by(id=req.user_id).first()
+            if not user:
+                db.delete(req)
+                continue
+            username = user.username
+            # Delete all related data
+            from sqlalchemy import or_
+            db.query(models.UserTask).filter_by(user_id=user.id).delete()
+            db.query(models.UserAchievement).filter_by(user_id=user.id).delete()
+            db.query(models.HotTake).filter_by(user_id=user.id).delete()
+            db.query(models.Holding).filter_by(user_id=user.id).delete()
+            db.query(models.Transaction).filter_by(user_id=user.id).delete()
+            db.query(models.PortfolioSnapshot).filter_by(user_id=user.id).delete()
+            db.query(models.UserWatchlist).filter_by(user_id=user.id).delete()
+            db.query(models.LeagueMember).filter_by(user_id=user.id).delete()
+            db.query(models.Duel).filter(
+                or_(models.Duel.challenger_id == user.id, models.Duel.opponent_id == user.id)
+            ).delete(synchronize_session=False)
+            db.query(models.LeaderboardEntry).filter_by(username=username).delete()
+            db.query(models.SeasonEntry).filter_by(username=username).delete()
+            db.add(models.AuditLog(username=username, action="account_purged_scheduled"))
+            db.delete(req)
+            db.delete(user)
+            log.info("[purge] Deleted user %s (scheduled deletion)", username)
+        db.commit()
+    except Exception:
+        log.exception("purge_deleted_users failed")
+    finally:
+        db.close()
+
+
 def cleanup_old_audit_logs():
     """Deletes AuditLog entries older than 90 days (data retention policy)."""
     cutoff = datetime.utcnow() - timedelta(days=90)
@@ -413,4 +459,5 @@ scheduler.add_job(end_season,          "cron", day_of_week="mon", hour=0, minute
 scheduler.add_job(cleanup_old_stats,       "cron", hour=4,  minute=0)
 scheduler.add_job(cleanup_inactive_videos, "cron", hour=4,  minute=30)
 scheduler.add_job(cleanup_old_audit_logs,  "cron", hour=5,  minute=0)
+scheduler.add_job(purge_deleted_users,     "cron", hour=3,  minute=0)
 scheduler.start()
