@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Datenspeicherung bestätigen — Clip Capital{% endblock %}
+{% block content %}
+
+<div style="max-width:400px;margin:60px auto 0;">
+  <div style="margin-bottom:28px;">
+    <div class="tr-label" style="margin-bottom:4px;">Clip Capital · Google-Anmeldung</div>
+    <div class="tr-title">Was wir speichern</div>
+    <div class="tr-sub" style="margin-top:6px;">
+      Bevor wir fortfahren, möchten wir dir genau erklären, welche Daten wir speichern.
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="tr-alert tr-alert-error">{{ error }}</div>
+  {% endif %}
+
+  <!-- What gets stored -->
+  <div style="background:rgba(44,59,77,.6);border:1px solid rgba(238,233,223,.1);
+              border-radius:14px;padding:16px 18px;margin-bottom:22px;">
+    <div style="font-size:.8rem;font-weight:700;color:#EEE9DF;margin-bottom:12px;">
+      Folgende Daten werden in unserer Datenbank gespeichert:
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#FFB162;font-size:1rem;flex-shrink:0;">🔑</span>
+        <div>
+          <div style="font-size:.82rem;color:#EEE9DF;font-weight:600;">Google Account-ID</div>
+          <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+            Eindeutige Kennung für zukünftige Anmeldungen. Nicht dein Name oder Passwort.
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#FFB162;font-size:1rem;flex-shrink:0;">✉️</span>
+        <div>
+          <div style="font-size:.82rem;color:#EEE9DF;font-weight:600;">E-Mail-Adresse{% if email %}: <span style="color:#FFB162;">{{ email }}</span>{% endif %}</div>
+          <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+            Zur Verknüpfung deines Accounts. Wird nicht veröffentlicht.
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="color:#FFB162;font-size:1rem;flex-shrink:0;">🔐</span>
+        <div>
+          <div style="font-size:.82rem;color:#EEE9DF;font-weight:600;">Google Access Token (verschlüsselt)</div>
+          <div style="font-size:.75rem;color:#8A9BAD;margin-top:2px;">
+            Nur zur Anmeldungsverifizierung. AES-verschlüsselt gespeichert.
+            <strong style="color:#C9C1B1;">Kein Refresh Token</strong> wird gespeichert.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(238,233,223,.08);">
+      <div style="font-size:.78rem;color:#8A9BAD;">
+        <strong style="color:#C9C1B1;">Was wir NICHT speichern:</strong>
+        YouTube-Verlauf, Abonnements, Playlists, Kanalanalysen oder andere Google-Daten.
+        Alle YouTube-Videodaten werden über unseren eigenen API-Schlüssel abgerufen —
+        nicht über deinen Account.
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="/auth/token-consent">
+    {{ csrf_input | safe }}
+    <div style="margin-bottom:20px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="checkbox" name="consent" required
+               style="margin-top:3px;accent-color:var(--accent,#FFB162);flex-shrink:0;" />
+        <span style="font-size:.8rem;color:#8A9BAD;line-height:1.5;">
+          Ich stimme zu, dass Clip Capital meine Google Account-ID, E-Mail-Adresse und einen
+          verschlüsselten Access Token zur Anmeldung speichert — gemäß der
+          <a href="/privacy" target="_blank" style="color:#C9C1B1;">Datenschutzerklärung</a>.
+        </span>
+      </label>
+    </div>
+    <button type="submit" class="tr-btn-primary" style="width:100%;text-align:center;">
+      Zustimmen &amp; weiter
+    </button>
+  </form>
+
+  <div style="text-align:center;margin-top:14px;">
+    <a href="/login" style="font-size:.78rem;color:#8A9BAD;text-decoration:none;">
+      Abbrechen — zurück zur Anmeldung
+    </a>
+  </div>
+
+  <div style="text-align:center;margin-top:10px;font-size:.7rem;color:#8A9BAD;">
+    Du kannst alle gespeicherten Daten jederzeit unter
+    <a href="/account" style="color:#8A9BAD;">/account</a> löschen.
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}API Usage — Clip Capital{% endblock %}
+{% block content %}
+<div style="max-width:640px;margin:0 auto;padding:32px 16px 120px;">
+  <a href="/" style="font-size:.8rem;color:var(--muted);text-decoration:none;">← Zurück</a>
+
+  <div style="margin:20px 0 8px;">
+    <div class="tr-title">YouTube API Usage</div>
+    <div class="tr-sub" style="margin-top:4px;">
+      Transparenz-Report · Stand: {{ updated_at }}
+    </div>
+  </div>
+
+  <!-- Context box -->
+  <div style="background:rgba(44,59,77,.5);border:1px solid rgba(238,233,223,.1);
+              border-radius:14px;padding:14px 18px;margin:20px 0;font-size:.82rem;
+              color:#8A9BAD;line-height:1.6;">
+    Clip Capital nutzt die <strong style="color:#C9C1B1;">YouTube Data API v3</strong> ausschließlich
+    um öffentliche Videodaten (Aufrufe, Likes, Kommentare, Titel) abzurufen.
+    Videodaten werden <strong style="color:#C9C1B1;">nicht</strong> für die Preisfindung verwendet —
+    alle Preisbewegungen entstehen durch In-App Kauf- und Verkaufsaktivität.
+    Das tägliche Limit beträgt <strong style="color:#C9C1B1;">{{ quota_limit|int }} Units</strong>
+    (kostenfreies Google-Kontingent).
+  </div>
+
+  <!-- Summary cards -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Heute</div>
+      <div style="font-size:1.5rem;font-weight:700;">{{ today_units }}</div>
+      <div style="font-size:.72rem;color:var(--muted);">{{ today_pct }}% von {{ quota_limit|int }}</div>
+      <div style="height:4px;background:rgba(238,233,223,.08);border-radius:2px;margin-top:8px;overflow:hidden;">
+        <div style="height:100%;width:{{ [today_pct, 100]|min }}%;background:{% if today_pct > 80 %}#E07055{% elif today_pct > 50 %}#FFB162{% else %}#4CAF82{% endif %};border-radius:2px;"></div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Ø pro Tag (30d)</div>
+      <div style="font-size:1.5rem;font-weight:700;">{{ daily_avg|int }}</div>
+      <div style="font-size:.72rem;color:var(--muted);">Units/Tag</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Diesen Monat</div>
+      <div style="font-size:1.5rem;font-weight:700;">{{ month_units }}</div>
+      <div style="font-size:.72rem;color:var(--muted);">Units gesamt</div>
+    </div>
+  </div>
+
+  <!-- Per-endpoint breakdown -->
+  {% if by_endpoint %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+              overflow:hidden;margin-bottom:20px;">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:.78rem;
+                font-weight:700;color:var(--muted2);">Endpunkt-Aufschlüsselung (letzte 30 Tage)</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="padding:8px 14px;text-align:left;color:var(--muted);font-weight:600;">Endpunkt</th>
+          <th style="padding:8px 14px;text-align:right;color:var(--muted);font-weight:600;">Units</th>
+          <th style="padding:8px 14px;text-align:right;color:var(--muted);font-weight:600;">Aufrufe</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ep, data in by_endpoint.items() %}
+        <tr style="border-bottom:1px solid rgba(238,233,223,.05);">
+          <td style="padding:9px 14px;font-family:monospace;font-size:.76rem;color:var(--text);">{{ ep }}</td>
+          <td style="padding:9px 14px;text-align:right;color:var(--accent);">{{ data.units }}</td>
+          <td style="padding:9px 14px;text-align:right;color:var(--muted);">{{ data.calls }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Daily breakdown -->
+  {% if by_day %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:.78rem;
+                font-weight:700;color:var(--muted2);">Tagesverlauf (letzte 14 Tage)</div>
+    {% for date, units in by_day.items() %}
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 14px;
+                border-bottom:1px solid rgba(238,233,223,.04);">
+      <div style="font-size:.76rem;color:var(--muted);width:90px;flex-shrink:0;">{{ date }}</div>
+      <div style="flex:1;height:6px;background:rgba(238,233,223,.06);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:{{ [units / quota_limit * 100, 100]|min }}%;
+                    background:var(--accent);border-radius:3px;opacity:.8;"></div>
+      </div>
+      <div style="font-size:.76rem;color:var(--muted2);width:50px;text-align:right;">{{ units }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not by_day %}
+  <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem;">
+    Noch keine API-Daten vorhanden. Quota-Tracking startet ab dem ersten API-Aufruf.
+  </div>
+  {% endif %}
+
+  <div style="margin-top:20px;font-size:.72rem;color:var(--muted);text-align:center;line-height:1.6;">
+    YouTube® ist eine eingetragene Marke von Google LLC. Clip Capital ist nicht mit YouTube oder
+    Google LLC verbunden. <a href="/privacy" style="color:var(--muted);">Datenschutz</a> ·
+    <a href="https://developers.google.com/youtube/terms" target="_blank" rel="noopener"
+       style="color:var(--muted);">YouTube API Terms</a>
+  </div>
+</div>
+{% endblock %}

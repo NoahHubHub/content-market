@@ -230,7 +230,10 @@ def generate_daily_drop():
             if v.channel_id:
                 channel_map[v.channel_id].append(v)
 
-        # Select by in-app trading activity (transaction count) — no YouTube metrics used
+        # Selection algorithm: rank by in-app transaction count (organic user interest).
+        # YouTube metrics (view_count, like_count, comment_count) are NOT used here —
+        # only the number of trades that happened inside Clip Capital.
+        # This ensures YouTube API data has zero influence on which videos are featured.
         scored = [
             (len(v.transactions), v)
             for v in videos

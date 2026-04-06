@@ -19,7 +19,7 @@ from deps import limiter, templates
 from csrf import CSRFMiddleware
 
 import scheduler  # starts APScheduler and runs migrate() on import
-from routers import auth, market, trading, portfolio, social, pwa, push, account, premium, admin
+from routers import auth, market, trading, portfolio, social, pwa, push, account, premium, admin, compliance
 
 Base.metadata.create_all(bind=engine)
 scheduler.migrate()
@@ -97,6 +97,7 @@ app.include_router(push.router)
 app.include_router(account.router)
 app.include_router(premium.router)
 app.include_router(admin.router)
+app.include_router(compliance.router)
 
 
 # ── startup seed ───────────────────────────────────────────────────────────────

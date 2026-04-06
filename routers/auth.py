@@ -22,11 +22,13 @@ from helpers import get_login, hash_pw, verify_pw
 _GOOGLE_AUTH_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
 _GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _GOOGLE_INFO_URL  = "https://www.googleapis.com/oauth2/v2/userinfo"
+# Only identity scopes — youtube.readonly is NOT requested because the app
+# uses YOUTUBE_API_KEY (server-side API key) for all YouTube data access.
+# No user YouTube data is accessed on behalf of the user.
 _SCOPES = " ".join([
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/youtube.readonly",
 ])
 
 
@@ -295,11 +297,11 @@ async def google_callback(
             "message": "Google hat keinen gültigen Token zurückgegeben. Bitte versuche es erneut.",
         }, status_code=502)
 
-    token_data    = token_resp.json()
-    access_token  = token_data.get("access_token")
-    refresh_token = token_data.get("refresh_token")
-    expires_in    = token_data.get("expires_in", 3600)
-    token_expiry  = datetime.utcnow() + timedelta(seconds=expires_in)
+    token_data   = token_resp.json()
+    access_token = token_data.get("access_token")
+    expires_in   = token_data.get("expires_in", 3600)
+    token_expiry = datetime.utcnow() + timedelta(seconds=expires_in)
+    # Refresh token is NOT stored (Option A — not needed for identity-only OAuth)
 
     # Fetch user info
     async with httpx.AsyncClient() as client:
@@ -314,58 +316,119 @@ async def google_callback(
             "message": "Google hat keine Nutzerinformationen zurückgegeben. Bitte versuche es erneut.",
         }, status_code=502)
 
-    info       = info_resp.json()
-    google_id  = info.get("id")
-    email      = info.get("email", "")
+    info      = info_resp.json()
+    google_id = info.get("id")
+    email     = info.get("email", "")
 
-    # Find or create user
+    # Check if user already exists
     db_user = db.query(models.User).filter(models.User.google_id == google_id).first()
-    is_new = db_user is None
+    if db_user is None and email:
+        db_user = db.query(models.User).filter(models.User.google_email == email).first()
+    is_returning = db_user is not None and db_user.consent_accepted
 
+    if is_returning:
+        # Existing user who already gave consent — update token + log in directly
+        db_user.google_access_token = _encrypt(access_token)
+        db_user.google_token_expiry = token_expiry
+        if not db_user.google_id:
+            db_user.google_id = google_id
+        db.commit()
+        _audit(db, request, "google_login", db_user)
+        request.session.clear()
+        request.session["user_id"] = db_user.id
+        return RedirectResponse("/", status_code=302)
+
+    # New user or user who hasn't consented yet:
+    # Store OAuth data in session temporarily — nothing written to DB until consent given
+    request.session["pending_oauth"] = {
+        "google_id":      google_id,
+        "email":          email,
+        "access_token":   _encrypt(access_token),   # encrypt before storing in session
+        "token_expiry":   token_expiry.isoformat(),
+        "is_new":         db_user is None,
+    }
+    return RedirectResponse("/auth/token-consent", status_code=302)
+
+
+@router.get("/auth/token-consent", response_class=HTMLResponse)
+async def token_consent_page(request: Request):
+    """Explicit consent before any data is written to DB — shown before T&C consent."""
+    pending = request.session.get("pending_oauth")
+    if not pending:
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse(request, "token_consent.html", {
+        "user": None,
+        "email": pending.get("email", ""),
+    })
+
+
+@router.post("/auth/token-consent")
+async def token_consent_accept(
+    request: Request,
+    db: Session = Depends(get_db),
+    consent: str = Form(default=""),
+):
+    """User explicitly consents to token storage — NOW create/update user in DB."""
+    pending = request.session.get("pending_oauth")
+    if not pending:
+        return RedirectResponse("/login", status_code=302)
+
+    if consent != "on":
+        return templates.TemplateResponse(request, "token_consent.html", {
+            "user": None,
+            "email": pending.get("email", ""),
+            "error": "Zustimmung erforderlich um fortzufahren.",
+        })
+
+    google_id    = pending["google_id"]
+    email        = pending["email"]
+    access_token = pending["access_token"]   # already encrypted
+    token_expiry = datetime.fromisoformat(pending["token_expiry"])
+
+    # Now find or create user
+    db_user = db.query(models.User).filter(models.User.google_id == google_id).first()
+    if db_user is None and email:
+        db_user = db.query(models.User).filter(models.User.google_email == email).first()
+
+    is_new = db_user is None
     if is_new:
-        # Check if an account already exists with same email (link it)
-        if email:
-            db_user = db.query(models.User).filter(models.User.google_email == email).first()
-        if db_user is None:
-            username = _make_username_from_email(email, db)
-            db_user = models.User(
-                username=username,
-                password_hash=None,
-                balance=10000.0,
-                google_id=google_id,
-                google_email=email,
-            )
-            db.add(db_user)
-            db.flush()
-        else:
+        username = _make_username_from_email(email, db)
+        db_user = models.User(
+            username=username,
+            password_hash=None,
+            balance=10000.0,
+            google_id=google_id,
+            google_email=email,
+        )
+        db.add(db_user)
+        db.flush()
+    else:
+        if not db_user.google_id:
             db_user.google_id = google_id
 
-    # Update/store tokens (encrypted)
-    db_user.google_access_token  = _encrypt(access_token)
-    db_user.google_token_expiry  = token_expiry
-    if refresh_token:
-        db_user.google_refresh_token = _encrypt(refresh_token)
+    db_user.google_access_token = access_token
+    db_user.google_token_expiry = token_expiry
     if email and not db_user.google_email:
         db_user.google_email = email
 
     db.commit()
     db.refresh(db_user)
 
-    _audit(db, request, "google_login", db_user)
+    _audit(db, request, "token_consent_accepted", db_user)
 
-    request.session.clear()
+    # Clear pending data, set session
+    request.session.pop("pending_oauth", None)
     request.session["user_id"] = db_user.id
 
-    # New users or users who haven't accepted consent → consent page
+    # Still need T&C consent?
     if is_new or not db_user.consent_accepted:
         return RedirectResponse("/auth/consent", status_code=302)
-
     return RedirectResponse("/", status_code=302)
 
 
 @router.get("/auth/consent", response_class=HTMLResponse)
 async def consent_page(request: Request, db: Session = Depends(get_db)):
-    """Show consent page for users who haven't accepted T&C yet."""
+    """Show T&C + Privacy consent page."""
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=302)
@@ -380,7 +443,7 @@ async def consent_accept(
     db: Session = Depends(get_db),
     consent: str = Form(default=""),
 ):
-    """Record consent acceptance."""
+    """Record T&C acceptance."""
     db_user = get_login(request, db)
     if not db_user:
         return RedirectResponse("/login", status_code=302)
