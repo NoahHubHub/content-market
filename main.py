@@ -32,6 +32,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 _session_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 _redis_url   = os.getenv("REDIS_URL")
 
+# CSRFMiddleware must be added before SessionMiddleware so that
+# SessionMiddleware (added last) runs first and populates request.session
+# before the CSRF check reads from it.
+app.add_middleware(CSRFMiddleware)
+
 if _redis_url:
     # Redis-backed sessions — shared across workers, survives restarts
     try:
@@ -53,8 +58,6 @@ if _redis_url:
         app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
 else:
     app.add_middleware(SessionMiddleware, secret_key=_session_key, max_age=86400 * 30)
-
-app.add_middleware(CSRFMiddleware)
 
 
 # ── error handlers ─────────────────────────────────────────────────────────────
