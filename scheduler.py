@@ -65,8 +65,10 @@ def migrate():
     # (SQLAlchemy create_all in main.py legt fehlende Tabellen an)
     # user_deletions and quota_usage are created via create_all in main.py
 
-    # Backfill category for existing videos that have none
-    _backfill_categories()
+    # Backfill category for existing videos that have none — run in background
+    # so it doesn't block uvicorn startup (YouTube API calls can hang).
+    import threading
+    threading.Thread(target=_backfill_categories, daemon=True).start()
 
 
 def _backfill_categories():
