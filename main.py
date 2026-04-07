@@ -104,9 +104,15 @@ app.include_router(compliance.router)
 
 
 # ── startup seed ───────────────────────────────────────────────────────────────
+# Run in background so YouTube API timeouts don't delay uvicorn startup
+# and trigger Railway's health check timeout.
 
-try:
-    scheduler.seed_market()
-    scheduler.generate_daily_drop()
-except Exception:
-    logging.getLogger(__name__).warning("startup seed failed", exc_info=True)
+def _startup_seed():
+    try:
+        scheduler.seed_market()
+        scheduler.generate_daily_drop()
+    except Exception:
+        logging.getLogger(__name__).warning("startup seed failed", exc_info=True)
+
+import threading
+threading.Thread(target=_startup_seed, daemon=True).start()
