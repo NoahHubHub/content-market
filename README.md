@@ -95,7 +95,7 @@ Die generierte `.aab`-Datei kann direkt in der Google Play Console hochgeladen w
 2. „OAuth 2.0-Client-ID" erstellen (Typ: Webanwendung)
 3. Autorisierte Weiterleitungs-URI hinzufügen: `https://DEINE-APP-URL/auth/google/callback`
 4. `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` in Railway setzen
-5. OAuth-Consent-Screen konfigurieren — Scopes: `openid`, `email`, `profile`, `youtube.readonly`
+5. OAuth-Consent-Screen konfigurieren — Scopes: `openid`, `email`, `profile`
 
 ## YouTube API Compliance
 
