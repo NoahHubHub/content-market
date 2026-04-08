@@ -1,8 +1,8 @@
 # Compliance Audit Report — Clip Capital
 
-**Date:** 2026-04-06  
+**Date:** 2026-04-08  
 **App:** Clip Capital  
-**Scope:** `youtube.readonly`
+**Scope:** Identity only (openid, email, profile) — no youtube.readonly
 
 ---
 
@@ -14,7 +14,7 @@
 | Privacy Policy URL | ✅ PASS | `/privacy` — public, no login required |
 | Terms of Service URL | ✅ PASS | `/terms` — public, no login required |
 | Scopes: openid, email, profile | ✅ PASS | Non-sensitive — auto-approved |
-| Scope: youtube.readonly | ⏳ PENDING | Submit for Google review |
+| Scope: youtube.readonly | ✅ N/A — NOT USED | YouTube data fetched via server-side API key, not user OAuth |
 | Authorized redirect URI | ✅ PASS | `APP_URL/auth/google/callback` |
 | Domain verification | ⏳ PENDING | Add meta tag from Search Console to `base.html` |
 
@@ -100,7 +100,7 @@
 | Item | Owner | Notes |
 |---|---|---|
 | Google Cloud Console: create OAuth Client | Dev | console.cloud.google.com/apis/credentials |
-| OAuth Consent Screen: configure + submit youtube.readonly for review | Dev | 2–7 day Google review |
+| OAuth Consent Screen: configure (identity scopes only — no youtube.readonly review needed) | Dev | openid, email, profile are auto-approved |
 | Google Search Console: verify domain | Dev | Add meta tag to `base.html` (placeholder is in the file) |
 | Create email addresses: privacy@, security@, support@ | Dev | Or configure Gmail forwarding |
 | Record demo video (2 min) | Dev | See checklist Step 7 |
