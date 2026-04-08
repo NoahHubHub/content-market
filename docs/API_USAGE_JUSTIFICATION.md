@@ -1,17 +1,31 @@
 # YouTube API Usage Justification
 
 **App:** Clip Capital  
-**Scope:** `youtube.readonly`  
-**Date:** 2026-04-06
+**Date:** 2026-04-08
 
 ---
 
-## Why We Need This Scope
+## OAuth Scopes Used
 
-Clip Capital is a gamified portfolio simulation where users collect YouTube videos and track their virtual value based on real public YouTube metrics (views, likes, comments). The `youtube.readonly` scope is used to:
+Clip Capital uses Google Sign-In exclusively for user authentication.
+The following scopes are requested:
 
-1. Authenticate users via Google Sign-In
-2. Access public video statistics to calculate in-game portfolio values
+- `openid`
+- `https://www.googleapis.com/auth/userinfo.email`
+- `https://www.googleapis.com/auth/userinfo.profile`
+
+`youtube.readonly` is **NOT** requested. All YouTube data is fetched
+server-side using `YOUTUBE_API_KEY` (a service API key) — no user
+YouTube account data is accessed on behalf of the user.
+
+---
+
+## Why We Need the YouTube Data API
+
+Clip Capital is a gamified portfolio simulation where users collect
+YouTube videos and track their virtual value. The YouTube Data API v3
+is used server-side to fetch **public** video metadata and statistics
+displayed in the app.
 
 ---
 
