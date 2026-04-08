@@ -1,7 +1,7 @@
 # Data Handling & Privacy Documentation
 
 **App:** Clip Capital  
-**Last Updated:** 2026-04-06
+**Last Updated:** 2026-04-08
 
 ---
 
@@ -14,9 +14,9 @@
 | Channel name | Attribution | 30 days (if video unused) | `videos.list` |
 | Channel ID | Channel page | 30 days (if video unused) | `videos.list` |
 | Thumbnail URL | Display | 30 days (if video unused) | `videos.list` |
-| View count | Price calculation | 30 days | `videos.list` |
-| Like count | Price calculation | 30 days | `videos.list` |
-| Comment count | Price calculation | 30 days | `videos.list` |
+| View count | Display only (views/day stat) | 30 days | `videos.list` |
+| Like count | Display only | 30 days | `videos.list` |
+| Comment count | Display only | 30 days | `videos.list` |
 
 All YouTube data is sourced exclusively from **public** endpoints. No private user data is accessed.
 
