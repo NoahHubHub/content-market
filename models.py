@@ -132,6 +132,10 @@ class User(Base):
     duels_received = relationship("Duel", foreign_keys="Duel.opponent_id", back_populates="opponent")
     league_memberships = relationship("LeagueMember", back_populates="user")
 
+    @property
+    def holdings_count(self) -> int:
+        return len([h for h in self.holdings if h.shares > 0])
+
 
 class Video(Base):
     __tablename__ = "videos"
@@ -415,3 +419,4 @@ class QuotaUsage(Base):
     units_used  = Column(Integer, default=0)
     calls_count = Column(Integer, default=0)
     recorded_at = Column(DateTime, default=datetime.utcnow)
+
