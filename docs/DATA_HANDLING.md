@@ -30,7 +30,7 @@ All YouTube data is sourced exclusively from **public** endpoints. No private us
 | Password hash (bcrypt) | Authentication | Until deletion | Change via `/account` |
 | Google ID | OAuth link | Until deletion | Disconnect via Google settings |
 | Google email | Account association | Until deletion | Delete via `/account` |
-| Google OAuth token (encrypted) | YouTube API access | Until deletion / token expiry | Revoke at myaccount.google.com |
+| Google OAuth token (encrypted) | Authentifizierung (Identität) | Until deletion / token expiry | Revoke at myaccount.google.com |
 | Portfolio holdings | Game mechanic | Until deletion | Delete via `/account` |
 | Transaction history | Audit + game | Until deletion | Export via `/account/export` |
 | XP, Level, Achievements | Gamification | Until deletion | Delete via `/account` |
@@ -94,3 +94,4 @@ Exception: Legal requests from law enforcement (with valid legal process).
 Privacy questions: clipcapitalcontact@gmail.com  
 Data export request: `/account/export`  
 Data deletion: `/account`
+
